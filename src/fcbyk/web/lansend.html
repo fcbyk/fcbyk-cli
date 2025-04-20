@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>局域网-文件共享</title>
+    <title>LanSend</title>
     <style>
         * {
             box-sizing: border-box;
@@ -18,14 +18,17 @@
             width: 100%;
             max-width: 100vw;
             overflow-x: hidden;
+            min-height: 100vh;
         }
         .main-container {
             display: flex;
             flex-direction: row;
             gap: 20px;
             width: 100%;
-            max-width: 100%;
-            margin: 0 auto;
+            max-width: 1200px;
+            margin: auto;
+            height: 70vh;
+            align-items: center;
         }
         .file-container {
             flex: 1;
@@ -35,7 +38,10 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             width: 100%;
             max-width: 100%;
-            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
         }
         .upload-container {
             flex: 1;
@@ -45,16 +51,42 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             width: 100%;
             max-width: 100%;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
         }
         h1 {
             color: #2c3e50;
             margin-bottom: 20px;
             font-size: 24px;
+            flex-shrink: 0;
         }
         .file-list {
             list-style: none;
             padding: 0;
             width: 100%;
+            flex-grow: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            margin-right: -10px;
+            padding-right: 10px;
+            height: calc(70vh - 100px);
+        }
+        /* 自定义滚动条样式 */
+        .file-list::-webkit-scrollbar {
+            width: 8px;
+        }
+        .file-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        .file-list::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+        .file-list::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
         }
         .file-item {
             padding: 10px;
@@ -128,11 +160,12 @@
             margin-bottom: 20px;
             cursor: pointer;
             transition: all 0.3s;
-            min-height: 200px;
+            height: calc(70vh - 100px);
             display: flex;
             align-items: center;
             justify-content: center;
             width: 100%;
+            flex-grow: 1;
         }
         .upload-area:hover {
             background-color: #f8f9fa;
@@ -145,6 +178,7 @@
             margin-top: 10px;
             display: none;
             width: 100%;
+            flex-shrink: 0;
         }
         .progress-bar {
             height: 20px;
@@ -177,20 +211,34 @@
         /* 响应式设计 */
         @media (max-width: 768px) {
             body {
-                padding: 10px;
+                padding: 0;
+                margin: 0;
+                min-height: 100vh;
+                overflow: hidden;
             }
             .main-container {
-                flex-direction: column;
+                flex-direction: column-reverse;
                 gap: 10px;
+                height: 100vh;
+                max-width: 100%;
+                align-items: stretch;
+                margin: 0;
+                padding: 10px;
             }
             .file-container, .upload-container {
-                padding: 15px;
+                padding: 20px;
+                height: calc(45vh - 10px);
+                min-height: 180px;
+            }
+            .file-list {
+                height: calc(45vh - 70px);
             }
             .upload-area {
-                min-height: 150px;
+                height: calc(45vh - 70px);
             }
             h1 {
-                font-size: 20px;
+                font-size: 18px;
+                margin-bottom: 10px;
             }
         }
     </style>
@@ -198,7 +246,21 @@
 <body>
     <div class="main-container">
         <div class="file-container">
-            <h1>{{ share_name }}</h1>
+            <h1>{{ display_name }}</h1>
+            <div class="current-path" style="margin-bottom: 15px; color: #666; font-size: 14px;">
+                <span class="path-separator">/</span>
+                {% if path_parts %}
+                    <a href="/" class="path-link" style="color: #3498db; text-decoration: none;">{{ share_name }}</a>
+                    <span class="path-separator" style="margin: 0 5px;">/</span>
+                    {% for part in path_parts %}
+                        <a href="/{{ part.path }}" class="path-link" style="color: #3498db; text-decoration: none;">{{ part.name }}</a>
+                        <span class="path-separator" style="margin: 0 5px;">/</span>
+                    {% endfor %}
+                {% else %}
+                    <a href="/" class="path-link" style="color: #3498db; text-decoration: none;">{{ share_name }}</a>
+                    <span class="path-separator" style="margin: 0 5px;">/</span>
+                {% endif %}
+            </div>
             
             <ul class="file-list">
                 {% for item in items %}
@@ -279,6 +341,7 @@
 
             uploadProgress.style.display = 'block';
             let uploaded = 0;
+            let renamedFiles = [];
 
             Array.from(files).forEach((file, index) => {
                 const formData = new FormData();
@@ -293,7 +356,16 @@
                     uploaded++;
                     const progress = (uploaded / files.length) * 100;
                     progressBar.style.width = `${progress}%`;
-                    uploadStatus.textContent = `已上传 ${uploaded}/${files.length} 个文件`;
+                    
+                    if (data.renamed) {
+                        renamedFiles.push(data.filename);
+                    }
+                    
+                    if (renamedFiles.length > 0) {
+                        uploadStatus.textContent = `已上传 ${uploaded}/${files.length} 个文件，${renamedFiles.length} 个文件因重名已自动重命名`;
+                    } else {
+                        uploadStatus.textContent = `已上传 ${uploaded}/${files.length} 个文件`;
+                    }
 
                     if (uploaded === files.length) {
                         setTimeout(() => {

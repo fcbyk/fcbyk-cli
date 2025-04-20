@@ -1,0 +1,19 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "fcbyk"
+version = "0.1.0"
+requires-python = ">=3.7"
+dependencies = [
+    "click",
+    "flask",
+    "pyperclip"
+]
+
+[project.scripts]
+fcbyk = "fcbyk.cli:cli"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/fcbyk"] 
