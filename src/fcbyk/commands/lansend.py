@@ -9,6 +9,7 @@ import re
 app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), '..', 'web'))
 shared_directory = None
 display_name = "共享文件夹"  # 默认显示名称
+upload_password = None  # 上传密码
 
 def safe_filename(filename):
     return re.sub(r'[^\w\s\u4e00-\u9fff\-\.]', '', filename)
@@ -51,6 +52,12 @@ def serve_file(filename):
 def upload_file():
     if not shared_directory:
         return jsonify({'error': '未指定共享目录'}), 400
+    
+    if upload_password:
+        if 'password' not in request.form:
+            return jsonify({'error': '需要上传密码'}), 401
+        if request.form['password'] != upload_password:
+            return jsonify({'error': '密码错误'}), 401
     
     if 'file' not in request.files:
         return jsonify({'error': '没有文件'}), 400
@@ -106,7 +113,8 @@ def serve_directory(relative_path):
                          path_parts=get_path_parts(relative_path),
                          items=items,
                          share_name=share_name,
-                         display_name=display_name)  # 传递显示名称到模板
+                         display_name=display_name,
+                         require_password=bool(upload_password))  # 传递显示名称到模板
 
 @click.command(help='Start a local web server for sharing files over LAN')
 @click.option(
@@ -124,12 +132,16 @@ def serve_directory(relative_path):
     help="Display name for the page title (default: '共享文件夹')"
 )
 @click.option(
+    "--password",
+    help="Password for file upload (optional)"
+)
+@click.option(
     "--no-browser",
     is_flag=True,
     help="Disable automatic browser opening"
 )
-def lansend(port, directory, name, no_browser):
-    global shared_directory, display_name
+def lansend(port, directory, name, password, no_browser):
+    global shared_directory, display_name, upload_password
     
     if not os.path.exists(directory):
         click.echo(f"Error: Directory {directory} does not exist")
@@ -142,6 +154,8 @@ def lansend(port, directory, name, no_browser):
     shared_directory = os.path.abspath(directory)
     if name:
         display_name = name
+    if password:
+        upload_password = password
     
     hostname = socket.gethostname()
     local_ip = socket.gethostbyname(hostname)
@@ -149,6 +163,8 @@ def lansend(port, directory, name, no_browser):
     click.echo(f"\n * File Sharing Server")
     click.echo(f" * Directory: {shared_directory}")
     click.echo(f" * Display Name: {display_name}")
+    if upload_password:
+        click.echo(f" * Upload Password: Enabled")
     click.echo(f" * Local URL: http://localhost:{port}")
     click.echo(f" * Local URL: http://127.0.0.1:{port}")
     click.echo(f" * Network URL: http://{local_ip}:{port}")

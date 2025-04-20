@@ -207,6 +207,34 @@
             color: #3498db;
             margin-bottom: 10px;
         }
+        .password-input {
+            margin-top: 15px;
+            display: none;
+        }
+        .password-input input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 200px;
+            margin-right: 10px;
+        }
+        .password-input button {
+            padding: 8px 15px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .password-input button:hover {
+            background-color: #2980b9;
+        }
+        .password-error {
+            color: #e74c3c;
+            margin-top: 5px;
+            font-size: 14px;
+            display: none;
+        }
 
         /* 响应式设计 */
         @media (max-width: 768px) {
@@ -294,6 +322,11 @@
                 </div>
                 <input type="file" id="fileInput" multiple style="display: none;">
             </div>
+            <div class="password-input" id="passwordInput">
+                <input type="password" id="password" placeholder="请输入上传密码">
+                <button onclick="verifyPassword()">验证</button>
+                <div class="password-error" id="passwordError">密码错误，请重试</div>
+            </div>
             <div class="upload-progress" id="uploadProgress">
                 <div class="progress-bar">
                     <div class="progress" id="progressBar"></div>
@@ -309,18 +342,67 @@
         const uploadProgress = document.getElementById('uploadProgress');
         const progressBar = document.getElementById('progressBar');
         const uploadStatus = document.getElementById('uploadStatus');
+        const passwordInput = document.getElementById('passwordInput');
+        const passwordField = document.getElementById('password');
+        const passwordError = document.getElementById('passwordError');
+        let isPasswordVerified = false;
+
+        // 如果设置了密码，显示密码输入框
+        if ({{ require_password|tojson }}) {
+            passwordInput.style.display = 'block';
+            uploadArea.style.pointerEvents = 'none';
+            uploadArea.style.opacity = '0.5';
+        }
+
+        function verifyPassword() {
+            const password = passwordField.value;
+            if (!password) {
+                passwordError.textContent = '请输入密码';
+                passwordError.style.display = 'block';
+                return;
+            }
+
+            // 发送密码验证请求
+            fetch('/upload', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `password=${encodeURIComponent(password)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error === '密码错误') {
+                    passwordError.textContent = '密码错误，请重试';
+                    passwordError.style.display = 'block';
+                } else {
+                    isPasswordVerified = true;
+                    passwordInput.style.display = 'none';
+                    uploadArea.style.pointerEvents = 'auto';
+                    uploadArea.style.opacity = '1';
+                }
+            })
+            .catch(error => {
+                console.error('验证错误:', error);
+                passwordError.textContent = '验证失败，请重试';
+                passwordError.style.display = 'block';
+            });
+        }
 
         // 拖拽事件处理
         uploadArea.addEventListener('dragover', (e) => {
+            if (!isPasswordVerified && {{ require_password|tojson }}) return;
             e.preventDefault();
             uploadArea.classList.add('dragover');
         });
 
         uploadArea.addEventListener('dragleave', () => {
+            if (!isPasswordVerified && {{ require_password|tojson }}) return;
             uploadArea.classList.remove('dragover');
         });
 
         uploadArea.addEventListener('drop', (e) => {
+            if (!isPasswordVerified && {{ require_password|tojson }}) return;
             e.preventDefault();
             uploadArea.classList.remove('dragover');
             handleFiles(e.dataTransfer.files);
@@ -328,10 +410,12 @@
 
         // 点击上传区域
         uploadArea.addEventListener('click', () => {
+            if (!isPasswordVerified && {{ require_password|tojson }}) return;
             fileInput.click();
         });
 
         fileInput.addEventListener('change', (e) => {
+            if (!isPasswordVerified && {{ require_password|tojson }}) return;
             handleFiles(e.target.files);
         });
 
@@ -346,6 +430,9 @@
             Array.from(files).forEach((file, index) => {
                 const formData = new FormData();
                 formData.append('file', file);
+                if ({{ require_password|tojson }}) {
+                    formData.append('password', passwordField.value);
+                }
 
                 fetch('/upload', {
                     method: 'POST',
@@ -353,6 +440,17 @@
                 })
                 .then(response => response.json())
                 .then(data => {
+                    if (data.error) {
+                        if (data.error === '需要上传密码') {
+                            passwordInput.style.display = 'block';
+                            uploadArea.style.pointerEvents = 'none';
+                            uploadArea.style.opacity = '0.5';
+                            isPasswordVerified = false;
+                        }
+                        uploadStatus.textContent = data.error;
+                        return;
+                    }
+
                     uploaded++;
                     const progress = (uploaded / files.length) * 100;
                     progressBar.style.width = `${progress}%`;
