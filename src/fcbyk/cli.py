@@ -13,7 +13,7 @@ from .commands import lansend
 def print_version(ctx, param, value):
     if not value or ctx.resilient_parsing:
         return
-    version = importlib.metadata.version("fcbyk")
+    version = importlib.metadata.version("fcbyk-cli")
     click.echo(f"v{version}")
     ctx.exit()
 
