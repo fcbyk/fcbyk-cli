@@ -3,14 +3,37 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "fcbyk"
-version = "0.0.0-alpha.1"
+name = "fcbyk-cli"
+version = "0.0.0-alpha.2"
 requires-python = ">=3.7"
+description = "A CLI tool for fcbyk"
+readme = "README.md"
+authors = [
+    { name = "fcbyk", email = "731240932@qq.com" }
+]
+license = { text = "MIT" }
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12"
+]
 dependencies = [
     "click",
     "flask",
     "pyperclip"
 ]
+
+[project.urls]
+Homepage = "https://github.com/fcbyk/fcbyk-cli"
+Source = "https://github.com/fcbyk/fcbyk-cli"
+"Bug Tracker" = "https://github.com/fcbyk/fcbyk-cli/issues"
 
 [project.optional-dependencies]
 test = [
@@ -28,4 +51,4 @@ packages = ["src/fcbyk"]
 [tool.pytest.ini_options]
 testpaths = ["src/fcbyk/tests"]
 python_files = ["test_*.py"]
-addopts = "-v --cov=fcbyk --cov-report=term-missing" 
+addopts = "-v --cov=fcbyk --cov-report=term-missing"
