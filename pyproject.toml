@@ -12,8 +12,20 @@ dependencies = [
     "pyperclip"
 ]
 
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-cov",
+    "beautifulsoup4"
+]
+
 [project.scripts]
 fcbyk = "fcbyk.cli:cli"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/fcbyk"] 
+packages = ["src/fcbyk"]
+
+[tool.pytest.ini_options]
+testpaths = ["src/fcbyk/tests"]
+python_files = ["test_*.py"]
+addopts = "-v --cov=fcbyk --cov-report=term-missing" 

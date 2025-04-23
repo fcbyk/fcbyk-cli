@@ -11,6 +11,14 @@ shared_directory = None
 display_name = "共享文件夹"  # 默认显示名称
 upload_password = None  # 上传密码
 
+def init_app(directory=None, name=None, password=None):
+    global shared_directory, display_name, upload_password
+    shared_directory = directory
+    if name:
+        display_name = name
+    if password:
+        upload_password = password
+
 def safe_filename(filename):
     return re.sub(r'[^\w\s\u4e00-\u9fff\-\.]', '', filename)
 
