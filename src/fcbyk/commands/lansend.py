@@ -86,7 +86,7 @@ def upload_file():
             name, ext = os.path.splitext(filename)
             counter = 1
             while os.path.exists(target_path):
-                new_filename = f"{name}_{counter}{ext}"
+                new_filename = "{}_{}{}".format(name, counter, ext)
                 target_path = os.path.join(shared_directory, new_filename)
                 counter += 1
             filename = new_filename
@@ -152,11 +152,11 @@ def lansend(port, directory, name, password, no_browser):
     global shared_directory, display_name, upload_password
     
     if not os.path.exists(directory):
-        click.echo(f"Error: Directory {directory} does not exist")
+        click.echo("Error: Directory {} does not exist".format(directory))
         return
     
     if not os.path.isdir(directory):
-        click.echo(f"Error: {directory} is not a directory")
+        click.echo("Error: {} is not a directory".format(directory))
         return
     
     shared_directory = os.path.abspath(directory)
@@ -178,12 +178,12 @@ def lansend(port, directory, name, password, no_browser):
     click.echo(f" * Network URL: http://{local_ip}:{port}")
     
     try:
-        pyperclip.copy(f"http://{local_ip}:{port}")
+        pyperclip.copy("http://{}:{}".format(local_ip, port))
         click.echo(" * URL has been copied to clipboard")
     except:
         click.echo(" * Warning: Could not copy URL to clipboard")
     
     if not no_browser:
-        webbrowser.open(f"http://{local_ip}:{port}")
+        webbrowser.open("http://{}:{}".format(local_ip, port))
     
     app.run(host='0.0.0.0', port=port) 
