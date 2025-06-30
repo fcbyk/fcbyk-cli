@@ -7,7 +7,7 @@ import sys
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
-from .commands import lansend
+from .commands import lansend, openai_chat
 
 def print_version(ctx, param, value):
     if not value or ctx.resilient_parsing:
@@ -35,6 +35,7 @@ def cli():
     pass
 
 cli.add_command(lansend)
+cli.add_command(openai_chat)
 
 if __name__ == "__main__":
     cli()
