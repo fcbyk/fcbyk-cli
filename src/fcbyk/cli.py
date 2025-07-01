@@ -29,10 +29,23 @@ def print_version(ctx, param, value):
     click.echo("v{}".format(version))
     ctx.exit()
 
-@click.group(context_settings=dict(help_option_names=['-h', '--help']))
+@click.group(
+    context_settings=dict(help_option_names=['-h', '--help']),
+    invoke_without_command=True
+)
 @click.option('--version', '-v', is_flag=True, callback=print_version, expose_value=False, is_eager=True, help='Show version and exit.')
-def cli():
-    pass
+@click.pass_context
+def cli(ctx):
+    if ctx.invoked_subcommand is None:
+        click.echo('''
+  ______ _____ ______     ___  __      _____ _      _____ 
+ |  ____/ ____|  _ \ \   / / |/ /     / ____| |    |_   _|
+ | |__ | |    | |_) \ \_/ /| ' /_____| |    | |      | |  
+ |  __|| |    |  _ < \   / |  <______| |    | |      | |  
+ | |   | |____| |_) | | |  | . \     | |____| |____ _| |_ 
+ |_|    \_____|____/  |_|  |_|\_\     \_____|______|_____|                                                                                                                                            
+    ''')
+        click.echo(ctx.get_help())
 
 cli.add_command(lansend)
 cli.add_command(openai_chat)

@@ -2,6 +2,7 @@ import click
 import os
 import json
 import requests
+import colorama
 
 config_file = os.path.join(os.path.expanduser('~'), '.fcbyk', 'openai.json')
 
@@ -118,12 +119,12 @@ def get_reply_from_response(response, stream=False):
     else:
         reply = ''
         try:
-            print('AI：', end='', flush=True)
+            print('\033[94mAI：\033[0m', end='', flush=True)
             for chunk in response:
                 delta = chunk['choices'][0]['delta'].get('content', '')
                 print(delta, end='', flush=True)
                 reply += delta
-            print('\n')
+            print()
         except Exception as e:
             print(f'[流式响应异常] {e}')
         return reply
@@ -136,6 +137,7 @@ def get_reply_from_response(response, stream=False):
 @click.option('--stream', '-s', help='set stream, 0 for false, 1 for true')
 @click.pass_context
 def openai_chat(ctx, model, api_key, base_url, stream):
+    colorama.init()
     if not model and not api_key and not base_url and not stream:
         config = load_config()
         model = config['model']
@@ -156,6 +158,8 @@ def openai_chat(ctx, model, api_key, base_url, stream):
                 user_input = input('You: ')
                 if user_input.strip().lower() == 'exit':
                     break
+                if user_input.strip() == '':
+                    continue
                 messages.append({"role": "user", "content": user_input})
                 response = chat_api(messages, model, api_key, base_url, stream_flag)
                 if response is None:
@@ -184,3 +188,6 @@ def openai_chat(ctx, model, api_key, base_url, stream):
             json.dump(config, f, indent=2)
         click.echo('config saved')
         ctx.exit()
+
+if __name__ == '__main__':
+    colorama.init()
