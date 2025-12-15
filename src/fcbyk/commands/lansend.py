@@ -124,31 +124,8 @@ def serve_directory(relative_path):
                          display_name=display_name,
                          require_password=bool(upload_password))  # 传递显示名称到模板
 
-@click.command(help='Start a local web server for sharing files over LAN')
-@click.option(
-    "-p", "--port",
-    default=80,
-    help="Web server port (default: 80)"
-)
-@click.option(
-    "-d", "--directory",
-    required=True,
-    help="Directory to share (e.g., './files')"
-)
-@click.option(
-    "-n", "--name",
-    help="Display name for the page title (default: '共享文件夹')"
-)
-@click.option(
-    "--password",
-    help="Password for file upload (optional)"
-)
-@click.option(
-    "--no-browser",
-    is_flag=True,
-    help="Disable automatic browser opening"
-)
-def lansend(port, directory, name, password, no_browser):
+def _lansend_impl(port, directory, name, password, no_browser):
+    """lansend 命令的实际实现"""
     global shared_directory, display_name, upload_password
     
     if not os.path.exists(directory):
@@ -186,4 +163,59 @@ def lansend(port, directory, name, password, no_browser):
     if not no_browser:
         webbrowser.open("http://{}:{}".format(local_ip, port))
     
-    app.run(host='0.0.0.0', port=port) 
+    app.run(host='0.0.0.0', port=port)
+
+@click.command(help='Start a local web server for sharing files over LAN')
+@click.option(
+    "-p", "--port",
+    default=80,
+    help="Web server port (default: 80)"
+)
+@click.option(
+    "-d", "--directory",
+    default='.',
+    help="Directory to share (default: current directory)"
+)
+@click.option(
+    "-n", "--name",
+    help="Display name for the page title (default: '共享文件夹')"
+)
+@click.option(
+    "-pw","--password",
+    help="Password for file upload (optional)"
+)
+@click.option(
+    "-nb","--no-browser",
+    is_flag=True,
+    help="Disable automatic browser opening"
+)
+def lansend(port, directory, name, password, no_browser):
+    _lansend_impl(port, directory, name, password, no_browser)
+
+@click.command(name='ls', help='alias for lansend')
+@click.option(
+    "-p", "--port",
+    default=80,
+    help="Web server port (default: 80)"
+)
+@click.option(
+    "-d", "--directory",
+    default='.',
+    help="Directory to share (default: current directory)"
+)
+@click.option(
+    "-n", "--name",
+    help="Display name for the page title (default: '共享文件夹')"
+)
+@click.option(
+    "-pw","--password",
+    help="Password for file upload (optional)"
+)
+@click.option(
+    "-nb","--no-browser",
+    is_flag=True,
+    help="Disable automatic browser opening"
+)
+def ls(port, directory, name, password, no_browser):
+    """ls 是 lansend 的别名"""
+    _lansend_impl(port, directory, name, password, no_browser) 
