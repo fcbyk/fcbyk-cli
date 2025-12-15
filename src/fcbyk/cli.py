@@ -7,7 +7,7 @@ import sys
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
-from .commands import lansend, ls, openai_chat, pick
+from .commands import lansend, ls, openai_chat, pick, jiahao
 
 def print_version(ctx, param, value):
     if not value or ctx.resilient_parsing:
@@ -51,6 +51,7 @@ cli.add_command(lansend)
 cli.add_command(ls)
 cli.add_command(openai_chat)
 cli.add_command(pick)
+cli.add_command(jiahao)
 
 if __name__ == "__main__":
     cli()
