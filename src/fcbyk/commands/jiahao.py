@@ -262,36 +262,6 @@ class FullscreenHacker:
         
         return screen
     
-    def display_header(self):
-        """显示头部信息"""
-        if not self.ansi_enabled:
-            # 简化版本，避免大量转义符
-            sys.stdout.write(f"JIAHAO HACKER TERMINAL | MODE={self.mode.upper()} | DURATION={self.duration}s\n")
-            sys.stdout.flush()
-            return
-        cols, _ = self.terminal_size
-        
-        header = f"""
-\033[1;31m{'=' * cols}\033[0m
-\033[1;37m
- ▄▄▄▄▄▄▄ ▄▄▄▄▄▄▄ ▄▄▄▄▄▄▄    ▄▄▄▄▄▄▄ ▄▄▄▄▄▄  ▄▄▄▄▄▄▄ ▄▄   ▄▄ 
-█       █       █       █  █       █      ██       █  █ █  █
-█  ▄▄▄▄▄█    ▄▄▄█    ▄▄▄█  █    ▄▄▄█  ▄    █    ▄▄▄█  █▄█  █
-█ █▄▄▄▄▄█   █▄▄▄█   █▄▄▄   █   █▄▄▄█ █ █   █   █▄▄▄█       █
-█▄▄▄▄▄  █    ▄▄▄█    ▄▄▄█  █    ▄▄▄█ █▄█   █    ▄▄▄█       █
- ▄▄▄▄▄█ █   █▄▄▄█   █▄▄▄   █   █▄▄▄█       █   █▄▄▄█   ▄   █
-█▄▄▄▄▄▄▄█▄▄▄▄▄▄▄█▄▄▄▄▄▄▄█  █▄▄▄▄▄▄▄█▄▄▄▄▄▄██▄▄▄▄▄▄▄█▄▄█ █▄▄█
-\033[0m\033[1;36m
-╔══════════════════════════════════════════════════════════════════════════╗
-║  JIAHAO HACKER TERMINAL v3.14 | MODE: {self.mode.upper():<10}           ║
-║  DURATION: {self.duration:<4}s | SPEED: {self.speed:<6} | SIZE: {self.terminal_size[0]}x{self.terminal_size[1]}  ║
-╚══════════════════════════════════════════════════════════════════════════╝
-\033[0m
-\033[1;31m{'=' * cols}\033[0m
-"""
-        
-        sys.stdout.write(header)
-        sys.stdout.flush()
     
     def display_progress(self, elapsed, rows):
         """在底部显示进度条"""
@@ -360,10 +330,7 @@ class FullscreenHacker:
             # 设置终端
             self.clear_screen()
             self.hide_cursor()
-            
-            # 显示头部
-            self.display_header()
-            
+                        
             # 启动倒计时线程
             timer_thread = Thread(target=self.countdown_timer, args=(self.terminal_size[1], self.terminal_size[0]))
             timer_thread.start()
@@ -387,8 +354,8 @@ class FullscreenHacker:
                 else:
                     screen = self.generate_binary_screen()
                 
-                # 移动到内容区域开始位置
-                self.move_cursor(1, 10)
+                # 移动到内容区域开始位置（顶部），避免留出大段空行
+                self.move_cursor(1, 2)
                 
                 # 输出屏幕内容
                 for line in screen:
@@ -450,18 +417,75 @@ class FullscreenHacker:
         # 等待按键退出
         input(f"\n{' ' * ((cols - 30) // 2)}\033[1;37mPress Enter to return to reality...\033[0m")
 
+def select_mode_interactively(current):
+    """使用上下键选择模式并按回车确认"""
+    modes = ['binary', 'code', 'matrix', 'glitch']
+    descriptions = {
+        'binary': 'Matrix-style binary rain',
+        'code': 'Random code blocks and snippets',
+        'matrix': 'Green cascade characters',
+        'glitch': 'Glitch symbols and blocks'
+    }
+    index = modes.index(current) if current in modes else 0
+    lines_to_render = len(modes) + 3  # 标题 + 模式行 + 空行
+
+    def render():
+        click.echo("\nUse ↑/↓ to choose display mode, Enter to confirm:")
+        for i, m in enumerate(modes):
+            selected = i == index
+            pointer = "\033[1;32m> \033[0m" if selected else "  "
+            color = "\033[1;37m" if selected else "\033[0;37m"
+            click.echo(f"{pointer}{color}{m:<7}\033[0m - {descriptions[m]}")
+        click.echo("")  # 保持一个空行
+
+    render()
+    while True:
+        ch = click.getchar()
+
+        # 兼容多种箭头键序列：
+        # - *nix / Windows Terminal: "\x1b[A" / "\x1b[B"
+        # - Windows 控制台 getch: 前缀 "\xe0" + "H"/"P"
+        # - 部分场景返回完整序列一次性 "\x1b[A"
+        seq = ch
+        if ch in ('\x1b', '\xe0', '\x00'):
+            second = click.getchar()
+            third = click.getchar() if second in ('[', 'O') else ''
+            seq = ch + second + third
+
+        if seq in ('\x1b[A', '\xe0H'):
+            index = (index - 1) % len(modes)
+        elif seq in ('\x1b[B', '\xe0P'):
+            index = (index + 1) % len(modes)
+        elif seq.startswith('\x1b[A'):  # 兼容一次性返回的序列
+            index = (index - 1) % len(modes)
+        elif seq.startswith('\x1b[B'):
+            index = (index + 1) % len(modes)
+        elif ch in ('w', 'W'):
+            index = (index - 1) % len(modes)
+        elif ch in ('s', 'S'):
+            index = (index + 1) % len(modes)
+        elif ch in ('\r', '\n'):
+            break
+        else:
+            continue
+
+        # 如果终端支持 ANSI，移动光标回到菜单顶部重绘
+        if sys.stdout.isatty():
+            sys.stdout.write('\033[F' * lines_to_render)
+            sys.stdout.write('\033[J')
+            sys.stdout.flush()
+        render()
+
+    return modes[index]
+
 @click.command(name='jiahao', help='Jiahao Hacker Terminal Simulator')
 @click.option('--duration', '-d', default=30, type=int, 
               help='Run duration in seconds', show_default=True)
 @click.option('--speed', '-s', default=0.05, type=float,
               help='Refresh interval in seconds (smaller is faster)', show_default=True)
-@click.option('--mode', '-m', default='binary', 
-              type=click.Choice(['binary', 'code', 'matrix', 'glitch'], case_sensitive=False),
-              help='Display mode: binary, code, matrix, glitch',
-              show_default=True)
 @click.option('--density', default=0.7, type=float,
               help='Character density 0.1-1.0', show_default=True)
-def jiahao(duration, speed, mode, density):
+def jiahao(duration, speed, density):
     click.clear()
     
     # 警告信息
@@ -471,10 +495,11 @@ def jiahao(duration, speed, mode, density):
     click.echo("\033[1;32m[!] This is a visual simulation only; no real network activity will occur\033[0m")
     click.echo("="*80)
     
-    for i in range(3, 0, -1):
-        click.echo(f"\r\033[1;35m[+] Launch countdown: {i}s...\033[0m", nl=False)
-        time.sleep(1)
+    # 模式选择（上下键选择，回车确认）
+    mode = select_mode_interactively('binary')
     
+    # 按回车进入
+    input("\033[1;35m[+] Press Enter to enter hacker mode...\033[0m")
     click.echo("\r\033[1;32m[+] Entering the Matrix...                          \033[0m")
     time.sleep(1)
     
