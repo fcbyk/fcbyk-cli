@@ -50,7 +50,7 @@ def show_config(ctx, param, value):
     ctx.exit()
 
 def pick_item(items):
-    """执行抽奖动画并返回结果"""
+    """执行抽奖动画"""
     if not items:
         click.echo("Error: No items available. Please use --add to add items first")
         return
@@ -60,21 +60,28 @@ def pick_item(items):
     
     # 抽奖动画
     max_length = max(len(f"Current pointer: {item}") for item in items) if items else 0
-    for _ in range(50):
-        current = random.choice(items)
-        # 使用空格填充确保清除整行
-        display_text = f"Current pointer: {current}"
-        padding = " " * max(0, max_length - len(display_text))
-        click.echo(f"\r{display_text}{padding}", nl=False)
-        time.sleep(0.05)
+
+    # 内部函数：显示抽奖动画帧
+    def show_animation_frame(iterations: int, delay: float) -> None:
+        """显示抽奖动画的一帧
+        Args:
+            iterations: 动画帧数
+            delay: 每帧之间的延迟（秒）
+        """
+        for _ in range(iterations):
+            current = random.choice(items)
+            # 使用空格填充确保清除整行
+            display_text = f"Current pointer: {current}"
+            padding = " " * max(0, max_length - len(display_text))
+            click.echo(f"\r{display_text}{padding}", nl=False)
+            time.sleep(delay)
     
-    # 最终结果（保留在"当前指针指向"这一行）
-    result = random.choice(items)
-    display_text = f"Current pointer: {result}"
-    padding = " " * max(0, max_length - len(display_text))
-    click.echo(f"\r{display_text}{padding}")
-    click.echo("Pick finished!")
-    return result
+    # 三个阶段：快速 -> 中速 -> 慢速
+    show_animation_frame(random.randint(100, 200), 0.05)  # 快速阶段
+    show_animation_frame(random.randint(20, 40), 0.3)    # 中速阶段
+    show_animation_frame(random.randint(3, 20), 0.7)     # 慢速阶段
+    
+    click.echo("\nPick finished!")
 
 @click.command(name='pick', help='Randomly pick one item from the list')
 @click.option('--config', '-c', is_flag=True, expose_value=False, callback=show_config, help='Show configuration')
