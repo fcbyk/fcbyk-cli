@@ -17,7 +17,7 @@ first_upload_log = True  # 控制首次日志前空一行
 def _format_size(num_bytes):
     """字节数转可读字符串"""
     if num_bytes is None:
-        return "未知大小"
+        return "unknown size"
     units = ["B", "KB", "MB", "GB", "TB"]
     size = float(num_bytes)
     for unit in units:
@@ -37,8 +37,8 @@ def log_upload(ip, file_count, status, rel_path="", file_size=None):
     ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     # 使用 print，确保在 Flask 线程中也能正常输出，并立即刷新
     path_str = f"/{rel_path}" if rel_path else "/"
-    size_str = _format_size(file_size) if file_size is not None else "未知大小"
-    print(f"[{ts}] {ip} 上传 {file_count} 个文件，状态：{status}，路径：{path_str}，大小：{size_str}", flush=True)
+    size_str = _format_size(file_size) if file_size is not None else "unknown size"
+    print(f"[{ts}] {ip} upload {file_count} file(s), status: {status}, path: {path_str}, size: {size_str}", flush=True)
 
 def init_app(directory=None, name=None, password=None):
     global shared_directory, display_name, upload_password
@@ -68,17 +68,17 @@ def get_path_parts(current_path):
 @app.route('/')
 def index():
     if not shared_directory:
-        return "未指定共享目录，请使用 -d 参数指定目录"
+        return "Shared directory not specified. Use -d to set directory."
     return serve_directory('')
 
 @app.route('/<path:filename>')
 def serve_file(filename):
     if not shared_directory:
-        abort(404, description="未指定共享目录")
+        abort(404, description="Shared directory not specified")
     
     file_path = os.path.join(shared_directory, filename)
     if not os.path.exists(file_path):
-        abort(404, description="文件不存在")
+        abort(404, description="File not found")
     
     if os.path.isdir(file_path):
         return serve_directory(filename)
@@ -87,7 +87,7 @@ def serve_file(filename):
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    ip = request.remote_addr or '未知IP'
+    ip = request.remote_addr or 'unknown ip'
     # 前端会传递相对于共享根目录的路径（空字符串代表根目录）
     rel_path = (request.form.get('path') or '').strip('/')
     target_dir = os.path.abspath(os.path.join(shared_directory or '', rel_path))
@@ -100,28 +100,32 @@ def upload_file():
 
     # 防止目录逃逸，确保目标目录在共享目录下
     if shared_directory and not target_dir.startswith(os.path.abspath(shared_directory)):
-        log_upload(ip, 0, "失败（非法路径）", rel_path)
-        return jsonify({'error': '非法路径'}), 400
+        log_upload(ip, 0, "failed (invalid path)", rel_path)
+        return jsonify({'error': 'invalid path'}), 400
 
-    # 仅做密码验证（没有文件）的请求，不算上传，不打“上传失败”的日志，保持现有前端逻辑
+    # 仅做密码验证（没有文件）的请求：只验证密码并返回结果，不记录上传日志
     if 'file' not in request.files and 'password' in request.form:
-        return jsonify({'error': '没有文件'}), 400
+        if upload_password:
+            if request.form['password'] != upload_password:
+                return jsonify({'error': 'wrong password'}), 401
+            return jsonify({'message': 'password ok'})
+        return jsonify({'error': 'upload password not set'}), 400
 
     if not shared_directory:
-        log_upload(ip, 0, "失败（未指定共享目录）", rel_path)
-        return jsonify({'error': '未指定共享目录'}), 400
+        log_upload(ip, 0, "failed (shared directory not set)", rel_path)
+        return jsonify({'error': 'shared directory not set'}), 400
     
     if upload_password:
         if 'password' not in request.form:
-            log_upload(ip, 0, "失败（缺少上传密码）", rel_path)
-            return jsonify({'error': '需要上传密码'}), 401
+            log_upload(ip, 0, "failed (upload password required)", rel_path)
+            return jsonify({'error': 'upload password required'}), 401
         if request.form['password'] != upload_password:
-            log_upload(ip, 0, "失败（密码错误）", rel_path)
-            return jsonify({'error': '密码错误'}), 401
+            log_upload(ip, 0, "failed (wrong password)", rel_path)
+            return jsonify({'error': 'wrong password'}), 401
     
     if 'file' not in request.files:
-        log_upload(ip, 0, "失败（没有文件字段）", rel_path)
-        return jsonify({'error': '没有文件'}), 400
+        log_upload(ip, 0, "failed (no file field)", rel_path)
+        return jsonify({'error': 'missing file'}), 400
     
     file = request.files['file']
     # 尽量获取文件大小（字节）
@@ -136,19 +140,19 @@ def upload_file():
             file_size = None
 
     if file.filename == '':
-        log_upload(ip, 0, "失败（没有选择文件）", rel_path)
-        return jsonify({'error': '没有选择文件'}), 400
+        log_upload(ip, 0, "failed (no file selected)", rel_path)
+        return jsonify({'error': 'no file selected'}), 400
     
     if file:
         filename = safe_filename(file.filename)
         if not filename:
-            filename = '未命名文件'
+            filename = 'untitled'
         
         # 检查文件是否已存在
         # 目标目录若不存在，直接报错，保持与目录结构一致
         if not os.path.exists(target_dir) or not os.path.isdir(target_dir):
-            log_upload(ip, 0, f"失败（目标目录不存在：{rel_path or '根目录'}）", rel_path)
-            return jsonify({'error': '目标目录不存在'}), 400
+            log_upload(ip, 0, f"failed (target directory missing: {rel_path or 'root'})", rel_path)
+            return jsonify({'error': 'target directory not found'}), 400
 
         target_path = os.path.join(target_dir, filename)
         if os.path.exists(target_path):
@@ -164,17 +168,17 @@ def upload_file():
         try:
             file.save(save_path)
             # 目前接口一次只支持上传一个文件，这里数量固定为 1
-            log_upload(ip, 1, f"成功（{filename}）", rel_path, file_size)
+            log_upload(ip, 1, f"success ({filename})", rel_path, file_size)
             return jsonify({
-                'message': '文件上传成功',
+                'message': 'file uploaded',
                 'filename': filename,
                 'renamed': counter > 1 if 'counter' in locals() else False
             })
         except Exception as e:
-            log_upload(ip, 1, f"失败（保存失败：{e}）", rel_path, file_size)
-            return jsonify({'error': '保存文件失败'}), 500
+            log_upload(ip, 1, f"failed (save failed: {e})", rel_path, file_size)
+            return jsonify({'error': 'failed to save file'}), 500
     
-    return jsonify({'error': '上传失败'}), 500
+    return jsonify({'error': 'upload failed'}), 500
 
 def serve_directory(relative_path):
     current_path = os.path.join(shared_directory, relative_path)
