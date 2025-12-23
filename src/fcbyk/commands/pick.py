@@ -1,13 +1,17 @@
 import click
 import random
+import string
 import time
 import os
 import json
 import webbrowser
 import socket
-from flask import Flask, jsonify, render_template
+import uuid
+from typing import Optional, Iterable, Dict, Set
+from flask import Flask, jsonify, render_template, request, send_file, url_for
 
 config_file = os.path.join(os.path.expanduser('~'), '.fcbyk', 'pick.json')
+SERVER_SESSION_ID = str(uuid.uuid4())
 
 default_config = {
     'items': []
@@ -16,11 +20,23 @@ default_config = {
 # Flask 应用（模板目录复用 web 目录）
 app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), '..', 'web'))
 
+# Web 模式状态
+current_template = 'pick.html'
+files_mode_root = None  # 指定目录或单文件路径
+
+# 抽奖限制模式：
+# - 旧逻辑：按 IP 限制（ip_draw_records）
+# - 新逻辑：按兑换码限制（redeem_codes），当 redeem_codes 不为空时优先生效
+# 另外增加 ip_file_history：记录每个 IP 已经抽中过哪些文件，避免同一 IP 重复抽到同一个文件
+ip_draw_records = {}                         # {ip: filename}
+redeem_codes: Dict[str, bool] = {}           # {code: used_flag}
+ip_file_history: Dict[str, Set[str]] = {}    # {ip: {filename, ...}}
+
 
 @app.route('/')
 def pick_index():
     """抽奖网页入口"""
-    return render_template('pick.html')
+    return render_template(current_template)
 
 
 @app.route('/api/items')
@@ -28,6 +44,168 @@ def api_items():
     """返回当前配置中的抽奖项"""
     config = load_config()
     return jsonify({'items': config.get('items', [])})
+
+
+def _get_client_ip():
+    """获取客户端 IP，优先 X-Forwarded-For"""
+    xff = request.headers.get('X-Forwarded-For', '')
+    if xff:
+        return xff.split(',')[0].strip()
+    return request.remote_addr or 'unknown'
+
+
+def _list_files():
+    """列出文件模式下可供抽取的文件"""
+    if not files_mode_root:
+        return []
+    root = files_mode_root
+    if os.path.isfile(root):
+        return [{
+            'name': os.path.basename(root),
+            'path': root,
+            'size': os.path.getsize(root) if os.path.exists(root) else 0
+        }]
+    files = []
+    try:
+        for name in sorted(os.listdir(root)):
+            full = os.path.join(root, name)
+            if os.path.isfile(full):
+                files.append({
+                    'name': name,
+                    'path': full,
+                    'size': os.path.getsize(full)
+                })
+    except FileNotFoundError:
+        return []
+    return files
+
+
+@app.route('/api/files', methods=['GET'])
+def api_files():
+    """列出文件列表并返回当前抽奖状态"""
+    if not files_mode_root:
+        return jsonify({'error': 'files mode not enabled'}), 400
+    files = _list_files()
+    resp = {
+        'files': [{'name': f['name'], 'size': f['size']} for f in files],
+    }
+
+    resp['session_id'] = SERVER_SESSION_ID
+
+    # 如果配置了兑换码，则使用兑换码模式统计
+    if redeem_codes:
+        total = len(redeem_codes)
+        used = sum(1 for v in redeem_codes.values() if v)
+        resp.update({
+            'mode': 'code',
+            'total_codes': total,
+            'used_codes': used,
+            'draw_count': used,
+            'limit_per_code': 1,
+        })
+    else:
+        # 兼容旧逻辑：按 IP 限制
+        client_ip = _get_client_ip()
+        picked = ip_draw_records.get(client_ip)
+        resp.update({
+            'mode': 'ip',
+            'draw_count': len(ip_draw_records),
+            'ip_picked': picked,
+            'limit_per_ip': 1,
+        })
+    return jsonify(resp)
+
+
+@app.route('/api/files/pick', methods=['POST'])
+def api_files_pick():
+    """从文件列表随机抽取一个文件
+
+    - 如果配置了兑换码：每个兑换码仅能成功抽取一次
+    - 否则回退到旧逻辑：每个 IP 限制一次
+    """
+    if not files_mode_root:
+        return jsonify({'error': 'files mode not enabled'}), 400
+    files = _list_files()
+    if not files:
+        return jsonify({'error': 'no files available'}), 400
+
+    # 获取当前 IP，用于记录该 IP 已抽中过的文件，避免重复
+    client_ip = _get_client_ip()
+
+    # 兑换码模式
+    if redeem_codes:
+        data = request.get_json(silent=True) or {}
+        code = str(data.get('code', '')).strip().upper()
+        if not code:
+            return jsonify({'error': '请输入兑换码'}), 400
+        if code not in redeem_codes:
+            return jsonify({'error': '兑换码无效'}), 400
+        if redeem_codes[code]:
+            return jsonify({'error': '兑换码已被使用'}), 429
+
+        # 过滤掉当前 IP 已抽中过的文件
+        used_by_ip = ip_file_history.get(client_ip, set())
+        candidates = [f for f in files if f['name'] not in used_by_ip]
+        if not candidates:
+            return jsonify({'error': '本 IP 已无可抽取的文件'}), 400
+
+        selected = random.choice(candidates)
+        redeem_codes[code] = True
+        # 记录当前 IP 抽中过的文件
+        ip_file_history.setdefault(client_ip, set()).add(selected['name'])
+        used = sum(1 for v in redeem_codes.values() if v)
+        download_url = url_for('download_file', filename=selected['name'], _external=True)
+        return jsonify({
+            'file': {'name': selected['name'], 'size': selected['size']},
+            'download_url': download_url,
+            'mode': 'code',
+            'draw_count': used,
+            'total_codes': len(redeem_codes),
+            'used_codes': used,
+        })
+
+    # 兼容旧逻辑：IP 限制
+    if client_ip in ip_draw_records:
+        return jsonify({'error': 'already picked', 'picked': ip_draw_records[client_ip]}), 429
+    # 过滤掉当前 IP 已抽中过的文件
+    used_by_ip = ip_file_history.get(client_ip, set())
+    candidates = [f for f in files if f['name'] not in used_by_ip]
+    if not candidates:
+        return jsonify({'error': '本 IP 已无可抽取的文件'}), 400
+
+    selected = random.choice(candidates)
+    ip_draw_records[client_ip] = selected['name']
+    ip_file_history.setdefault(client_ip, set()).add(selected['name'])
+    download_url = url_for('download_file', filename=selected['name'], _external=True)
+    return jsonify({
+        'file': {'name': selected['name'], 'size': selected['size']},
+        'download_url': download_url,
+        'mode': 'ip',
+        'draw_count': len(ip_draw_records),
+        'ip_picked': selected['name']
+    })
+
+
+@app.route('/api/files/download/<path:filename>', methods=['GET'])
+def download_file(filename):
+    """下载指定文件，受限于文件模式根目录"""
+    if not files_mode_root:
+        return jsonify({'error': 'files mode not enabled'}), 400
+
+    # 单文件模式：仅允许精确匹配文件名
+    if os.path.isfile(files_mode_root):
+        if filename != os.path.basename(files_mode_root):
+            return jsonify({'error': 'file not found'}), 404
+        return send_file(files_mode_root, as_attachment=True, download_name=filename)
+
+    # 目录模式：防止路径穿越
+    safe_root = os.path.abspath(files_mode_root)
+    target_path = os.path.abspath(os.path.join(safe_root, filename))
+    if not target_path.startswith(safe_root + os.sep) and target_path != safe_root:
+        return jsonify({'error': 'invalid path'}), 400
+    if not os.path.isfile(target_path):
+        return jsonify({'error': 'file not found'}), 404
+    return send_file(target_path, as_attachment=True, download_name=os.path.basename(target_path))
 
 
 @app.route('/api/pick', methods=['POST'])
@@ -115,8 +293,35 @@ def pick_item(items):
     click.echo("\nPick finished!")
 
 
-def start_web_server(port: int, no_browser: bool) -> None:
+def generate_redeem_codes(count: int, length: int = 5) -> Iterable[str]:
+    """生成若干个随机兑换码（字母数字混合，大写）"""
+    charset = string.ascii_uppercase + string.digits
+    codes = set()
+    # 简单避免重复
+    while len(codes) < count:
+        code = ''.join(random.choice(charset) for _ in range(length))
+        codes.add(code)
+    return sorted(codes)
+
+
+def start_web_server(
+    port: int,
+    no_browser: bool,
+    template: str = 'pick.html',
+    files_root: Optional[str] = None,
+    codes: Optional[Iterable[str]] = None,
+) -> None:
     """启动抽奖 Web 服务器"""
+    global current_template, files_mode_root, ip_draw_records, redeem_codes, ip_file_history
+    current_template = template
+    files_mode_root = os.path.abspath(files_root) if files_root else None
+    ip_draw_records = {}
+    redeem_codes = {}
+    ip_file_history = {}
+    if codes:
+        # 初始化兑换码使用状态
+        redeem_codes = {str(c).strip().upper(): False for c in codes if str(c).strip()}
+
     hostname = socket.gethostname()
     local_ip = socket.gethostbyname(hostname)
     url_local = f"http://127.0.0.1:{port}"
@@ -124,10 +329,13 @@ def start_web_server(port: int, no_browser: bool) -> None:
     click.echo()
     click.echo(f" * Local URL: {url_local}")
     click.echo(f" * Network URL: {url_network}")
+    if files_mode_root:
+        click.echo(f" * Files root: {files_mode_root}")
     if not no_browser:
         try:
-            webbrowser.open(url_local)
-            click.echo(" * Attempted to open picker page in browser")
+            # 优先使用局域网地址自动打开，方便学生扫码或访问
+            webbrowser.open(url_network)
+            click.echo(" * Attempted to open picker page in browser (network URL)")
         except Exception:
             click.echo(" * Note: Could not auto-open browser, please visit the URL above")
     # 监听 0.0.0.0 便于局域网访问
@@ -141,11 +349,13 @@ def start_web_server(port: int, no_browser: bool) -> None:
 @click.option('--clear', is_flag=True, help='Clear the list')
 @click.option('--list', '-l', 'show_list', is_flag=True, help='Show current list')
 @click.option('--web', '-w', is_flag=True, help='Start web picker server')
-@click.option('--port', '-p', default=5000, show_default=True, type=int, help='Port for web mode')
+@click.option('--port', '-p', default=80, show_default=True, type=int, help='Port for web mode')
 @click.option('--no-browser', is_flag=True, help='Do not auto-open browser in web mode')
+@click.option('--files', type=click.Path(exists=True, dir_okay=True, file_okay=True, readable=True, resolve_path=True), help='Start web file picker with given file or directory')
+@click.option('--gen-codes', type=int, default=0, show_default=True, help='Generate redeem codes for web file picker (only with --files)')
 @click.argument('items', nargs=-1)
 @click.pass_context
-def pick(ctx, add, remove, clear, show_list, web, port, no_browser, items):
+def pick(ctx, add, remove, clear, show_list, web, port, no_browser, files, gen_codes, items):
     config = load_config()
     
     # 显示配置
@@ -192,9 +402,20 @@ def pick(ctx, add, remove, clear, show_list, web, port, no_browser, items):
         save_config(config)
         return
     
+    # 文件抽奖模式（优先）
+    if files:
+        codes = None
+        if gen_codes and gen_codes > 0:
+            codes = list(generate_redeem_codes(gen_codes))
+            click.echo("Generated redeem codes (each can be used once):")
+            for c in codes:
+                click.echo(f"  {c}")
+        start_web_server(port, no_browser, template='pick_files.html', files_root=files, codes=codes)
+        return
+
     # Web 抽奖模式
     if web:
-        start_web_server(port, no_browser)
+        start_web_server(port, no_browser, template='pick.html')
         return
     
     # 执行抽奖
