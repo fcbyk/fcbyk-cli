@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FCBYK PICK</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #0f172a;
+      --panel: #1e293b;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --primary: #22d3ee;
+      --accent: #a855f7;
+      --danger: #ef4444;
+      --success: #10b981;
+      --shadow: 0 20px 60px rgba(0,0,0,0.25);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: radial-gradient(circle at 20% 20%, rgba(34,211,238,0.12), transparent 35%),
+                  radial-gradient(circle at 80% 10%, rgba(168,85,247,0.14), transparent 40%),
+                  var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 12px;
+    }
+    .card {
+      width: min(960px, 100%);
+      background: rgba(30,41,59,0.85);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+      padding: 28px;
+    }
+    p.desc {
+      margin: 0 0 16px;
+      color: var(--muted);
+    }
+    .toolbar {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+    button {
+      border: none;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.15s;
+      color: #0b1224;
+    }
+    button.primary {
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      box-shadow: 0 12px 30px rgba(34,211,238,0.18);
+    }
+    button.secondary {
+      background: rgba(255,255,255,0.12);
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    button:not(:disabled):active {
+      transform: translateY(1px);
+      box-shadow: none;
+    }
+    .status {
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.05);
+      color: var(--muted);
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 16px;
+    }
+    @media (max-width: 880px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+    .panel {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 14px;
+      padding: 16px;
+    }
+    .panel h3 {
+      margin: 0 0 10px;
+      font-size: 17px;
+      color: var(--text);
+    }
+    .list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 10px;
+    }
+    .item {
+      padding: 12px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.06);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+      word-break: break-word;
+    }
+    .item .badge {
+      width: 30px;
+      height: 30px;
+      border-radius: 10px;
+      background: rgba(34,211,238,0.2);
+      color: var(--primary);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 13px;
+    }
+    .item.active {
+      border-color: rgba(34,211,238,0.5);
+      box-shadow: 0 8px 18px rgba(34,211,238,0.18);
+      transform: translateY(-1px);
+    }
+    .result {
+      background: linear-gradient(135deg, rgba(34,211,238,0.12), rgba(168,85,247,0.12));
+      border: 1px solid rgba(34,211,238,0.35);
+      border-radius: 14px;
+      padding: 18px;
+      text-align: center;
+      min-height: 140px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 10px;
+    }
+    .result .title {
+      color: var(--muted);
+      letter-spacing: 0.4px;
+    }
+    .result .value {
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--primary);
+      text-shadow: 0 6px 24px rgba(34,211,238,0.3);
+      word-break: break-word;
+    }
+    .muted {
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .badge-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--primary);
+      box-shadow: 0 0 12px rgba(34,211,238,0.7);
+    }
+    .status.ok { color: var(--success); }
+    .status.err { color: var(--danger); }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <p class="desc">列表数据直接来自命令行的配置文件，使用 <code>fcbyk pick --add</code> 即可更新。</p>
+
+    <div class="toolbar">
+      <button id="start-btn" class="primary">开始选择</button>
+      <button id="refresh-btn" class="secondary">刷新列表</button>
+    </div>
+
+    <div class="status" id="status">
+      <span class="badge-dot"></span>
+      正在加载列表...
+    </div>
+
+    <div class="layout">
+      <section class="panel">
+        <h3>候选列表</h3>
+        <div id="list" class="list"></div>
+        <p class="muted" id="empty-hint" style="display:none;">列表为空，请在终端执行 <code>fcbyk pick --add 项目</code> 添加。</p>
+      </section>
+
+      <section class="panel">
+        <h3>最终结果</h3>
+        <div class="result" id="result">
+          <div class="title">点击「开始」随机选出一项</div>
+          <div class="value">—</div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    let items = [];
+    let animationTimer = null;
+
+    const statusEl = document.getElementById('status');
+    const listEl = document.getElementById('list');
+    const emptyHintEl = document.getElementById('empty-hint');
+    const resultEl = document.getElementById('result');
+    const startBtn = document.getElementById('start-btn');
+    const refreshBtn = document.getElementById('refresh-btn');
+
+    function setStatus(text, type = '') {
+      statusEl.textContent = text;
+      statusEl.classList.toggle('ok', type === 'ok');
+      statusEl.classList.toggle('err', type === 'err');
+    }
+
+    function renderList() {
+      listEl.innerHTML = '';
+      if (!items.length) {
+        emptyHintEl.style.display = 'block';
+        return;
+      }
+      emptyHintEl.style.display = 'none';
+      items.forEach((item, idx) => {
+        const card = document.createElement('div');
+        card.className = 'item';
+        card.innerHTML = `<span class="badge">${idx + 1}</span><span>${item}</span>`;
+        listEl.appendChild(card);
+      });
+    }
+
+    async function loadItems() {
+      setStatus('正在加载列表...');
+      try {
+        const res = await fetch('/api/items');
+        const data = await res.json();
+        items = Array.isArray(data.items) ? data.items : [];
+        renderList();
+        if (!items.length) {
+          setStatus('列表为空，请先在命令行使用 --add 添加项目', 'err');
+        } else {
+          setStatus(`已加载 ${items.length} 条候选项`, 'ok');
+        }
+      } catch (err) {
+        setStatus('加载列表失败，请稍后重试', 'err');
+      }
+    }
+
+    function stopAnimation() {
+      if (animationTimer) {
+        clearInterval(animationTimer);
+        clearTimeout(animationTimer);
+        animationTimer = null;
+      }
+      document.querySelectorAll('.item').forEach(el => el.classList.remove('active'));
+    }
+
+    function highlight(cards, index) {
+      cards.forEach(el => el.classList.remove('active'));
+      if (cards[index]) cards[index].classList.add('active');
+    }
+
+    function sleep(ms) {
+      return new Promise(res => animationTimer = setTimeout(res, ms));
+    }
+
+    async function spinToTarget(cards, targetIndex) {
+      // 先做一段快速随机旋转，再按目标收尾，确保最终停在 targetIndex
+      let current = -1;
+      const stages = [
+        { steps: Math.floor(Math.random() * 60) + 80, delay: 50 },   // 快速
+        { steps: Math.floor(Math.random() * 20) + 30, delay: 120 }   // 过渡
+      ];
+      for (const stage of stages) {
+        for (let i = 0; i < stage.steps; i++) {
+          current = (current + 1) % cards.length;
+          highlight(cards, current);
+          await sleep(stage.delay);
+        }
+      }
+
+      // 计算到目标的剩余步数，多绕 2 圈再落到目标，做减速效果
+      const len = cards.length;
+      const distance = ((targetIndex - current) % len + len) % len;
+      const totalSteps = distance + len * 2;
+      const finalDelayStart = 180;
+      const finalDelayEnd = 550;
+      for (let step = 0; step < totalSteps; step++) {
+        current = (current + 1) % len;
+        highlight(cards, current);
+        // 逐步放慢：线性插值 delay
+        const t = step / Math.max(1, totalSteps - 1);
+        const delay = finalDelayStart + (finalDelayEnd - finalDelayStart) * t;
+        await sleep(delay);
+      }
+      return current;
+    }
+
+    async function startDraw() {
+      if (!items.length) {
+        setStatus('列表为空，请先添加候选项', 'err');
+        return;
+      }
+      startBtn.disabled = true;
+      setStatus('正在选择...');
+      stopAnimation();
+      const cards = Array.from(document.querySelectorAll('.item'));
+      if (!cards.length) {
+        setStatus('列表为空，请刷新后重试', 'err');
+        startBtn.disabled = false;
+        return;
+      }
+
+      try {
+        const targetIndex = Math.floor(Math.random() * items.length);
+        const winner = items[targetIndex];
+
+        await spinToTarget(cards, targetIndex);
+        setStatus('选择完成！', 'ok');
+        resultEl.innerHTML = `
+          <div class="title">本轮选中</div>
+          <div class="value">${winner}</div>
+          <div class="muted">数据来源：本地配置文件 ~/.fcbyk/pick.json</div>
+        `;
+      } catch (err) {
+        stopAnimation();
+        setStatus(err.message || '随机选择失败', 'err');
+      } finally {
+        startBtn.disabled = false;
+      }
+    }
+
+    startBtn.addEventListener('click', startDraw);
+    refreshBtn.addEventListener('click', loadItems);
+    loadItems();
+  </script>
+</body>
+</html>
+

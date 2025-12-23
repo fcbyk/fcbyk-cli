@@ -3,12 +3,43 @@ import random
 import time
 import os
 import json
+import webbrowser
+import socket
+from flask import Flask, jsonify, render_template
 
 config_file = os.path.join(os.path.expanduser('~'), '.fcbyk', 'pick.json')
 
 default_config = {
     'items': []
 }
+
+# Flask 应用（模板目录复用 web 目录）
+app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), '..', 'web'))
+
+
+@app.route('/')
+def pick_index():
+    """抽奖网页入口"""
+    return render_template('pick.html')
+
+
+@app.route('/api/items')
+def api_items():
+    """返回当前配置中的抽奖项"""
+    config = load_config()
+    return jsonify({'items': config.get('items', [])})
+
+
+@app.route('/api/pick', methods=['POST'])
+def api_pick_item():
+    """从配置列表中随机抽取一项"""
+    config = load_config()
+    items = config.get('items', [])
+    if not items:
+        return jsonify({'error': 'no items available'}), 400
+    selected = random.choice(items)
+    return jsonify({'item': selected, 'items': items})
+
 
 def load_config():
     """加载配置文件"""
@@ -79,9 +110,29 @@ def pick_item(items):
     # 三个阶段：快速 -> 中速 -> 慢速
     show_animation_frame(random.randint(100, 200), 0.05)  # 快速阶段
     show_animation_frame(random.randint(20, 40), 0.3)    # 中速阶段
-    show_animation_frame(random.randint(3, 20), 0.7)     # 慢速阶段
+    show_animation_frame(random.randint(3, 10), 0.7)     # 慢速阶段
     
     click.echo("\nPick finished!")
+
+
+def start_web_server(port: int, no_browser: bool) -> None:
+    """启动抽奖 Web 服务器"""
+    hostname = socket.gethostname()
+    local_ip = socket.gethostbyname(hostname)
+    url_local = f"http://127.0.0.1:{port}"
+    url_network = f"http://{local_ip}:{port}"
+    click.echo()
+    click.echo(f" * Local URL: {url_local}")
+    click.echo(f" * Network URL: {url_network}")
+    if not no_browser:
+        try:
+            webbrowser.open(url_local)
+            click.echo(" * Attempted to open picker page in browser")
+        except Exception:
+            click.echo(" * Note: Could not auto-open browser, please visit the URL above")
+    # 监听 0.0.0.0 便于局域网访问
+    app.run(host='0.0.0.0', port=port)
+
 
 @click.command(name='pick', help='Randomly pick one item from the list')
 @click.option('--config', '-c', is_flag=True, expose_value=False, callback=show_config, help='Show configuration')
@@ -89,9 +140,12 @@ def pick_item(items):
 @click.option('--remove', '-r', multiple=True, help='Remove item from list (can be used multiple times)')
 @click.option('--clear', is_flag=True, help='Clear the list')
 @click.option('--list', '-l', 'show_list', is_flag=True, help='Show current list')
+@click.option('--web', '-w', is_flag=True, help='Start web picker server')
+@click.option('--port', '-p', default=5000, show_default=True, type=int, help='Port for web mode')
+@click.option('--no-browser', is_flag=True, help='Do not auto-open browser in web mode')
 @click.argument('items', nargs=-1)
 @click.pass_context
-def pick(ctx, add, remove, clear, show_list, items):
+def pick(ctx, add, remove, clear, show_list, web, port, no_browser, items):
     config = load_config()
     
     # 显示配置
@@ -136,6 +190,11 @@ def pick(ctx, add, remove, clear, show_list, items):
                 click.echo(f"Item does not exist: {item}")
         config['items'] = items_list
         save_config(config)
+        return
+    
+    # Web 抽奖模式
+    if web:
+        start_web_server(port, no_browser)
         return
     
     # 执行抽奖
