@@ -5,11 +5,40 @@ import pyperclip
 import socket
 from flask import Flask, send_from_directory, abort, render_template, request, jsonify
 import re
+from datetime import datetime
 
 app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), '..', 'web'))
 shared_directory = None
 display_name = "共享文件夹"  # 默认显示名称
 upload_password = None  # 上传密码
+first_upload_log = True  # 控制首次日志前空一行
+
+
+def _format_size(num_bytes):
+    """字节数转可读字符串"""
+    if num_bytes is None:
+        return "未知大小"
+    units = ["B", "KB", "MB", "GB", "TB"]
+    size = float(num_bytes)
+    for unit in units:
+        if size < 1024 or unit == units[-1]:
+            return f"{size:.2f} {unit}" if unit != "B" else f"{int(size)} {unit}"
+        size /= 1024
+
+
+def log_upload(ip, file_count, status, rel_path="", file_size=None):
+    """统一的上传日志输出：时间 - IP - 文件数量 - 状态 - 相对路径 - 文件大小"""
+    global first_upload_log
+    # 第一次打印上传日志前先空一行，让它和 Flask 的启动信息之间有间隔
+    if first_upload_log:
+        print("", flush=True)
+        first_upload_log = False
+
+    ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    # 使用 print，确保在 Flask 线程中也能正常输出，并立即刷新
+    path_str = f"/{rel_path}" if rel_path else "/"
+    size_str = _format_size(file_size) if file_size is not None else "未知大小"
+    print(f"[{ts}] {ip} 上传 {file_count} 个文件，状态：{status}，路径：{path_str}，大小：{size_str}", flush=True)
 
 def init_app(directory=None, name=None, password=None):
     global shared_directory, display_name, upload_password
@@ -58,20 +87,56 @@ def serve_file(filename):
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
+    ip = request.remote_addr or '未知IP'
+    # 前端会传递相对于共享根目录的路径（空字符串代表根目录）
+    rel_path = (request.form.get('path') or '').strip('/')
+    target_dir = os.path.abspath(os.path.join(shared_directory or '', rel_path))
+    # 前端可提供 size（字节），用于日志显示
+    size_hint = request.form.get('size')
+    try:
+        size_hint = int(size_hint) if size_hint is not None else None
+    except (TypeError, ValueError):
+        size_hint = None
+
+    # 防止目录逃逸，确保目标目录在共享目录下
+    if shared_directory and not target_dir.startswith(os.path.abspath(shared_directory)):
+        log_upload(ip, 0, "失败（非法路径）", rel_path)
+        return jsonify({'error': '非法路径'}), 400
+
+    # 仅做密码验证（没有文件）的请求，不算上传，不打“上传失败”的日志，保持现有前端逻辑
+    if 'file' not in request.files and 'password' in request.form:
+        return jsonify({'error': '没有文件'}), 400
+
     if not shared_directory:
+        log_upload(ip, 0, "失败（未指定共享目录）", rel_path)
         return jsonify({'error': '未指定共享目录'}), 400
     
     if upload_password:
         if 'password' not in request.form:
+            log_upload(ip, 0, "失败（缺少上传密码）", rel_path)
             return jsonify({'error': '需要上传密码'}), 401
         if request.form['password'] != upload_password:
+            log_upload(ip, 0, "失败（密码错误）", rel_path)
             return jsonify({'error': '密码错误'}), 401
     
     if 'file' not in request.files:
+        log_upload(ip, 0, "失败（没有文件字段）", rel_path)
         return jsonify({'error': '没有文件'}), 400
     
     file = request.files['file']
+    # 尽量获取文件大小（字节）
+    file_size = file.content_length if file.content_length not in (None, 0) else size_hint
+    if file_size is None:
+        try:
+            pos = file.stream.tell()
+            file.stream.seek(0, os.SEEK_END)
+            file_size = file.stream.tell()
+            file.stream.seek(pos, os.SEEK_SET)
+        except Exception:
+            file_size = None
+
     if file.filename == '':
+        log_upload(ip, 0, "失败（没有选择文件）", rel_path)
         return jsonify({'error': '没有选择文件'}), 400
     
     if file:
@@ -80,23 +145,34 @@ def upload_file():
             filename = '未命名文件'
         
         # 检查文件是否已存在
-        target_path = os.path.join(shared_directory, filename)
+        # 目标目录若不存在，直接报错，保持与目录结构一致
+        if not os.path.exists(target_dir) or not os.path.isdir(target_dir):
+            log_upload(ip, 0, f"失败（目标目录不存在：{rel_path or '根目录'}）", rel_path)
+            return jsonify({'error': '目标目录不存在'}), 400
+
+        target_path = os.path.join(target_dir, filename)
         if os.path.exists(target_path):
             # 生成新文件名
             name, ext = os.path.splitext(filename)
             counter = 1
             while os.path.exists(target_path):
                 new_filename = "{}_{}{}".format(name, counter, ext)
-                target_path = os.path.join(shared_directory, new_filename)
+                target_path = os.path.join(target_dir, new_filename)
                 counter += 1
             filename = new_filename
-        
-        file.save(os.path.join(shared_directory, filename))
-        return jsonify({
-            'message': '文件上传成功',
-            'filename': filename,
-            'renamed': counter > 1 if 'counter' in locals() else False
-        })
+        save_path = os.path.join(target_dir, filename)
+        try:
+            file.save(save_path)
+            # 目前接口一次只支持上传一个文件，这里数量固定为 1
+            log_upload(ip, 1, f"成功（{filename}）", rel_path, file_size)
+            return jsonify({
+                'message': '文件上传成功',
+                'filename': filename,
+                'renamed': counter > 1 if 'counter' in locals() else False
+            })
+        except Exception as e:
+            log_upload(ip, 1, f"失败（保存失败：{e}）", rel_path, file_size)
+            return jsonify({'error': '保存文件失败'}), 500
     
     return jsonify({'error': '上传失败'}), 500
 
@@ -118,6 +194,7 @@ def serve_directory(relative_path):
     
     return render_template('lansend.html',
                          current_path=relative_path or '根目录',
+                         relative_path=relative_path,
                          path_parts=get_path_parts(relative_path),
                          items=items,
                          share_name=share_name,
@@ -162,7 +239,7 @@ def _lansend_impl(port, directory, name, password, no_browser):
     
     if not no_browser:
         webbrowser.open("http://{}:{}".format(local_ip, port))
-    
+
     app.run(host='0.0.0.0', port=port)
 
 @click.command(help='Start a local web server for sharing files over LAN')

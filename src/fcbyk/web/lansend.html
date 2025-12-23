@@ -363,6 +363,7 @@
         const passwordField = document.getElementById('password');
         const passwordError = document.getElementById('passwordError');
         let isPasswordVerified = false;
+        const currentPath = "{{ relative_path|default('', true) }}"; // 例如 ""(根目录) 或 "sub/dir"
 
         // 上传队列管理
         let uploadQueue = [];
@@ -515,6 +516,8 @@
 
             const formData = new FormData();
             formData.append('file', file);
+            formData.append('path', currentPath); // 将当前浏览路径传给后端，决定存储目录
+            formData.append('size', file.size); // 提供前端获取的文件大小（字节）
             if ({{ require_password|tojson }}) {
                 formData.append('password', passwordField.value);
             }
