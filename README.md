@@ -7,8 +7,44 @@
 
 ## 子命令
 
-- lansend：在指定端口开启 `http服务器`，用于局域网内共享文件
-- openai：在控制台与 `ai`交互 （需自行配置`api-key`）
-- pick：随机抽取一个元素（可用于抽奖、随机选择等）
-- jiahao：黑客终端模拟器
-- popup：弹窗效果
+- `lansend` / `ls`：在指定端口开启 `http服务器`，用于局域网内共享文件
+- `ai`：在控制台与 `ai` 聊天 （需自行配置`api-key`）
+- `pick`：随机抽取一个元素（可用于抽奖、随机选择等）
+- `jiahao`：黑客终端模拟器
+- `popup`：弹窗效果
+
+## 安装
+
+#### 使用 pip 安装
+
+```bash
+pip install fcbyk-cli
+```
+
+#### 从源码安装（可按需调整代码）
+
+```bash
+git clone https://github.com/fcbyk/fcbyk-cli.git
+cd fcbyk-cli
+pip install -e .
+```
+
+## 查看帮助信息
+
+```bash
+fcbyk --help
+fcbyk --version
+```
+
+## 系统要求
+
+- Python 3.6+
+- Windows
+
+## 依赖项
+
+- click - 命令行界面框架
+- flask - Web框架
+- pyperclip - 剪贴板操作
+- requests - HTTP请求库
+- colorama - 终端颜色支持

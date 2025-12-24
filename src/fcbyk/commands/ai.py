@@ -2,7 +2,6 @@ import click
 import os
 import json
 import requests
-import colorama
 
 config_file = os.path.join(os.path.expanduser('~'), '.fcbyk', 'openai.json')
 
@@ -129,15 +128,14 @@ def get_reply_from_response(response, stream=False):
             print(f'[流式响应异常] {e}')
         return reply
 
-@click.command(name='openai', help='use openai api to chat in terminal')
+@click.command(name='ai', help='use openai api to chat in terminal')
 @click.option('--config', '-c', is_flag=True, expose_value=False, callback=show_config, help='show config')
 @click.option('--model', '-m', help='set model')
 @click.option('--api-key', '-k', help='set api key')
 @click.option('--base-url', '-u', help='set base url')
 @click.option('--stream', '-s', help='set stream, 0 for false, 1 for true')
 @click.pass_context
-def openai_chat(ctx, model, api_key, base_url, stream):
-    colorama.init()
+def ai(ctx, model, api_key, base_url, stream):
     if not model and not api_key and not base_url and not stream:
         config = load_config()
         model = config['model']
@@ -188,6 +186,3 @@ def openai_chat(ctx, model, api_key, base_url, stream):
             json.dump(config, f, indent=2)
         click.echo('config saved')
         ctx.exit()
-
-if __name__ == '__main__':
-    colorama.init()
