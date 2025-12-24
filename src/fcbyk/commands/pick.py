@@ -477,7 +477,7 @@ def admin_codes_add():
 @click.option('--files','-f', type=click.Path(exists=True, dir_okay=True, file_okay=True, readable=True, resolve_path=True), help='Start web file picker with given file')
 @click.option('--gen-codes','-gc', type=int, default=5, show_default=True, help='Generate redeem codes for web file picker (only with --files)')
 @click.option('--show-codes','-sc', is_flag=True, help='Show the redeem codes in console (only with --files)')
-@click.option('--password', '-pw',default=None,help='Admin password for /admin page')
+@click.option('--password', '-pw', is_flag=True, default=False, help='Prompt to set admin password (default: 123456 if not set)')
 @click.argument('items', nargs=-1)
 @click.pass_context
 def pick(ctx, add, remove, clear, show_list, web, port, no_browser, files, gen_codes, show_codes, password, items):
@@ -538,11 +538,18 @@ def pick(ctx, add, remove, clear, show_list, web, port, no_browser, files, gen_c
                 for c in codes:
                     click.echo(f"  {c}")
 
+
+        if password:
+            admin_password = click.prompt('Admin password (press Enter to use default: 123456)', hide_input=True, default='123456', show_default=False)
+            admin_password = admin_password if admin_password else '123456'
+        else:
+            admin_password = '123456'
+
         # 在启动Web服务器前，先启动延迟任务线程
         delay_thread = threading.Thread(target=delayed_newline_simple, daemon=True)
         delay_thread.start()
 
-        start_web_server(port, no_browser, template='pick/pick_files.html', files_root=files, codes=codes, admin_password=password)
+        start_web_server(port, no_browser, template='pick/pick_files.html', files_root=files, codes=codes, admin_password=admin_password)
         return
 
     # Web 抽奖模式

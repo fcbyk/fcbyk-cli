@@ -220,8 +220,12 @@ def _lansend_impl(port, directory, name, password, no_browser):
     shared_directory = os.path.abspath(directory)
     if name:
         display_name = name
+    
     if password:
-        upload_password = password
+        upload_password = click.prompt('Upload password (press Enter to use default: 123456)', hide_input=True, default='123456', show_default=False)
+        upload_password = upload_password if upload_password else '123456'
+    else:
+        upload_password = None
     
     hostname = socket.gethostname()
     local_ip = socket.gethostbyname(hostname)
@@ -263,7 +267,9 @@ def _lansend_impl(port, directory, name, password, no_browser):
 )
 @click.option(
     "-pw","--password",
-    help="Password for file upload (optional)"
+    is_flag=True,
+    default=False,
+    help="Prompt to set upload password (default: no password, or 123456 if skipped)"
 )
 @click.option(
     "-nb","--no-browser",
@@ -290,7 +296,9 @@ def lansend(port, directory, name, password, no_browser):
 )
 @click.option(
     "-pw","--password",
-    help="Password for file upload (optional)"
+    is_flag=True,
+    default=False,
+    help="Prompt to set upload password (default: no password, or 123456 if skipped)"
 )
 @click.option(
     "-nb","--no-browser",
