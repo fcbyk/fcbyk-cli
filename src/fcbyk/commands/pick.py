@@ -24,7 +24,7 @@ default_config = {
 app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), '..', 'web'))
 
 # Web 模式状态
-current_template = 'pick.html'
+current_template = 'pick/index.html'
 files_mode_root = None  # 指定目录或单文件路径
 
 # 抽奖限制模式：
@@ -41,6 +41,14 @@ code_results: Dict[str, Dict] = {}           # {code: {file: {...}, download_url
 def pick_index():
     """抽奖网页入口"""
     return render_template(current_template)
+
+
+@app.route('/style.css')
+@app.route('/pick/style.css')
+def style_css():
+    """提供公共样式文件"""
+    css_path = os.path.join(os.path.dirname(__file__), '..', 'web', 'pick', 'style.css')
+    return send_file(css_path, mimetype='text/css')
 
 
 @app.route('/api/items')
@@ -337,7 +345,7 @@ def generate_redeem_codes(count: int, length: int = 4) -> Iterable[str]:
 def start_web_server(
     port: int,
     no_browser: bool,
-    template: str = 'pick.html',
+    template: str = 'pick/index.html',
     files_root: Optional[str] = None,
     codes: Optional[Iterable[str]] = None,
     admin_password: Optional[str] = None,
@@ -382,7 +390,7 @@ def delayed_newline_simple():
 
 @app.route('/admin')
 def admin_page():
-    return render_template('admin.html')
+    return render_template('pick/admin.html')
 
 
 @app.route('/api/admin/login', methods=['POST'])
@@ -498,12 +506,12 @@ def pick(ctx, add, remove, clear, show_list, web, port, no_browser, files, gen_c
         delay_thread = threading.Thread(target=delayed_newline_simple, daemon=True)
         delay_thread.start()
 
-        start_web_server(port, no_browser, template='pick_files.html', files_root=files, codes=codes, admin_password=password)
+        start_web_server(port, no_browser, template='pick/pick_files.html', files_root=files, codes=codes, admin_password=password)
         return
 
     # Web 抽奖模式
     if web:
-        start_web_server(port, no_browser, template='pick.html')
+        start_web_server(port, no_browser, template='pick/index.html')
         return
     
     # 执行抽奖
