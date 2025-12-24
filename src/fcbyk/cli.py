@@ -7,7 +7,7 @@ import sys
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
-from .commands import lansend, ls, ai, pick, jiahao,popup
+from .commands import lansend, ls, ai, pick, jiahao, popup, slide
 
 def print_version(ctx, param, value):
     if not value or ctx.resilient_parsing:
@@ -37,7 +37,7 @@ def print_version(ctx, param, value):
 @click.pass_context
 def cli(ctx):
     if ctx.invoked_subcommand is None:
-        click.echo('''
+        click.echo(r'''
   ______ _____ ______     ___  __      _____ _      _____ 
  |  ____/ ____|  _ \ \   / / |/ /     / ____| |    |_   _|
  | |__ | |    | |_) \ \_/ /| ' /_____| |    | |      | |  
@@ -53,6 +53,7 @@ cli.add_command(ai)
 cli.add_command(pick)
 cli.add_command(jiahao)
 cli.add_command(popup)
+cli.add_command(slide)
 
 if __name__ == "__main__":
     cli()
