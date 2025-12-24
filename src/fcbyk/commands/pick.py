@@ -9,9 +9,12 @@ import socket
 import uuid
 from typing import Optional, Iterable, Dict, Set
 from flask import Flask, jsonify, render_template, request, send_file, url_for
+from datetime import datetime
+import threading, asyncio
 
 config_file = os.path.join(os.path.expanduser('~'), '.fcbyk', 'pick.json')
 SERVER_SESSION_ID = str(uuid.uuid4())
+ADMIN_PASSWORD = None
 
 default_config = {
     'items': []
@@ -155,6 +158,7 @@ def api_files_pick():
         ip_file_history.setdefault(client_ip, set()).add(selected['name'])
         used = sum(1 for v in redeem_codes.values() if v)
         download_url = url_for('download_file', filename=selected['name'], _external=True)
+        click.echo(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {client_ip} draw file: {selected['name']} successfully, redeem code: {code} used, remaining redeem codes: {len(redeem_codes)-used}")
         return jsonify({
             'file': {'name': selected['name'], 'size': selected['size']},
             'download_url': download_url,
@@ -293,7 +297,7 @@ def pick_item(items):
     click.echo("\nPick finished!")
 
 
-def generate_redeem_codes(count: int, length: int = 5) -> Iterable[str]:
+def generate_redeem_codes(count: int, length: int = 4) -> Iterable[str]:
     """生成若干个随机兑换码（字母数字混合，大写）"""
     charset = string.ascii_uppercase + string.digits
     codes = set()
@@ -310,10 +314,12 @@ def start_web_server(
     template: str = 'pick.html',
     files_root: Optional[str] = None,
     codes: Optional[Iterable[str]] = None,
+    admin_password: Optional[str] = None,
 ) -> None:
     """启动抽奖 Web 服务器"""
-    global current_template, files_mode_root, ip_draw_records, redeem_codes, ip_file_history
+    global current_template, files_mode_root, ip_draw_records, redeem_codes, ip_file_history, ADMIN_PASSWORD
     current_template = template
+    ADMIN_PASSWORD = admin_password
     files_mode_root = os.path.abspath(files_root) if files_root else None
     ip_draw_records = {}
     redeem_codes = {}
@@ -341,6 +347,52 @@ def start_web_server(
     # 监听 0.0.0.0 便于局域网访问
     app.run(host='0.0.0.0', port=port)
 
+def delayed_newline_simple():
+    """延迟打印空行"""
+    time.sleep(2)
+    click.echo()
+
+
+@app.route('/admin')
+def admin_page():
+    return render_template('admin.html')
+
+
+@app.route('/api/admin/login', methods=['POST'])
+def admin_login():
+    if not ADMIN_PASSWORD:
+        return jsonify({'error': 'admin password not set'}), 500
+
+    data = request.get_json(silent=True) or {}
+    password = str(data.get('password', ''))
+
+    if password != ADMIN_PASSWORD:
+        return jsonify({'error': 'invalid password'}), 401
+
+    return jsonify({'success': True})
+
+
+@app.route('/api/admin/codes', methods=['GET'])
+def admin_codes():
+    if not ADMIN_PASSWORD:
+        return jsonify({'error': 'admin password not set'}), 500
+
+    password = request.headers.get('X-Admin-Password', '')
+    if password != ADMIN_PASSWORD:
+        return jsonify({'error': 'unauthorized'}), 401
+
+    codes_list = [{'code': code, 'used': used} for code, used in redeem_codes.items()]
+    total = len(codes_list)
+    used = sum(1 for c in codes_list if c['used'])
+    left = total - used
+
+    return jsonify({
+        'codes': codes_list,
+        'total_codes': total,   # 总数
+        'used_codes': used,     # 已用
+        'left_codes': left      # 剩余
+    })
+
 
 @click.command(name='pick', help='Randomly pick one item from the list')
 @click.option('--config', '-c', is_flag=True, expose_value=False, callback=show_config, help='Show configuration')
@@ -351,11 +403,13 @@ def start_web_server(
 @click.option('--web', '-w', is_flag=True, help='Start web picker server')
 @click.option('--port', '-p', default=80, show_default=True, type=int, help='Port for web mode')
 @click.option('--no-browser', is_flag=True, help='Do not auto-open browser in web mode')
-@click.option('--files', type=click.Path(exists=True, dir_okay=True, file_okay=True, readable=True, resolve_path=True), help='Start web file picker with given file or directory')
-@click.option('--gen-codes', type=int, default=0, show_default=True, help='Generate redeem codes for web file picker (only with --files)')
+@click.option('--files','-f', type=click.Path(exists=True, dir_okay=True, file_okay=True, readable=True, resolve_path=True), help='Start web file picker with given file')
+@click.option('--gen-codes','-gc', type=int, default=5, show_default=True, help='Generate redeem codes for web file picker (only with --files)')
+@click.option('--show-codes','-sc', is_flag=True, help='Show the redeem codes in console (only with --files)')
+@click.option('--password', '-pw', default=None, help='Admin password for /admin page')
 @click.argument('items', nargs=-1)
 @click.pass_context
-def pick(ctx, add, remove, clear, show_list, web, port, no_browser, files, gen_codes, items):
+def pick(ctx, add, remove, clear, show_list, web, port, no_browser, files, gen_codes, show_codes, password, items):
     config = load_config()
     
     # 显示配置
@@ -407,10 +461,17 @@ def pick(ctx, add, remove, clear, show_list, web, port, no_browser, files, gen_c
         codes = None
         if gen_codes and gen_codes > 0:
             codes = list(generate_redeem_codes(gen_codes))
-            click.echo("Generated redeem codes (each can be used once):")
-            for c in codes:
-                click.echo(f"  {c}")
-        start_web_server(port, no_browser, template='pick_files.html', files_root=files, codes=codes)
+            if show_codes:
+                click.echo()
+                click.echo("Generated redeem codes (each can be used once):")
+                for c in codes:
+                    click.echo(f"  {c}")
+
+        # 在启动Web服务器前，先启动延迟任务线程
+        delay_thread = threading.Thread(target=delayed_newline_simple, daemon=True)
+        delay_thread.start()
+
+        start_web_server(port, no_browser, template='pick_files.html', files_root=files, codes=codes, admin_password=password)
         return
 
     # Web 抽奖模式
