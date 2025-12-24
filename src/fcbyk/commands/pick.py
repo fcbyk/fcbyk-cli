@@ -34,6 +34,7 @@ files_mode_root = None  # 指定目录或单文件路径
 ip_draw_records = {}                         # {ip: filename}
 redeem_codes: Dict[str, bool] = {}           # {code: used_flag}
 ip_file_history: Dict[str, Set[str]] = {}    # {ip: {filename, ...}}
+code_results: Dict[str, Dict] = {}           # {code: {file: {...}, download_url: str, timestamp: str}} 保存兑换码的抽奖结果
 
 
 @app.route('/')
@@ -158,7 +159,14 @@ def api_files_pick():
         ip_file_history.setdefault(client_ip, set()).add(selected['name'])
         used = sum(1 for v in redeem_codes.values() if v)
         download_url = url_for('download_file', filename=selected['name'], _external=True)
-        click.echo(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {client_ip} draw file: {selected['name']} successfully, redeem code: {code} used, remaining redeem codes: {len(redeem_codes)-used}")
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        # 保存兑换码的抽奖结果，用于页面刷新后恢复
+        code_results[code] = {
+            'file': {'name': selected['name'], 'size': selected['size']},
+            'download_url': download_url,
+            'timestamp': timestamp,
+        }
+        click.echo(f"[{timestamp}] {client_ip} draw file: {selected['name']} successfully, redeem code: {code} used, remaining redeem codes: {len(redeem_codes)-used}")
         return jsonify({
             'file': {'name': selected['name'], 'size': selected['size']},
             'download_url': download_url,
@@ -166,6 +174,7 @@ def api_files_pick():
             'draw_count': used,
             'total_codes': len(redeem_codes),
             'used_codes': used,
+            'code': code,  # 返回兑换码，方便前端保存
         })
 
     # 兼容旧逻辑：IP 限制
@@ -187,6 +196,23 @@ def api_files_pick():
         'mode': 'ip',
         'draw_count': len(ip_draw_records),
         'ip_picked': selected['name']
+    })
+
+
+@app.route('/api/files/result/<code>', methods=['GET'])
+def api_files_result(code):
+    """查询兑换码的抽奖结果（用于页面刷新后恢复）"""
+    if not files_mode_root:
+        return jsonify({'error': 'files mode not enabled'}), 400
+    code = str(code).strip().upper()
+    if code not in code_results:
+        return jsonify({'error': '兑换码未使用或结果不存在'}), 404
+    result = code_results[code]
+    return jsonify({
+        'code': code,
+        'file': result['file'],
+        'download_url': result['download_url'],
+        'timestamp': result['timestamp'],
     })
 
 
@@ -317,13 +343,14 @@ def start_web_server(
     admin_password: Optional[str] = None,
 ) -> None:
     """启动抽奖 Web 服务器"""
-    global current_template, files_mode_root, ip_draw_records, redeem_codes, ip_file_history, ADMIN_PASSWORD
+    global current_template, files_mode_root, ip_draw_records, redeem_codes, ip_file_history, ADMIN_PASSWORD, code_results
     current_template = template
     ADMIN_PASSWORD = admin_password
     files_mode_root = os.path.abspath(files_root) if files_root else None
     ip_draw_records = {}
     redeem_codes = {}
     ip_file_history = {}
+    code_results = {}
     if codes:
         # 初始化兑换码使用状态
         redeem_codes = {str(c).strip().upper(): False for c in codes if str(c).strip()}
