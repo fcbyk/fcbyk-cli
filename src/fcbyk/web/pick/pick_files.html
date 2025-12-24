@@ -203,6 +203,11 @@
         <input id="code-input" type="text" placeholder="输入 4 位抽奖码" maxlength="10" />
         <button id="start-btn" class="primary">使用抽奖码抽文件</button>
       </div>
+      <div class="speed-control">
+        <label for="speed-slider">抽奖速度：</label>
+        <input type="range" id="speed-slider" min="1" max="8" value="3" step="0.5">
+        <span class="speed-value" id="speed-value">3秒</span>
+      </div>
       <button id="refresh-btn" class="secondary">刷新列表</button>
     </div>
 
@@ -240,6 +245,7 @@
     let files = [];
     let animationTimer = null;
     let history = [];
+    let drawSpeed = 3; // 抽奖速度（秒），默认3秒
 
     const HISTORY_KEY = 'file_pick_history';
     const SESSION_KEY = 'file_pick_session';
@@ -261,6 +267,8 @@
     const limitHintEl = document.getElementById('limit-hint');
     const codeInput = document.getElementById('code-input');
     const historyListEl = document.getElementById('history-list');
+    const speedSlider = document.getElementById('speed-slider');
+    const speedValue = document.getElementById('speed-value');
 
     const sleep = (ms) => new Promise(res => animationTimer = setTimeout(res, ms));
 
@@ -421,27 +429,48 @@
     async function spinToTarget(targetIndex) {
       const cards = Array.from(document.querySelectorAll('.item'));
       if (!cards.length) return;
+      
+      // 根据速度计算延迟因子（速度越快，因子越小）
+      // 默认3秒对应的因子为1，1秒对应约0.15，8秒对应约2.5
+      const speedFactor = drawSpeed / 3;
+      
+      const len = cards.length;
+      
+      // 根据元素数量动态计算步数
+      // 快速阶段：至少轮完2.5-4圈，加上随机0-60%的额外步数
+      const fastMinCircles = 2.5;
+      const fastMaxCircles = 4.0;
+      const fastBaseSteps = Math.floor(len * (fastMinCircles + Math.random() * (fastMaxCircles - fastMinCircles)));
+      const fastExtraSteps = Math.floor(fastBaseSteps * Math.random() * 0.6);
+      const fastSteps = fastBaseSteps + fastExtraSteps;
+      
+      // 过渡阶段：轮完0.6-1.2圈，加上随机0-40%的额外步数
+      const transitionMinCircles = 0.6;
+      const transitionMaxCircles = 1.2;
+      const transitionBaseSteps = Math.floor(len * (transitionMinCircles + Math.random() * (transitionMaxCircles - transitionMinCircles)));
+      const transitionExtraSteps = Math.floor(transitionBaseSteps * Math.random() * 0.4);
+      const transitionSteps = transitionBaseSteps + transitionExtraSteps;
+      
       let current = -1;
       const stages = [
-        { steps: Math.floor(Math.random() * 40) + 50, delay: 50 },
-        { steps: Math.floor(Math.random() * 20) + 25, delay: 120 }
+        { steps: fastSteps, delay: 50 },
+        { steps: transitionSteps, delay: 120 }
       ];
       for (const stage of stages) {
         for (let i = 0; i < stage.steps; i++) {
           current = (current + 1) % cards.length;
           cards.forEach(el => el.classList.remove('active'));
           cards[current].classList.add('active');
-          await sleep(stage.delay);
+          await sleep(stage.delay * speedFactor);
         }
       }
-      const len = cards.length;
       const distance = ((targetIndex - current) % len + len) % len;
       const totalSteps = distance + len * 2;
       for (let step = 0; step < totalSteps; step++) {
         current = (current + 1) % len;
         cards.forEach(el => el.classList.remove('active'));
         cards[current].classList.add('active');
-        const delay = 160 + (320 * (step / Math.max(1, totalSteps - 1)));
+        const delay = (160 + (320 * (step / Math.max(1, totalSteps - 1)))) * speedFactor;
         await sleep(delay);
       }
       return current;
@@ -533,12 +562,16 @@
 
     startBtn.addEventListener('click', startDraw);
     refreshBtn.addEventListener('click', loadFiles);
+    speedSlider.addEventListener('input', (e) => {
+      drawSpeed = parseFloat(e.target.value);
+      speedValue.textContent = `${drawSpeed}秒`;
+    });
+    // 初始化速度显示
+    speedValue.textContent = `${drawSpeed}秒`;
     loadFiles();
 
     window.addEventListener('pageshow', (event) => {
-      if (event.persisted) {
         loadFiles();
-      }
     });
   </script>
 </body>

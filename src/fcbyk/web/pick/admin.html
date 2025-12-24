@@ -136,6 +136,44 @@
             white-space: nowrap;
         }
 
+        /* ===== 新增兑换码 ===== */
+        .add-code-section {
+            margin-bottom: 16px;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+        }
+
+        .add-code-form {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .add-code-form input {
+            flex: 1;
+            margin: 0;
+        }
+
+        .add-code-form button {
+            white-space: nowrap;
+        }
+
+        .add-code-msg {
+            margin-top: 8px;
+            font-size: 13px;
+            min-height: 18px;
+        }
+
+        .add-code-msg.success {
+            color: var(--success);
+        }
+
+        .add-code-msg.error {
+            color: var(--danger);
+        }
+
         /* ===== 响应式 ===== */
         @media (max-width: 640px) {
             .row {
@@ -193,6 +231,15 @@
                     <div class="label">剩余</div>
                     <div class="value left" id="stat-left">0</div>
                 </div>
+            </div>
+
+            <!-- 新增兑换码 -->
+            <div class="add-code-section">
+                <div class="add-code-form">
+                    <input id="new-code-input" type="text" placeholder="请输入兑换码" maxlength="20" />
+                    <button class="primary" onclick="addCode()">新增</button>
+                </div>
+                <div id="add-code-msg" class="add-code-msg"></div>
             </div>
 
             <!-- 列表 -->
@@ -277,7 +324,18 @@
 
         function reveal(btn) {
             const span = btn.closest('.row').querySelector('.hidden');
-            span.textContent = span.dataset.code;
+            const code = span.dataset.code;
+            const isRevealed = span.textContent === code;
+            
+            if (isRevealed) {
+                // 当前已显示，切换为隐藏
+                span.textContent = mask(code);
+                btn.textContent = '查看';
+            } else {
+                // 当前已隐藏，切换为显示
+                span.textContent = code;
+                btn.textContent = '隐藏';
+            }
         }
 
         function copy(code, btn) {
@@ -301,6 +359,66 @@
             btn.textContent = '已复制';
             setTimeout(() => btn.textContent = old, 800);
         }
+
+        function addCode() {
+            const input = document.getElementById('new-code-input');
+            const msg = document.getElementById('add-code-msg');
+            const code = input.value.trim().toUpperCase();
+            
+            if (!code) {
+                msg.textContent = '请输入兑换码';
+                msg.className = 'add-code-msg error';
+                return;
+            }
+
+            // 验证格式：只允许字母和数字
+            if (!/^[A-Z0-9]+$/.test(code)) {
+                msg.textContent = '兑换码只能包含字母和数字';
+                msg.className = 'add-code-msg error';
+                return;
+            }
+
+            fetch('/api/admin/codes/add', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Admin-Password': adminPw
+                },
+                body: JSON.stringify({ code: code })
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.error) {
+                        msg.textContent = data.error;
+                        msg.className = 'add-code-msg error';
+                    } else {
+                        msg.textContent = `成功新增兑换码: ${code}`;
+                        msg.className = 'add-code-msg success';
+                        input.value = '';
+                        loadCodes(); // 重新加载列表
+                        setTimeout(() => {
+                            msg.textContent = '';
+                            msg.className = 'add-code-msg';
+                        }, 2000);
+                    }
+                })
+                .catch(e => {
+                    msg.textContent = '添加失败: ' + e.message;
+                    msg.className = 'add-code-msg error';
+                });
+        }
+
+        // 支持回车键提交
+        document.addEventListener('DOMContentLoaded', () => {
+            const input = document.getElementById('new-code-input');
+            if (input) {
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        addCode();
+                    }
+                });
+            }
+        });
 
         /* 自动恢复登录 */
         if (sessionStorage.getItem(KEY_AUTH) === '1') {

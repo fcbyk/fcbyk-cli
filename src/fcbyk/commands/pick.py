@@ -370,6 +370,7 @@ def start_web_server(
     click.echo()
     click.echo(f" * Local URL: {url_local}")
     click.echo(f" * Network URL: {url_network}")
+    click.echo(f" * Admin URL: {url_network}/admin")
     if files_mode_root:
         click.echo(f" * Files root: {files_mode_root}")
     if not no_browser:
@@ -429,6 +430,41 @@ def admin_codes():
     })
 
 
+@app.route('/api/admin/codes/add', methods=['POST'])
+def admin_codes_add():
+    """新增兑换码"""
+    if not ADMIN_PASSWORD:
+        return jsonify({'error': 'admin password not set'}), 500
+
+    password = request.headers.get('X-Admin-Password', '')
+    if password != ADMIN_PASSWORD:
+        return jsonify({'error': 'unauthorized'}), 401
+
+    data = request.get_json(silent=True) or {}
+    code = str(data.get('code', '')).strip().upper()
+
+    if not code:
+        return jsonify({'error': '兑换码不能为空'}), 400
+
+    # 验证格式：只允许字母和数字
+    if not all(c.isalnum() for c in code):
+        return jsonify({'error': '兑换码只能包含字母和数字'}), 400
+
+    # 检查是否已存在
+    if code in redeem_codes:
+        return jsonify({'error': '兑换码已存在'}), 400
+
+    # 添加新兑换码
+    redeem_codes[code] = False
+    click.echo(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Admin added new redeem code: {code}")
+    
+    return jsonify({
+        'success': True,
+        'code': code,
+        'message': f'成功新增兑换码: {code}'
+    })
+
+
 @click.command(name='pick', help='Randomly pick one item from the list')
 @click.option('--config', '-c', is_flag=True, expose_value=False, callback=show_config, help='Show configuration')
 @click.option('--add', '-a', multiple=True, help='Add item to list (can be used multiple times)')
@@ -441,7 +477,7 @@ def admin_codes():
 @click.option('--files','-f', type=click.Path(exists=True, dir_okay=True, file_okay=True, readable=True, resolve_path=True), help='Start web file picker with given file')
 @click.option('--gen-codes','-gc', type=int, default=5, show_default=True, help='Generate redeem codes for web file picker (only with --files)')
 @click.option('--show-codes','-sc', is_flag=True, help='Show the redeem codes in console (only with --files)')
-@click.option('--password', '-pw', default=None, help='Admin password for /admin page')
+@click.option('--password', '-pw',default=None,help='Admin password for /admin page')
 @click.argument('items', nargs=-1)
 @click.pass_context
 def pick(ctx, add, remove, clear, show_list, web, port, no_browser, files, gen_codes, show_codes, password, items):

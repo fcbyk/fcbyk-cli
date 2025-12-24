@@ -77,3 +77,70 @@ button:not(:disabled):active {
   box-shadow: none;
 }
 
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.speed-control label {
+  color: var(--text);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.speed-control input[type="range"] {
+  flex: 1;
+  min-width: 120px;
+  height: 6px;
+  appearance: none;
+  background: rgba(255,255,255,0.1);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+
+.speed-control input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--primary);
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(34,211,238,0.4);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.speed-control input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 3px 8px rgba(34,211,238,0.6);
+}
+
+.speed-control input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--primary);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 6px rgba(34,211,238,0.4);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.speed-control input[type="range"]::-moz-range-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 3px 8px rgba(34,211,238,0.6);
+}
+
+.speed-value {
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 14px;
+  min-width: 45px;
+  text-align: right;
+}
+
