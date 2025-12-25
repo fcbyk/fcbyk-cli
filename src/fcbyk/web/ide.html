@@ -1,0 +1,1563 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='1em' font-size='80'>💻</text></svg>" type="image/svg+xml">
+    <title>代码浏览</title>
+    <!-- Prism.js 语法高亮 -->
+    <link href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script>
+        // 配置 Prism autoloader
+        window.Prism = window.Prism || {};
+        Prism.plugins.autoloader.languages_path = 'https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/';
+    </script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            background-color: #0d1117;
+            color: #d4d4d4;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            gap: 12px;
+        }
+        .sidebar {
+            width: 300px;
+            min-width: 150px;
+            max-width: 50%;
+            background-color: #252526;
+            border-radius: 12px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            flex-shrink: 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease;
+        }
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 998;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .sidebar-overlay.active {
+            display: block;
+            opacity: 1;
+        }
+        .resizer {
+            width: 4px;
+            background-color: transparent;
+            cursor: col-resize;
+            flex-shrink: 0;
+            position: relative;
+            user-select: none;
+            transition: background-color 0.2s;
+        }
+        .resizer:hover {
+            background-color: #0e639c;
+        }
+        .resizer.dragging {
+            background-color: #0e639c;
+        }
+        .code-viewer {
+            flex: 1;
+            min-width: 200px;
+            display: flex;
+            flex-direction: column;
+            background-color: #1e1e1e;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+        .code-header {
+            background-color: #2d2d30;
+            padding: 10px 20px;
+            border-bottom: 1px solid #3e3e42;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+            border-radius: 12px 12px 0 0;
+        }
+        .menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: #cccccc;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 5px 10px;
+            margin-right: 10px;
+            transition: color 0.2s;
+        }
+        .menu-btn:hover {
+            color: #ffffff;
+        }
+        .code-title {
+            color: #cccccc;
+            font-size: 14px;
+            font-weight: normal;
+            display: flex;
+            align-items: center;
+            flex: 1;
+            min-width: 0;
+            gap: 8px;
+        }
+        .code-title-text {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+            min-width: 0;
+        }
+        .close-btn {
+            display: none;
+            background-color: #c53030;
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+            font-family: inherit;
+            transition: background-color 0.2s;
+            min-width: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .close-btn:hover {
+            background-color: #e53e3e;
+        }
+        .close-btn:active {
+            background-color: #9b2c2c;
+        }
+        .copy-btn {
+            background-color: #0e639c;
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+            font-family: inherit;
+            transition: background-color 0.2s;
+            min-width: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .copy-btn:hover {
+            background-color: #1177bb;
+        }
+        .copy-btn:active {
+            background-color: #0a4d73;
+        }
+        .copy-btn.copied {
+            background-color: #0e7c0e;
+        }
+        .font-size-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-right: 10px;
+        }
+        .font-size-btn {
+            background-color: #3e3e42;
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+            font-family: inherit;
+            transition: background-color 0.2s;
+            min-width: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .font-size-btn:hover {
+            background-color: #4e4e52;
+        }
+        .font-size-btn:active {
+            background-color: #2e2e32;
+        }
+        .font-size-btn:disabled {
+            background-color: #2a2a2a;
+            color: #666;
+            cursor: not-allowed;
+        }
+        .refresh-btn {
+            background-color: #0e639c;
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+            font-family: inherit;
+            transition: background-color 0.2s;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 32px;
+        }
+        .refresh-btn:hover {
+            background-color: #1177bb;
+        }
+        .refresh-btn:active {
+            background-color: #0a4d73;
+        }
+        .refresh-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+        .refresh-btn .refresh-icon {
+            display: inline-block;
+            transition: transform 0.2s;
+        }
+        .refresh-btn.refreshing .refresh-icon {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        /* 下拉菜单样式 */
+        .dropdown-menu {
+            position: relative;
+            display: none;
+        }
+        .dropdown-btn {
+            background-color: #0e639c;
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+            font-family: inherit;
+            transition: background-color 0.2s;
+            min-width: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+        }
+        .dropdown-btn:hover {
+            background-color: #1177bb;
+        }
+        .dropdown-btn:active {
+            background-color: #0a4d73;
+        }
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 100%;
+            margin-top: 4px;
+            background-color: #2d2d30;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            min-width: 150px;
+            z-index: 1000;
+            overflow: hidden;
+        }
+        .dropdown-content.show {
+            display: block;
+        }
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 16px;
+            color: #cccccc;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        .dropdown-item:hover {
+            background-color: #37373d;
+        }
+        .dropdown-item:active {
+            background-color: #3e3e42;
+        }
+        .dropdown-item.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .dropdown-item.disabled:hover {
+            background-color: transparent;
+        }
+        .dropdown-divider {
+            height: 1px;
+            background-color: #3e3e42;
+            margin: 4px 0;
+        }
+        body.light-theme .dropdown-content {
+            background-color: #f8f8f8;
+            border: 1px solid #c0c0c0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        body.light-theme .dropdown-item {
+            color: #333333;
+        }
+        body.light-theme .dropdown-item:hover {
+            background-color: #e8e8e8;
+        }
+        body.light-theme .dropdown-item:active {
+            background-color: #d0d0d0;
+        }
+        body.light-theme .dropdown-divider {
+            background-color: #c0c0c0;
+        }
+        body.light-theme .dropdown-btn {
+            background-color: #0e639c;
+        }
+        body.light-theme .dropdown-btn:hover {
+            background-color: #1177bb;
+        }
+        /* 主题切换滑块 */
+        .theme-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: 10px;
+        }
+        .theme-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+        .theme-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .theme-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #3e3e42;
+            transition: 0.3s;
+            border-radius: 24px;
+        }
+        .theme-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+        .theme-switch input:checked + .theme-slider {
+            background-color: #0e639c;
+        }
+        .theme-switch input:checked + .theme-slider:before {
+            transform: translateX(20px);
+        }
+        .theme-switch input:focus + .theme-slider {
+            box-shadow: 0 0 1px #0e639c;
+        }
+        .code-content {
+            flex: 1;
+            overflow: auto;
+            padding: 0;
+            position: relative;
+        }
+        .code-wrapper {
+            display: flex;
+            min-height: 100%;
+        }
+        .line-numbers {
+            background-color: #252526;
+            color: #858585;
+            padding: 20px 10px 20px 20px;
+            text-align: right;
+            user-select: none;
+            flex-shrink: 0;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            border-right: 1px solid #3e3e42;
+        }
+        .line-number {
+            display: block;
+            padding-right: 15px;
+            min-height: 1.6em;
+        }
+        .code-content pre {
+            margin: 0;
+            padding: 20px;
+            background: transparent;
+            border: none;
+            font-size: 14px;
+            line-height: 1.6;
+            flex: 1;
+            overflow: visible;
+        }
+        .code-content code {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        }
+        .empty-state {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #858585;
+            font-size: 14px;
+        }
+        /* 目录树样式 */
+        .file-tree {
+            padding: 12px 8px;
+        }
+        .tree-item {
+            padding: 0;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            flex-direction: column;
+            font-size: 13px;
+            transition: background-color 0.1s;
+            position: relative;
+            line-height: 22px;
+            min-height: 22px;
+        }
+        .tree-item-row {
+            display: flex;
+            align-items: center;
+            min-height: 22px;
+        }
+        .tree-item-row:hover {
+            background-color: #2a2d2e;
+        }
+        .tree-item.active > .tree-item-row {
+            background-color: #37373d;
+        }
+        .tree-item-wrapper {
+            display: flex;
+            align-items: center;
+            flex: 1;
+            min-width: 0;
+            padding: 0 4px 0 0;
+        }
+        .tree-item-indent {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+        }
+        .tree-item-expander {
+            width: 16px;
+            height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-right: 2px;
+            color: #858585;
+            font-size: 10px;
+        }
+        .tree-item[data-type="dir"] .tree-item-expander::before {
+            content: '>';
+            transition: transform 0.15s ease;
+            display: inline-block;
+        }
+        .tree-item[data-type="dir"].expanded > .tree-item-row > .tree-item-expander::before {
+            transform: rotate(90deg);
+        }
+        .tree-item[data-type="file"] .tree-item-expander {
+            width: 18px;
+        }
+        .tree-item[data-type="file"] .tree-item-expander::before {
+            content: '';
+        }
+        .tree-item-icon {
+            margin-right: 6px;
+            width: 16px;
+            text-align: center;
+            font-size: 14px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .tree-item-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: #cccccc;
+        }
+        .tree-item-children {
+            display: none;
+        }
+        .tree-item.expanded > .tree-item-children {
+            display: block;
+        }
+        /* 文件夹图标 */
+        .tree-item[data-type="dir"] .tree-item-icon::before {
+            content: '📁';
+            font-size: 14px;
+        }
+        .tree-item[data-type="dir"].expanded .tree-item-icon::before {
+            content: '📂';
+        }
+        /* 文件类型图标 - 确保权重足够，不会被文件夹样式覆盖 */
+        .tree-item[data-type="file"] .tree-item-icon::before {
+            content: '📄' !important;
+            font-size: 14px;
+        }
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e1e1e;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #424242;
+            border-radius: 5px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4e4e4e;
+        }
+        .sidebar::-webkit-scrollbar-track {
+            background: #252526;
+        }
+        /* 加载状态 */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #858585;
+            font-size: 14px;
+        }
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+        /* 浅色主题 */
+        body.light-theme {
+            background-color: #f5f5f5;
+            color: #333333;
+        }
+        body.light-theme .main-container {
+            gap: 12px;
+        }
+        body.light-theme .sidebar {
+            background-color: #ffffff;
+            border: 1px solid #c0c0c0;
+            box-shadow: none;
+        }
+        body.light-theme .code-viewer {
+            background-color: #ffffff;
+            border: 1px solid #c0c0c0;
+            box-shadow: none;
+        }
+        body.light-theme .code-header {
+            background-color: #f8f8f8;
+            border-bottom: 1px solid #c0c0c0;
+        }
+        body.light-theme .code-title {
+            color: #333333;
+        }
+        body.light-theme .code-title-text {
+            color: #333333;
+        }
+        body.light-theme .menu-btn {
+            color: #666666;
+        }
+        body.light-theme .menu-btn:hover {
+            color: #333333;
+        }
+        body.light-theme .code-content {
+            background-color: #ffffff;
+        }
+        body.light-theme .line-numbers {
+            background-color: #f8f8f8;
+            color: #666666;
+            border-right: 1px solid #c0c0c0;
+        }
+        body.light-theme .tree-item-row:hover {
+            background-color: #f0f0f0;
+        }
+        body.light-theme .tree-item.active > .tree-item-row {
+            background-color: #e8e8e8;
+        }
+        body.light-theme .tree-item-name {
+            color: #333333;
+        }
+        body.light-theme .empty-state {
+            color: #999999;
+        }
+        body.light-theme .loading {
+            color: #999999;
+        }
+        body.light-theme .copy-btn {
+            background-color: #0e639c;
+        }
+        body.light-theme .copy-btn:hover {
+            background-color: #1177bb;
+        }
+        body.light-theme .font-size-btn {
+            background-color: #e0e0e0;
+            color: #333333;
+        }
+        body.light-theme .font-size-btn:hover {
+            background-color: #d0d0d0;
+        }
+        body.light-theme .font-size-btn:disabled {
+            background-color: #f0f0f0;
+            color: #999999;
+        }
+        body.light-theme .refresh-btn {
+            background-color: #0e639c;
+        }
+        body.light-theme .refresh-btn:hover {
+            background-color: #1177bb;
+        }
+        body.light-theme .close-btn {
+            background-color: #c53030;
+        }
+        body.light-theme .close-btn:hover {
+            background-color: #e53e3e;
+        }
+        body.light-theme .resizer:hover {
+            background-color: #0e639c;
+        }
+        body.light-theme .sidebar-overlay {
+            background-color: rgba(0, 0, 0, 0.3);
+        }
+        body.light-theme ::-webkit-scrollbar-track {
+            background: #f5f5f5;
+        }
+        body.light-theme .sidebar::-webkit-scrollbar-track {
+            background: #ffffff;
+        }
+        body.light-theme .theme-slider {
+            background-color: #d0d0d0;
+        }
+        body.light-theme .theme-switch input:checked + .theme-slider {
+            background-color: #0e639c;
+        }
+        /* 浅色主题下的代码高亮样式 */
+        body.light-theme .code-content pre[class*="language-"],
+        body.light-theme .code-content code[class*="language-"] {
+            color: #24292e;
+            background: #ffffff;
+        }
+        body.light-theme .code-content pre {
+            background: #ffffff;
+        }
+        body.light-theme .code-content code {
+            color: #24292e;
+        }
+        body.light-theme .code-content .token.comment,
+        body.light-theme .code-content .token.prolog,
+        body.light-theme .code-content .token.doctype,
+        body.light-theme .code-content .token.cdata {
+            color: #6a737d;
+            font-style: italic;
+        }
+        body.light-theme .code-content .token.punctuation {
+            color: #24292e;
+        }
+        body.light-theme .code-content .token.property,
+        body.light-theme .code-content .token.tag,
+        body.light-theme .code-content .token.boolean,
+        body.light-theme .code-content .token.number,
+        body.light-theme .code-content .token.constant,
+        body.light-theme .code-content .token.symbol,
+        body.light-theme .code-content .token.deleted {
+            color: #d73a49;
+        }
+        body.light-theme .code-content .token.selector,
+        body.light-theme .code-content .token.attr-name,
+        body.light-theme .code-content .token.string,
+        body.light-theme .code-content .token.char,
+        body.light-theme .code-content .token.builtin,
+        body.light-theme .code-content .token.inserted {
+            color: #032f62;
+        }
+        body.light-theme .code-content .token.operator,
+        body.light-theme .code-content .token.entity,
+        body.light-theme .code-content .token.url,
+        body.light-theme .code-content .language-css .token.string,
+        body.light-theme .code-content .style .token.string {
+            color: #a626a4;
+        }
+        body.light-theme .code-content .token.atrule,
+        body.light-theme .code-content .token.attr-value,
+        body.light-theme .code-content .token.keyword {
+            color: #d73a49;
+        }
+        body.light-theme .code-content .token.function,
+        body.light-theme .code-content .token.class-name {
+            color: #6f42c1;
+        }
+        body.light-theme .code-content .token.regex,
+        body.light-theme .code-content .token.important,
+        body.light-theme .code-content .token.variable {
+            color: #e36209;
+        }
+        body.light-theme .code-content .token.important,
+        body.light-theme .code-content .token.bold {
+            font-weight: bold;
+        }
+        body.light-theme .code-content .token.italic {
+            font-style: italic;
+        }
+        body.light-theme .code-content .token.entity {
+            cursor: help;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            body {
+                padding: 0;
+            }
+            .main-container {
+                flex-direction: row;
+                gap: 0;
+                position: relative;
+            }
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                width: 280px;
+                max-width: 85%;
+                height: 100vh;
+                border-radius: 0;
+                z-index: 999;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+                box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
+            }
+            .sidebar.mobile-open {
+                transform: translateX(0);
+            }
+            .code-viewer {
+                width: 100%;
+                border-radius: 0;
+                box-shadow: none;
+            }
+            .code-header {
+                border-radius: 0;
+            }
+            .menu-btn {
+                display: block;
+            }
+            .resizer {
+                display: none;
+            }
+            /* 移动端：隐藏原始按钮，显示下拉菜单 */
+            .font-size-controls {
+                display: none !important;
+            }
+            .copy-btn {
+                display: none !important;
+            }
+            .dropdown-menu {
+                display: block;
+            }
+            /* 浅色主题在移动端的样式 */
+            body.light-theme .sidebar {
+                box-shadow: none;
+                border-right: 2px solid #c0c0c0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <div class="main-container">
+        <div class="sidebar" id="sidebar">
+            <div class="file-tree" id="fileTree">
+                <div class="loading">加载目录结构</div>
+            </div>
+        </div>
+        <div class="resizer" id="resizer"></div>
+        <div class="code-viewer">
+            <div class="code-header">
+                <div class="code-title">
+                    <button class="menu-btn" id="menuBtn">☰</button>
+                    <span class="code-title-text" id="codeTitle">选择一个文件查看代码</span>
+                </div>
+                <div style="display: flex; align-items: center;">
+                    <div class="font-size-controls" id="fontSizeControls" style="display: none;">
+                        <button class="close-btn" id="closeBtn" title="关闭文件">×</button>
+                        <button class="font-size-btn" id="fontSizeDecrease" title="减小字体">−</button>
+                        <button class="font-size-btn" id="fontSizeIncrease" title="增大字体">+</button>
+                    </div>
+                    <!-- 移动端下拉菜单 -->
+                    <div class="dropdown-menu" id="dropdownMenu">
+                        <button class="dropdown-btn" id="dropdownBtn" title="更多操作">⋮</button>
+                        <div class="dropdown-content" id="dropdownContent">
+                            <button class="dropdown-item" id="dropdownClose" title="关闭文件">关闭文件</button>
+                            <div class="dropdown-divider"></div>
+                            <button class="dropdown-item" id="dropdownCopy" title="复制代码">复制代码</button>
+                            <div class="dropdown-divider"></div>
+                            <button class="dropdown-item" id="dropdownFontDecrease" title="减小字体">减小字体</button>
+                            <button class="dropdown-item" id="dropdownFontIncrease" title="增大字体">增大字体</button>
+                        </div>
+                    </div>
+                    <button class="refresh-btn" id="refreshBtn" title="刷新内容"><span class="refresh-icon">⟳</span></button>
+                    <button class="copy-btn" id="copyBtn" style="display: none;">copy</button>
+                    <div class="theme-toggle">
+                        <label class="theme-switch">
+                            <input type="checkbox" id="themeToggle">
+                            <span class="theme-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="code-content" id="codeContent">
+                <div class="empty-state">请从左侧选择文件查看代码</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let fileTree = [];
+        let currentFile = null;
+        
+        // 字体大小控制
+        let currentFontSize = parseInt(localStorage.getItem('codeFontSize')) || 14;
+        const minFontSize = 10;
+        const maxFontSize = 24;
+        const fontSizeStep = 2;
+        
+        // 应用字体大小
+        function applyFontSize(size) {
+            // 限制字体大小范围
+            size = Math.max(minFontSize, Math.min(maxFontSize, size));
+            currentFontSize = size;
+            
+            // 应用到代码和行号
+            const codeContent = document.getElementById('codeContent');
+            const preElements = codeContent.querySelectorAll('pre');
+            const lineNumbersElements = codeContent.querySelectorAll('.line-numbers');
+            
+            preElements.forEach(el => {
+                el.style.fontSize = size + 'px';
+            });
+            
+            lineNumbersElements.forEach(el => {
+                el.style.fontSize = size + 'px';
+            });
+            
+            // 保存到localStorage
+            localStorage.setItem('codeFontSize', size.toString());
+            
+            // 更新按钮状态（桌面端）
+            const fontSizeDecrease = document.getElementById('fontSizeDecrease');
+            const fontSizeIncrease = document.getElementById('fontSizeIncrease');
+            if (fontSizeDecrease) {
+                fontSizeDecrease.disabled = (size <= minFontSize);
+            }
+            if (fontSizeIncrease) {
+                fontSizeIncrease.disabled = (size >= maxFontSize);
+            }
+            
+            // 更新下拉菜单中的字体按钮状态（移动端）
+            const dropdownFontDecrease = document.getElementById('dropdownFontDecrease');
+            const dropdownFontIncrease = document.getElementById('dropdownFontIncrease');
+            if (dropdownFontDecrease) {
+                dropdownFontDecrease.disabled = (size <= minFontSize);
+                dropdownFontDecrease.classList.toggle('disabled', size <= minFontSize);
+            }
+            if (dropdownFontIncrease) {
+                dropdownFontIncrease.disabled = (size >= maxFontSize);
+                dropdownFontIncrease.classList.toggle('disabled', size >= maxFontSize);
+            }
+        }
+
+        // 获取目录树
+        async function loadFileTree() {
+            try {
+                const response = await fetch('/api/tree');
+                const data = await response.json();
+                if (data.tree) {
+                    fileTree = data.tree;
+                    renderFileTree();
+                }
+            } catch (error) {
+                console.error('加载目录树失败:', error);
+                document.getElementById('fileTree').innerHTML = '<div style="padding: 20px; color: #e74c3c;">加载失败，请刷新页面重试</div>';
+            }
+        }
+
+        // 渲染目录树
+        function renderFileTree() {
+            const container = document.getElementById('fileTree');
+            container.innerHTML = '';
+            
+            function renderItem(item, level = 0, isLast = false, parentPath = []) {
+                const div = document.createElement('div');
+                div.className = 'tree-item';
+                div.setAttribute('data-type', item.is_dir ? 'dir' : 'file');
+                div.setAttribute('data-path', item.path);
+                
+                // 获取文件扩展名
+                if (!item.is_dir) {
+                    const ext = item.name.split('.').pop().toLowerCase();
+                    div.setAttribute('data-ext', ext);
+                }
+                
+                // 默认不展开，用户需要点击才能展开
+                
+                // 创建行容器（包含缩进、展开器、图标和名称）
+                const row = document.createElement('div');
+                row.className = 'tree-item-row';
+                
+                // 创建缩进（每级缩进16px）
+                const indentDiv = document.createElement('div');
+                indentDiv.className = 'tree-item-indent';
+                indentDiv.style.width = `${level * 16}px`;
+                indentDiv.style.minWidth = `${level * 16}px`;
+                
+                // 创建展开/折叠指示器（仅文件夹显示）
+                const expander = document.createElement('div');
+                expander.className = 'tree-item-expander';
+                
+                // 创建内容包装器
+                const wrapper = document.createElement('div');
+                wrapper.className = 'tree-item-wrapper';
+                wrapper.innerHTML = `
+                    <span class="tree-item-icon"></span>
+                    <span class="tree-item-name">${escapeHtml(item.name)}</span>
+                `;
+                
+                row.appendChild(indentDiv);
+                row.appendChild(expander);
+                row.appendChild(wrapper);
+                div.appendChild(row);
+                
+                // 处理子项
+                if (item.is_dir && item.children && item.children.length > 0) {
+                    const childrenDiv = document.createElement('div');
+                    childrenDiv.className = 'tree-item-children';
+                    item.children.forEach((child, index) => {
+                        const isLastChild = index === item.children.length - 1;
+                        childrenDiv.appendChild(renderItem(child, level + 1, isLastChild, [...parentPath, item.path]));
+                    });
+                    div.appendChild(childrenDiv);
+                }
+                
+                div.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (item.is_dir) {
+                        div.classList.toggle('expanded');
+                    } else {
+                        loadFile(item.path);
+                        // 更新活动状态
+                        document.querySelectorAll('.tree-item').forEach(el => {
+                            el.classList.remove('active');
+                        });
+                        div.classList.add('active');
+                    }
+                });
+                
+                return div;
+            }
+            
+            fileTree.forEach((item, index) => {
+                const isLast = index === fileTree.length - 1;
+                container.appendChild(renderItem(item, 0, isLast, []));
+            });
+        }
+
+        // 加载文件内容
+        async function loadFile(path) {
+            currentFile = path;
+            const codeContent = document.getElementById('codeContent');
+            const codeTitle = document.getElementById('codeTitle');
+            const copyBtn = document.getElementById('copyBtn');
+            const refreshBtn = document.getElementById('refreshBtn');
+            
+            // 更新刷新按钮提示
+            if (refreshBtn) {
+                refreshBtn.title = '刷新当前文件: ' + path.split('/').pop();
+            }
+            
+            codeContent.innerHTML = '<div class="loading">加载文件</div>';
+            copyBtn.style.display = 'none';
+            
+            try {
+                const response = await fetch('/' + encodeURIComponent(path));
+                if (!response.ok) {
+                    throw new Error('文件加载失败');
+                }
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    codeContent.innerHTML = `<div class="empty-state">${escapeHtml(data.error)}</div>`;
+                    document.getElementById('closeBtn').style.display = 'none';
+                    return;
+                }
+                
+                codeTitle.textContent = data.name || path;
+                copyBtn.style.display = 'block';
+                document.getElementById('fontSizeControls').style.display = 'flex';
+                document.getElementById('closeBtn').style.display = 'block';
+                updateDropdownMenuVisibility();
+                
+                // 获取文件扩展名以确定语言
+                const ext = path.split('.').pop().toLowerCase();
+                const language = getLanguageFromExt(ext);
+                
+                // 使用 Prism.js 高亮代码
+                let highlighted;
+                if (Prism.languages[language]) {
+                    highlighted = Prism.highlight(data.content, Prism.languages[language], language);
+                } else {
+                    // 如果语言未加载，尝试自动加载
+                    highlighted = Prism.highlight(data.content, Prism.languages.text || Prism.languages.plain, 'text');
+                }
+                
+                // 计算行数
+                const lines = data.content.split('\n');
+                const lineCount = lines.length;
+                
+                // 生成行号
+                let lineNumbersHtml = '';
+                for (let i = 1; i <= lineCount; i++) {
+                    lineNumbersHtml += `<span class="line-number">${i}</span>\n`;
+                }
+                
+                // 创建带行号的代码显示结构
+                codeContent.innerHTML = `
+                    <div class="code-wrapper">
+                        <div class="line-numbers">${lineNumbersHtml}</div>
+                        <pre><code class="language-${language}">${highlighted}</code></pre>
+                    </div>
+                `;
+                
+                // 触发 Prism 重新处理（用于自动加载语言）
+                if (typeof Prism !== 'undefined' && Prism.highlightElement) {
+                    const codeElement = codeContent.querySelector('code');
+                    if (codeElement) {
+                        Prism.highlightElement(codeElement);
+                    }
+                }
+                
+                // 应用保存的字体大小
+                setTimeout(() => {
+                    applyFontSize(currentFontSize);
+                }, 50);
+                
+                // 存储原始内容用于复制
+                codeContent.dataset.rawContent = data.content;
+                
+            } catch (error) {
+                console.error('加载文件失败:', error);
+                codeContent.innerHTML = '<div class="empty-state">加载失败，请重试</div>';
+                document.getElementById('closeBtn').style.display = 'none';
+            }
+        }
+
+        // 关闭当前文件
+        function closeFile() {
+            currentFile = null;
+            const codeContent = document.getElementById('codeContent');
+            const codeTitle = document.getElementById('codeTitle');
+            const copyBtn = document.getElementById('copyBtn');
+            const closeBtn = document.getElementById('closeBtn');
+            const fontSizeControls = document.getElementById('fontSizeControls');
+            const refreshBtn = document.getElementById('refreshBtn');
+            
+            // 恢复初始状态
+            codeContent.innerHTML = '<div class="empty-state">请从左侧选择文件查看代码</div>';
+            codeTitle.textContent = '选择一个文件查看代码';
+            copyBtn.style.display = 'none';
+            closeBtn.style.display = 'none';
+            fontSizeControls.style.display = 'none';
+            
+            // 更新刷新按钮提示
+            if (refreshBtn) {
+                refreshBtn.title = '刷新目录树';
+            }
+            
+            // 清除活动状态
+            document.querySelectorAll('.tree-item').forEach(el => {
+                el.classList.remove('active');
+            });
+            
+            // 更新下拉菜单显示状态
+            updateDropdownMenuVisibility();
+        }
+
+        // 根据文件扩展名获取语言
+        function getLanguageFromExt(ext) {
+            const langMap = {
+                'py': 'python',
+                'cpp': 'cpp',
+                'cxx': 'cpp',
+                'cc': 'cpp',
+                'c': 'c',
+                'h': 'c',
+                'hpp': 'cpp',
+                'java': 'java',
+                'js': 'javascript',
+                'ts': 'typescript',
+                'html': 'html',
+                'css': 'css',
+                'json': 'json',
+                'xml': 'xml',
+                'md': 'markdown',
+                'sh': 'bash',
+                'bat': 'batch',
+                'ps1': 'powershell',
+                'sql': 'sql',
+                'go': 'go',
+                'rs': 'rust',
+                'php': 'php',
+                'rb': 'ruby',
+                'swift': 'swift',
+                'kt': 'kotlin',
+                'scala': 'scala',
+                'r': 'r',
+                'm': 'objectivec',
+                'mm': 'objectivec',
+            };
+            return langMap[ext] || 'text';
+        }
+
+        // 复制代码到剪贴板的通用函数
+        async function copyToClipboard(text) {
+            // 优先使用 Clipboard API
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                try {
+                    await navigator.clipboard.writeText(text);
+                    return true;
+                } catch (error) {
+                    // 如果 Clipboard API 失败，使用降级方案
+                    return fallbackCopyToClipboard(text);
+                }
+            } else {
+                // 如果不支持 Clipboard API，直接使用降级方案
+                return fallbackCopyToClipboard(text);
+            }
+        }
+        
+        // 降级复制方案
+        function fallbackCopyToClipboard(text) {
+            try {
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                textarea.style.left = '-9999px';
+                document.body.appendChild(textarea);
+                textarea.select();
+                const success = document.execCommand('copy');
+                document.body.removeChild(textarea);
+                return success;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        // 复制代码
+        document.getElementById('copyBtn').addEventListener('click', async () => {
+            const rawContent = document.getElementById('codeContent').dataset.rawContent;
+            if (!rawContent) return;
+            
+            const success = await copyToClipboard(rawContent);
+            const btn = document.getElementById('copyBtn');
+            const originalText = btn.textContent;
+            
+            if (success) {
+                btn.textContent = 'Copied!';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.classList.remove('copied');
+                }, 2000);
+            } else {
+                alert('复制失败，请手动选择复制');
+            }
+        });
+
+        // HTML转义
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 初始化侧边栏宽度调整功能
+        function initResizer() {
+            const resizer = document.getElementById('resizer');
+            const sidebar = document.getElementById('sidebar');
+            let isResizing = false;
+            let startX = 0;
+            let startWidth = 0;
+
+            // 从localStorage恢复宽度
+            const savedWidth = localStorage.getItem('sidebarWidth');
+            if (savedWidth) {
+                sidebar.style.width = savedWidth + 'px';
+            }
+
+            resizer.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                startX = e.clientX;
+                startWidth = sidebar.offsetWidth;
+                resizer.classList.add('dragging');
+                document.body.style.cursor = 'col-resize';
+                document.body.style.userSelect = 'none';
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+                
+                const diff = e.clientX - startX;
+                const newWidth = startWidth + diff;
+                const minWidth = 150;
+                const maxWidth = window.innerWidth * 0.5; // 最大不超过50%
+                
+                if (newWidth >= minWidth && newWidth <= maxWidth) {
+                    sidebar.style.width = newWidth + 'px';
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isResizing) {
+                    isResizing = false;
+                    resizer.classList.remove('dragging');
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                    // 保存宽度到localStorage
+                    localStorage.setItem('sidebarWidth', sidebar.offsetWidth);
+                }
+            });
+        }
+
+        // 初始化移动端侧边栏控制
+        function initMobileSidebar() {
+            const menuBtn = document.getElementById('menuBtn');
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            
+            // 打开侧边栏
+            function openSidebar() {
+                sidebar.classList.add('mobile-open');
+                overlay.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+            
+            // 关闭侧边栏
+            function closeSidebar() {
+                sidebar.classList.remove('mobile-open');
+                overlay.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+            
+            // 菜单按钮点击事件
+            if (menuBtn) {
+                menuBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openSidebar();
+                });
+            }
+            
+            // 覆盖层点击关闭
+            if (overlay) {
+                overlay.addEventListener('click', () => {
+                    closeSidebar();
+                });
+            }
+            
+            // 点击侧边栏内的文件时关闭侧边栏（移动端）
+            const fileTree = document.getElementById('fileTree');
+            if (fileTree) {
+                fileTree.addEventListener('click', (e) => {
+                    const treeItem = e.target.closest('.tree-item');
+                    if (treeItem && treeItem.getAttribute('data-type') === 'file') {
+                        // 延迟关闭，让文件加载动画先显示
+                        setTimeout(() => {
+                            if (window.innerWidth <= 768) {
+                                closeSidebar();
+                            }
+                        }, 100);
+                    }
+                });
+            }
+        }
+
+        // 初始化字体大小调整功能
+        function initFontSizeControl() {
+            const fontSizeDecrease = document.getElementById('fontSizeDecrease');
+            const fontSizeIncrease = document.getElementById('fontSizeIncrease');
+            
+            // 减小字体
+            if (fontSizeDecrease) {
+                fontSizeDecrease.addEventListener('click', () => {
+                    applyFontSize(currentFontSize - fontSizeStep);
+                });
+            }
+            
+            // 增大字体
+            if (fontSizeIncrease) {
+                fontSizeIncrease.addEventListener('click', () => {
+                    applyFontSize(currentFontSize + fontSizeStep);
+                });
+            }
+            
+            // 初始化字体大小
+            applyFontSize(currentFontSize);
+        }
+
+        // 初始化刷新功能
+        function initRefresh() {
+            const refreshBtn = document.getElementById('refreshBtn');
+            
+            if (!refreshBtn) return;
+            
+            refreshBtn.addEventListener('click', async () => {
+                // 防止重复点击
+                if (refreshBtn.classList.contains('refreshing')) {
+                    return;
+                }
+                
+                refreshBtn.classList.add('refreshing');
+                refreshBtn.disabled = true;
+                
+                try {
+                    if (currentFile) {
+                        // 如果有当前打开的文件，刷新当前文件
+                        await loadFile(currentFile);
+                    } else {
+                        // 如果没有打开文件，刷新目录树
+                        await loadFileTree();
+                    }
+                } catch (error) {
+                    console.error('刷新失败:', error);
+                } finally {
+                    // 延迟移除刷新状态，让用户看到动画
+                    setTimeout(() => {
+                        refreshBtn.classList.remove('refreshing');
+                        refreshBtn.disabled = false;
+                    }, 500);
+                }
+            });
+        }
+
+        // 初始化关闭文件功能
+        function initCloseFile() {
+            const closeBtn = document.getElementById('closeBtn');
+            const dropdownClose = document.getElementById('dropdownClose');
+            
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => {
+                    closeFile();
+                    closeDropdown();
+                });
+            }
+            
+            if (dropdownClose) {
+                dropdownClose.addEventListener('click', () => {
+                    closeFile();
+                    closeDropdown();
+                });
+            }
+        }
+
+        // 初始化下拉菜单功能
+        function initDropdownMenu() {
+            const dropdownBtn = document.getElementById('dropdownBtn');
+            const dropdownContent = document.getElementById('dropdownContent');
+            const dropdownCopy = document.getElementById('dropdownCopy');
+            const dropdownFontDecrease = document.getElementById('dropdownFontDecrease');
+            const dropdownFontIncrease = document.getElementById('dropdownFontIncrease');
+            
+            if (!dropdownBtn || !dropdownContent) return;
+            
+            // 切换下拉菜单显示
+            dropdownBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                dropdownContent.classList.toggle('show');
+            });
+            
+            // 点击外部关闭下拉菜单
+            document.addEventListener('click', (e) => {
+                if (!dropdownContent.contains(e.target) && e.target !== dropdownBtn) {
+                    closeDropdown();
+                }
+            });
+            
+            // 复制按钮
+            if (dropdownCopy) {
+                dropdownCopy.addEventListener('click', async () => {
+                    const rawContent = document.getElementById('codeContent').dataset.rawContent;
+                    if (!rawContent) return;
+                    
+                    const success = await copyToClipboard(rawContent);
+                    
+                    if (success) {
+                        dropdownCopy.textContent = '已复制!';
+                        setTimeout(() => {
+                            dropdownCopy.textContent = '复制代码';
+                        }, 2000);
+                    } else {
+                        alert('复制失败，请手动选择复制');
+                    }
+                    
+                    closeDropdown();
+                });
+            }
+            
+            // 字体大小控制
+            if (dropdownFontDecrease) {
+                dropdownFontDecrease.addEventListener('click', () => {
+                    applyFontSize(currentFontSize - fontSizeStep);
+                });
+            }
+            
+            if (dropdownFontIncrease) {
+                dropdownFontIncrease.addEventListener('click', () => {
+                    applyFontSize(currentFontSize + fontSizeStep);
+                });
+            }
+            
+            // 初始更新下拉菜单中字体按钮的状态
+            const dropdownFontDecreaseEl = document.getElementById('dropdownFontDecrease');
+            const dropdownFontIncreaseEl = document.getElementById('dropdownFontIncrease');
+            if (dropdownFontDecreaseEl) {
+                dropdownFontDecreaseEl.disabled = (currentFontSize <= minFontSize);
+                dropdownFontDecreaseEl.classList.toggle('disabled', currentFontSize <= minFontSize);
+            }
+            if (dropdownFontIncreaseEl) {
+                dropdownFontIncreaseEl.disabled = (currentFontSize >= maxFontSize);
+                dropdownFontIncreaseEl.classList.toggle('disabled', currentFontSize >= maxFontSize);
+            }
+        }
+        
+        // 关闭下拉菜单
+        function closeDropdown() {
+            const dropdownContent = document.getElementById('dropdownContent');
+            if (dropdownContent) {
+                dropdownContent.classList.remove('show');
+            }
+        }
+        
+        // 更新下拉菜单显示状态
+        function updateDropdownMenuVisibility() {
+            const dropdownMenu = document.getElementById('dropdownMenu');
+            const fontSizeControls = document.getElementById('fontSizeControls');
+            const copyBtn = document.getElementById('copyBtn');
+            
+            if (!dropdownMenu) return;
+            
+            // 如果有文件打开，显示下拉菜单（移动端）或原始按钮（桌面端）
+            if (currentFile) {
+                if (window.innerWidth <= 768) {
+                    // 移动端：显示下拉菜单
+                    dropdownMenu.style.display = 'block';
+                } else {
+                    // 桌面端：隐藏下拉菜单，显示原始按钮
+                    dropdownMenu.style.display = 'none';
+                }
+            } else {
+                // 没有文件打开时隐藏下拉菜单
+                dropdownMenu.style.display = 'none';
+            }
+        }
+
+        // 初始化主题切换功能
+        function initThemeToggle() {
+            const themeToggle = document.getElementById('themeToggle');
+            const body = document.body;
+            
+            if (!themeToggle) return;
+            
+            // 从localStorage读取保存的主题
+            const savedTheme = localStorage.getItem('theme');
+            const isLightTheme = savedTheme === 'light';
+            
+            // 设置初始主题
+            if (isLightTheme) {
+                body.classList.add('light-theme');
+                themeToggle.checked = true;
+            } else {
+                body.classList.remove('light-theme');
+                themeToggle.checked = false;
+            }
+            
+            // 监听主题切换
+            themeToggle.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    body.classList.add('light-theme');
+                    localStorage.setItem('theme', 'light');
+                } else {
+                    body.classList.remove('light-theme');
+                    localStorage.setItem('theme', 'dark');
+                }
+            });
+        }
+
+        // 初始化
+        initResizer();
+        initMobileSidebar();
+        initFontSizeControl();
+        initRefresh();
+        initCloseFile();
+        initThemeToggle();
+        initDropdownMenu();
+        
+        // 监听窗口大小变化，更新下拉菜单显示状态
+        window.addEventListener('resize', () => {
+            updateDropdownMenuVisibility();
+        });
+        
+        loadFileTree();
+    </script>
+</body>
+</html>
+

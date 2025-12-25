@@ -12,6 +12,16 @@ shared_directory = None
 display_name = "共享文件夹"  # 默认显示名称
 upload_password = None  # 上传密码
 first_upload_log = True  # 控制首次日志前空一行
+ide_mode = False  # IDE模式标志
+
+def init_app(directory=None, name=None, password=None, ide=False):
+    global shared_directory, display_name, upload_password, ide_mode
+    shared_directory = directory
+    if name:
+        display_name = name
+    if password:
+        upload_password = password
+    ide_mode = ide
 
 
 def _format_size(num_bytes):
@@ -40,13 +50,6 @@ def log_upload(ip, file_count, status, rel_path="", file_size=None):
     size_str = _format_size(file_size) if file_size is not None else "unknown size"
     print(f"[{ts}] {ip} upload {file_count} file(s), status: {status}, path: {path_str}, size: {size_str}", flush=True)
 
-def init_app(directory=None, name=None, password=None):
-    global shared_directory, display_name, upload_password
-    shared_directory = directory
-    if name:
-        display_name = name
-    if password:
-        upload_password = password
 
 def safe_filename(filename):
     return re.sub(r'[^\w\s\u4e00-\u9fff\-\.]', '', filename)
@@ -69,6 +72,8 @@ def get_path_parts(current_path):
 def index():
     if not shared_directory:
         return "Shared directory not specified. Use -d to set directory."
+    if ide_mode:
+        return serve_ide_view('')
     return serve_directory('')
 
 @app.route('/<path:filename>')
@@ -76,14 +81,28 @@ def serve_file(filename):
     if not shared_directory:
         abort(404, description="Shared directory not specified")
     
-    file_path = os.path.join(shared_directory, filename)
+    # 将URL路径中的 / 转换为系统路径分隔符
+    normalized_path = filename.replace('/', os.sep)
+    file_path = os.path.join(shared_directory, normalized_path)
+    
+    # 防止路径逃逸
+    file_path = os.path.abspath(file_path)
+    if not file_path.startswith(os.path.abspath(shared_directory)):
+        abort(404, description="Invalid path")
+    
     if not os.path.exists(file_path):
         abort(404, description="File not found")
     
     if os.path.isdir(file_path):
+        if ide_mode:
+            return serve_ide_view(filename)
         return serve_directory(filename)
     
-    return send_from_directory(shared_directory, filename)
+    if ide_mode:
+        # IDE模式下，返回文件内容用于预览
+        return get_file_content(filename)
+    
+    return send_from_directory(shared_directory, normalized_path)
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -180,6 +199,77 @@ def upload_file():
     
     return jsonify({'error': 'upload failed'}), 500
 
+def get_file_tree(base_path='', relative_path=''):
+    """递归获取目录树结构"""
+    current_path = os.path.join(base_path, relative_path) if relative_path else base_path
+    items = []
+    
+    if not os.path.exists(current_path) or not os.path.isdir(current_path):
+        return items
+    
+    for name in os.listdir(current_path):
+        full_path = os.path.join(current_path, name)
+        item_path = os.path.join(relative_path, name) if relative_path else name
+        
+        item = {
+            'name': name,
+            'path': item_path.replace('\\', '/'),  # 统一使用 / 作为路径分隔符
+            'is_dir': os.path.isdir(full_path)
+        }
+        
+        if item['is_dir']:
+            item['children'] = get_file_tree(base_path, item_path)
+        
+        items.append(item)
+    
+    items.sort(key=lambda x: (not x['is_dir'], x['name'].lower()))
+    return items
+
+def get_file_content(relative_path):
+    """获取文件内容（用于IDE模式）"""
+    # 将URL路径中的 / 转换为系统路径分隔符
+    normalized_path = relative_path.replace('/', os.sep)
+    file_path = os.path.join(shared_directory, normalized_path)
+    
+    # 防止路径逃逸
+    file_path = os.path.abspath(file_path)
+    if not file_path.startswith(os.path.abspath(shared_directory)):
+        abort(404, description="Invalid path")
+    
+    if not os.path.exists(file_path) or os.path.isdir(file_path):
+        abort(404, description="File not found")
+    
+    try:
+        # 尝试以文本方式读取
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        return jsonify({
+            'content': content,
+            'path': relative_path,
+            'name': os.path.basename(relative_path)
+        })
+    except UnicodeDecodeError:
+        # 二进制文件，返回错误
+        return jsonify({'error': 'Binary file cannot be displayed'}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/tree')
+def api_tree():
+    """API: 获取目录树"""
+    if not shared_directory:
+        return jsonify({'error': 'Shared directory not specified'}), 400
+    tree = get_file_tree(shared_directory)
+    return jsonify({'tree': tree})
+
+def serve_ide_view(relative_path):
+    """IDE模式视图"""
+    share_name = os.path.basename(shared_directory)
+    return render_template('ide.html',
+                         relative_path=relative_path,
+                         share_name=share_name,
+                         display_name=display_name)
+
 def serve_directory(relative_path):
     current_path = os.path.join(shared_directory, relative_path)
     items = []
@@ -205,9 +295,9 @@ def serve_directory(relative_path):
                          display_name=display_name,
                          require_password=bool(upload_password))  # 传递显示名称到模板
 
-def _lansend_impl(port, directory, name, password, no_browser):
+def _lansend_impl(port, directory, name, password, no_browser, ide=False):
     """lansend 命令的实际实现"""
-    global shared_directory, display_name, upload_password
+    global shared_directory, display_name, upload_password, ide_mode
     
     if not os.path.exists(directory):
         click.echo("Error: Directory {} does not exist".format(directory))
@@ -218,10 +308,11 @@ def _lansend_impl(port, directory, name, password, no_browser):
         return
     
     shared_directory = os.path.abspath(directory)
+    ide_mode = ide
     if name:
         display_name = name
     
-    if password:
+    if password and not ide:
         upload_password = click.prompt('Upload password (press Enter to use default: 123456)', hide_input=True, default='123456', show_default=False)
         upload_password = upload_password if upload_password else '123456'
     else:
@@ -230,7 +321,8 @@ def _lansend_impl(port, directory, name, password, no_browser):
     hostname = socket.gethostname()
     local_ip = socket.gethostbyname(hostname)
     
-    click.echo(f"\n * File Sharing Server")
+    mode_text = "IDE Code Viewer" if ide_mode else "File Sharing Server"
+    click.echo(f"\n * {mode_text}")
     click.echo(f" * Directory: {shared_directory}")
     click.echo(f" * Display Name: {display_name}")
     if upload_password:
@@ -276,8 +368,14 @@ def _lansend_impl(port, directory, name, password, no_browser):
     is_flag=True,
     help="Disable automatic browser opening"
 )
-def lansend(port, directory, name, password, no_browser):
-    _lansend_impl(port, directory, name, password, no_browser)
+@click.option(
+    "--ide",
+    is_flag=True,
+    default=False,
+    help="Enable IDE mode for code viewing (read-only code browser)"
+)
+def lansend(port, directory, name, password, no_browser, ide):
+    _lansend_impl(port, directory, name, password, no_browser, ide)
 
 @click.command(name='ls', help='alias for lansend')
 @click.option(
@@ -305,6 +403,12 @@ def lansend(port, directory, name, password, no_browser):
     is_flag=True,
     help="Disable automatic browser opening"
 )
-def ls(port, directory, name, password, no_browser):
+@click.option(
+    "--ide",
+    is_flag=True,
+    default=False,
+    help="Enable IDE mode for code viewing (read-only code browser)"
+)
+def ls(port, directory, name, password, no_browser, ide):
     """ls 是 lansend 的别名"""
-    _lansend_impl(port, directory, name, password, no_browser) 
+    _lansend_impl(port, directory, name, password, no_browser, ide) 
