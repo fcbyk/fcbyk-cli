@@ -116,11 +116,102 @@
         .touchpad-btn:active {
             background: rgba(255, 255, 255, 0.3);
         }
+        
+        /* 密码输入界面 */
+        .login-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .login-box {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .login-title {
+            font-size: 28px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .login-input {
+            width: 100%;
+            padding: 15px;
+            font-size: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+        }
+        
+        .login-input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .login-input:focus {
+            outline: none;
+            border-color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .login-btn {
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        
+        .login-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .login-btn:active {
+            background: rgba(255, 255, 255, 0.4);
+        }
+        
+        .error-message {
+            color: #ff6b6b;
+            text-align: center;
+            margin-top: 15px;
+            font-size: 14px;
+            min-height: 20px;
+        }
+        
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
+    <!-- 密码输入界面 -->
+    <div class="login-container" id="loginContainer">
+        <div class="login-box">
+            <div class="login-title">PPT 遥控器</div>
+            <input type="password" class="login-input" id="passwordInput" placeholder="请输入访问密码" autocomplete="off">
+            <button class="login-btn" id="loginBtn">登录</button>
+            <div class="error-message" id="errorMessage"></div>
+        </div>
+    </div>
+    
     <!-- 触摸板模式 -->
-    <div class="touchpad-mode" id="touchpadMode">
+    <div class="touchpad-mode hidden" id="touchpadMode">
         <div class="touchpad-wrapper">
             <div class="touchpad-area" id="touchpadArea">
                 <div class="touchpad-hint">
@@ -148,20 +239,93 @@
         window.addEventListener('resize', setViewportHeight);
         window.addEventListener('orientationchange', setViewportHeight);
         
-        // 初始化 WebSocket 连接
-        const socket = io();
+        // 认证相关
+        const loginContainer = document.getElementById('loginContainer');
+        const touchpadMode = document.getElementById('touchpadMode');
+        const passwordInput = document.getElementById('passwordInput');
+        const loginBtn = document.getElementById('loginBtn');
+        const errorMessage = document.getElementById('errorMessage');
+        
+        // 检查认证状态
+        async function checkAuth() {
+            try {
+                const response = await fetch('/api/check_auth');
+                const data = await response.json();
+                if (data.authenticated) {
+                    showTouchpad();
+                }
+            } catch (error) {
+                // 忽略错误，显示登录界面
+            }
+        }
+        
+        // 登录
+        async function login() {
+            const password = passwordInput.value.trim();
+            if (!password) {
+                errorMessage.textContent = '请输入密码';
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ password: password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    errorMessage.textContent = '';
+                    showTouchpad();
+                    initSocket();
+                } else {
+                    errorMessage.textContent = data.message || '登录失败';
+                }
+            } catch (error) {
+                errorMessage.textContent = '网络错误，请重试';
+            }
+        }
+        
+        // 显示触摸板界面
+        function showTouchpad() {
+            loginContainer.classList.add('hidden');
+            touchpadMode.classList.remove('hidden');
+        }
+        
+        // 登录按钮事件
+        loginBtn.addEventListener('click', login);
+        
+        // 回车键登录
+        passwordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                login();
+            }
+        });
+        
+        // 页面加载时检查认证状态
+        checkAuth();
+        
+        // 初始化 WebSocket 连接（在登录成功后）
+        let socket = null;
         let socketConnected = false;
         
-        socket.on('connect', () => {
-            socketConnected = true;
-        });
-        
-        socket.on('disconnect', () => {
-            socketConnected = false;
-        });
+        function initSocket() {
+            socket = io();
+            
+            socket.on('connect', () => {
+                socketConnected = true;
+            });
+            
+            socket.on('disconnect', () => {
+                socketConnected = false;
+            });
+        }
         
         // 触摸板功能
-        const touchpadMode = document.getElementById('touchpadMode');
         const touchpadArea = document.getElementById('touchpadArea');
         
         // PPT 控制按钮
@@ -323,7 +487,7 @@
         
         // API 调用函数 - 使用 WebSocket 提高流畅度
         function sendMouseMove(dx, dy) {
-            if (socketConnected) {
+            if (socket && socketConnected) {
                 // 使用 WebSocket，延迟更低，更流畅
                 socket.emit('mouse_move', { dx: Math.round(dx), dy: Math.round(dy) });
             } else {
@@ -337,7 +501,7 @@
         }
         
         function sendMouseClick() {
-            if (socketConnected) {
+            if (socket && socketConnected) {
                 socket.emit('mouse_click');
             } else {
                 fetch('/api/mouse/click', { method: 'POST' })
@@ -347,7 +511,7 @@
         }
         
         function sendMouseRightClick() {
-            if (socketConnected) {
+            if (socket && socketConnected) {
                 socket.emit('mouse_rightclick');
             } else {
                 fetch('/api/mouse/rightclick', { method: 'POST' })
@@ -357,7 +521,7 @@
         }
         
         function sendMouseScroll(dx, dy) {
-            if (socketConnected) {
+            if (socket && socketConnected) {
                 // 使用 WebSocket，延迟更低
                 socket.emit('mouse_scroll', { dx: dx, dy: dy });
             } else {

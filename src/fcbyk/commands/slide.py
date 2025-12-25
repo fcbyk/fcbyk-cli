@@ -2,8 +2,9 @@ import click
 import os
 import pyperclip
 import socket
-from flask import Flask, send_from_directory, jsonify, request
-from flask_socketio import SocketIO, emit
+from functools import wraps
+from flask import Flask, send_from_directory, jsonify, request, session
+from flask_socketio import SocketIO, emit, disconnect
 
 # 在 CI 环境中，如果没有 DISPLAY 环境变量，设置一个默认值以避免导入 pyautogui 时出错
 if 'DISPLAY' not in os.environ:
@@ -40,10 +41,24 @@ except Exception:
     pyautogui = MockPyAutoGUI()
 
 app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), '..', 'web'))
+# 设置 secret_key 用于 session
+app.secret_key = os.urandom(24)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+
+# 存储密码（在启动时设置）
+PASSWORD = None
 
 # 防止 pyautogui 的安全机制（如果鼠标移到屏幕角落会触发异常）
 pyautogui.FAILSAFE = False
+
+def require_auth(f):
+    """装饰器：要求认证"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('authenticated'):
+            return jsonify({'status': 'error', 'message': 'Unauthorized'}), 401
+        return f(*args, **kwargs)
+    return decorated_function
 
 @app.route('/')
 def index():
@@ -53,7 +68,29 @@ def index():
         'slide.html'
     )
 
+@app.route('/api/login', methods=['POST'])
+def login():
+    """登录验证"""
+    global PASSWORD
+    data = request.get_json()
+    password = data.get('password', '')
+    
+    if password == PASSWORD:
+        session['authenticated'] = True
+        return jsonify({'status': 'success', 'message': 'Login successful'})
+    else:
+        return jsonify({'status': 'error', 'message': 'Invalid password'}), 401
+
+@app.route('/api/check_auth', methods=['GET'])
+def check_auth():
+    """检查认证状态"""
+    if session.get('authenticated'):
+        return jsonify({'status': 'success', 'authenticated': True})
+    else:
+        return jsonify({'status': 'success', 'authenticated': False})
+
 @app.route('/api/next', methods=['POST'])
+@require_auth
 def next_slide():
     """下一页"""
     try:
@@ -63,6 +100,7 @@ def next_slide():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @app.route('/api/prev', methods=['POST'])
+@require_auth
 def prev_slide():
     """上一页"""
     try:
@@ -72,6 +110,7 @@ def prev_slide():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @app.route('/api/home', methods=['POST'])
+@require_auth
 def home_slide():
     """回到首页"""
     try:
@@ -81,6 +120,7 @@ def home_slide():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @app.route('/api/end', methods=['POST'])
+@require_auth
 def end_slide():
     """跳到最后"""
     try:
@@ -90,6 +130,7 @@ def end_slide():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @app.route('/api/mouse/move', methods=['POST'])
+@require_auth
 def mouse_move():
     """移动鼠标（HTTP接口，保留兼容性）"""
     try:
@@ -102,9 +143,18 @@ def mouse_move():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
+@socketio.on('connect')
+def handle_connect():
+    """WebSocket连接时验证认证"""
+    if not session.get('authenticated'):
+        disconnect()
+        return False
+
 @socketio.on('mouse_move')
 def handle_mouse_move(data):
     """WebSocket处理鼠标移动"""
+    if not session.get('authenticated'):
+        return
     try:
         dx = data.get('dx', 0)
         dy = data.get('dy', 0)
@@ -114,6 +164,7 @@ def handle_mouse_move(data):
         pass
 
 @app.route('/api/mouse/click', methods=['POST'])
+@require_auth
 def mouse_click():
     """鼠标左键点击（HTTP接口，保留兼容性）"""
     try:
@@ -125,12 +176,15 @@ def mouse_click():
 @socketio.on('mouse_click')
 def handle_mouse_click():
     """WebSocket处理鼠标左键点击"""
+    if not session.get('authenticated'):
+        return
     try:
         pyautogui.click()
     except Exception as e:
         pass
 
 @app.route('/api/mouse/rightclick', methods=['POST'])
+@require_auth
 def mouse_rightclick():
     """鼠标右键点击（HTTP接口，保留兼容性）"""
     try:
@@ -142,12 +196,15 @@ def mouse_rightclick():
 @socketio.on('mouse_rightclick')
 def handle_mouse_rightclick():
     """WebSocket处理鼠标右键点击"""
+    if not session.get('authenticated'):
+        return
     try:
         pyautogui.rightClick()
     except Exception as e:
         pass
 
 @app.route('/api/mouse/scroll', methods=['POST'])
+@require_auth
 def mouse_scroll():
     """鼠标滚动（HTTP接口，保留兼容性）"""
     try:
@@ -173,6 +230,8 @@ def mouse_scroll():
 @socketio.on('mouse_scroll')
 def handle_mouse_scroll(data):
     """WebSocket处理鼠标滚动"""
+    if not session.get('authenticated'):
+        return
     try:
         dx = data.get('dx', 0)
         dy = data.get('dy', 0)
@@ -194,6 +253,17 @@ def handle_mouse_scroll(data):
 
 def _slide_impl(port):
     """slide 命令的实际实现"""
+    global PASSWORD
+    
+    # 提示用户设置密码
+    while True:
+        password = click.prompt('Please set access password', hide_input=True, confirmation_prompt=True)
+        if password:
+            PASSWORD = password
+            break
+        else:
+            click.echo('Password cannot be empty, please try again')
+    
     hostname = socket.gethostname()
     local_ip = socket.gethostbyname(hostname)
     
