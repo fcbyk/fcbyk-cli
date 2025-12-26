@@ -3,9 +3,11 @@ import os
 import webbrowser
 import pyperclip
 import socket
-from flask import Flask, send_from_directory, abort, render_template, request, jsonify
+from flask import Flask, send_from_directory, abort, render_template, request, jsonify, send_file
 import re
 from datetime import datetime
+import urllib.request
+import urllib.error
 
 app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), '..', 'web'))
 shared_directory = None
@@ -13,6 +15,17 @@ display_name = "共享文件夹"  # 默认显示名称
 upload_password = None  # 上传密码
 first_upload_log = True  # 控制首次日志前空一行
 ide_mode = False  # IDE模式标志
+
+# 静态资源配置
+ASSETS_DIR = os.path.join(os.path.dirname(__file__), '..', 'web', 'assets')
+PRISM_VERSION = '1.29.0'
+STATIC_RESOURCES = {
+    'prism-tomorrow.min.css': f'https://cdn.jsdelivr.net/npm/prismjs@{PRISM_VERSION}/themes/prism-tomorrow.min.css',
+    'prism-core.min.js': f'https://cdn.jsdelivr.net/npm/prismjs@{PRISM_VERSION}/components/prism-core.min.js',
+    'prism-c.min.js': f'https://cdn.jsdelivr.net/npm/prismjs@{PRISM_VERSION}/components/prism-c.min.js',  # C++ 依赖 C
+    'prism-cpp.min.js': f'https://cdn.jsdelivr.net/npm/prismjs@{PRISM_VERSION}/components/prism-cpp.min.js',
+    'prism-python.min.js': f'https://cdn.jsdelivr.net/npm/prismjs@{PRISM_VERSION}/components/prism-python.min.js',
+}
 
 def init_app(directory=None, name=None, password=None, ide=False):
     global shared_directory, display_name, upload_password, ide_mode
@@ -22,6 +35,51 @@ def init_app(directory=None, name=None, password=None, ide=False):
     if password:
         upload_password = password
     ide_mode = ide
+
+def download_static_resource(filename, url):
+    """下载单个静态资源文件"""
+    try:
+        click.echo(f"  Downloading {filename}...", nl=False)
+        urllib.request.urlretrieve(url, os.path.join(ASSETS_DIR, filename))
+        click.echo(" ✓")
+        return True
+    except Exception as e:
+        click.echo(f" ✗ Failed: {e}")
+        return False
+
+def ensure_assets_dir():
+    """确保 assets 目录存在"""
+    if not os.path.exists(ASSETS_DIR):
+        os.makedirs(ASSETS_DIR)
+
+def check_and_download_assets():
+    """检查并下载所需的静态资源（首次运行时）"""
+    ensure_assets_dir()
+    
+    missing_files = []
+    for filename in STATIC_RESOURCES.keys():
+        file_path = os.path.join(ASSETS_DIR, filename)
+        if not os.path.exists(file_path):
+            missing_files.append(filename)
+    
+    if missing_files:
+        click.echo("\nFirst time running IDE mode, downloading static resources...")
+        click.echo("Please ensure network connection is available to download resources from CDN.\n")
+        
+        success_count = 0
+        for filename in missing_files:
+            url = STATIC_RESOURCES[filename]
+            if download_static_resource(filename, url):
+                success_count += 1
+        
+        if success_count == len(missing_files):
+            click.echo(f"\n✓ All static resources downloaded successfully ({success_count}/{len(missing_files)})")
+        else:
+            click.echo(f"\n⚠ Some static resources failed to download ({success_count}/{len(missing_files)})")
+            click.echo("Code highlighting may be limited, but text files can still be viewed normally.")
+    else:
+        # 所有文件都存在，无需下载
+        pass
 
 
 def _format_size(num_bytes):
@@ -262,6 +320,22 @@ def api_tree():
     tree = get_file_tree(shared_directory)
     return jsonify({'tree': tree})
 
+@app.route('/assets/<path:filename>')
+def serve_asset(filename):
+    """提供静态资源文件"""
+    # 安全检查：只允许访问预定义的文件
+    if filename not in STATIC_RESOURCES:
+        abort(404, description="Asset not found")
+    
+    file_path = os.path.join(ASSETS_DIR, filename)
+    if not os.path.exists(file_path):
+        abort(404, description="Asset file not found")
+    
+    try:
+        return send_file(file_path)
+    except Exception as e:
+        abort(500, description=f"Error serving asset: {str(e)}")
+
 def serve_ide_view(relative_path):
     """IDE模式视图"""
     share_name = os.path.basename(shared_directory)
@@ -309,6 +383,11 @@ def _lansend_impl(port, directory, name, password, no_browser, ide=False):
     
     shared_directory = os.path.abspath(directory)
     ide_mode = ide
+    
+    # IDE 模式：检查并下载静态资源
+    if ide_mode:
+        check_and_download_assets()
+    
     if name:
         display_name = name
     
