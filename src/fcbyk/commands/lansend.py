@@ -157,6 +157,9 @@ def serve_file(filename):
         return serve_directory(filename)
     
     if ide_mode:
+        # IDE模式下，如果请求参数包含 raw=true，直接返回原始文件（用于二进制文件）
+        if request.args.get('raw') == 'true':
+            return send_file(file_path)
         # IDE模式下，如果是图片文件，直接返回图片
         if is_image_file(file_path):
             return send_file(file_path)
@@ -325,8 +328,13 @@ def get_file_content(relative_path):
             'is_image': False
         })
     except UnicodeDecodeError:
-        # 二进制文件，返回错误
-        return jsonify({'error': 'Binary file cannot be displayed'}), 400
+        # 二进制文件，返回特殊标记，让前端显示"使用浏览器打开"按钮
+        return jsonify({
+            'is_binary': True,
+            'path': relative_path,
+            'name': os.path.basename(relative_path),
+            'error': 'Binary file cannot be displayed'
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -337,6 +345,29 @@ def api_tree():
         return jsonify({'error': 'Shared directory not specified'}), 400
     tree = get_file_tree(shared_directory)
     return jsonify({'tree': tree})
+
+@app.route('/api/download/<path:filename>')
+def api_download(filename):
+    """API: 下载文件"""
+    if not shared_directory:
+        abort(404, description="Shared directory not specified")
+    
+    # 将URL路径中的 / 转换为系统路径分隔符
+    normalized_path = filename.replace('/', os.sep)
+    file_path = os.path.join(shared_directory, normalized_path)
+    
+    # 防止路径逃逸
+    file_path = os.path.abspath(file_path)
+    if not file_path.startswith(os.path.abspath(shared_directory)):
+        abort(404, description="Invalid path")
+    
+    if not os.path.exists(file_path) or os.path.isdir(file_path):
+        abort(404, description="File not found")
+    
+    try:
+        return send_file(file_path, as_attachment=True)
+    except Exception as e:
+        abort(500, description=f"Error downloading file: {str(e)}")
 
 @app.route('/assets/<path:filename>')
 def serve_asset(filename):

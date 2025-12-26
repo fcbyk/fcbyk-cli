@@ -277,6 +277,32 @@
         .copy-btn.copied {
             background-color: #0e7c0e;
         }
+        .download-btn {
+            background-color: #0e639c;
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+            font-family: inherit;
+            transition: background-color 0.2s;
+            min-width: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+        }
+        .download-btn:hover {
+            background-color: #1177bb;
+        }
+        .download-btn:active {
+            background-color: #0a4d73;
+        }
+        .download-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
         .font-size-controls {
             display: flex;
             align-items: center;
@@ -541,6 +567,32 @@
             color: #858585;
             font-size: 14px;
         }
+        .open-browser-btn {
+            background-color: #0e639c;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-family: inherit;
+            transition: background-color 0.2s;
+        }
+        .open-browser-btn:hover {
+            background-color: #1177bb;
+        }
+        .open-browser-btn:active {
+            background-color: #0a4d73;
+        }
+        body.light-theme .open-browser-btn {
+            background-color: #0e639c;
+        }
+        body.light-theme .open-browser-btn:hover {
+            background-color: #1177bb;
+        }
+        body.light-theme .open-browser-btn:active {
+            background-color: #0a4d73;
+        }
         /* 图片预览样式 */
         .image-preview-container {
             display: flex;
@@ -774,6 +826,12 @@
         body.light-theme .copy-btn:hover {
             background-color: #1177bb;
         }
+        body.light-theme .download-btn {
+            background-color: #0e639c;
+        }
+        body.light-theme .download-btn:hover {
+            background-color: #1177bb;
+        }
         body.light-theme .font-size-btn {
             background-color: #e0e0e0;
             color: #333333;
@@ -934,6 +992,9 @@
             .copy-btn {
                 display: none !important;
             }
+            .download-btn {
+                display: none !important;
+            }
             .dropdown-menu {
                 display: block;
             }
@@ -972,6 +1033,7 @@
                         <div class="dropdown-content" id="dropdownContent">
                             <button class="dropdown-item" id="dropdownClose" title="关闭文件">关闭文件</button>
                             <div class="dropdown-divider"></div>
+                            <button class="dropdown-item" id="dropdownDownload" title="下载文件">下载文件</button>
                             <button class="dropdown-item" id="dropdownCopy" title="复制代码">复制代码</button>
                             <div class="dropdown-divider"></div>
                             <button class="dropdown-item" id="dropdownFontDecrease" title="减小字体">减小字体</button>
@@ -979,7 +1041,8 @@
                         </div>
                     </div>
                     <button class="refresh-btn" id="refreshBtn" title="刷新内容"><span class="refresh-icon">⟳</span></button>
-                    <button class="copy-btn" id="copyBtn" style="display: none;">copy</button>
+                    <button class="download-btn" id="downloadBtn" style="display: none;" title="下载文件">下载</button>
+                    <button class="copy-btn" id="copyBtn" style="display: none;">复制</button>
                     <div class="theme-toggle">
                         <label class="theme-switch">
                             <input type="checkbox" id="themeToggle">
@@ -1150,6 +1213,7 @@
             const codeContent = document.getElementById('codeContent');
             const codeTitle = document.getElementById('codeTitle');
             const copyBtn = document.getElementById('copyBtn');
+            const downloadBtn = document.getElementById('downloadBtn');
             const refreshBtn = document.getElementById('refreshBtn');
             
             // 更新刷新按钮提示
@@ -1159,6 +1223,7 @@
             
             codeContent.innerHTML = '<div class="loading">加载文件</div>';
             copyBtn.style.display = 'none';
+            downloadBtn.style.display = 'none';
             
             // 先检查是否为图片文件，如果是图片，直接显示，不需要调用API
             if (isImageFile(path)) {
@@ -1177,6 +1242,8 @@
                 `;
                 // 图片不需要复制功能，隐藏复制按钮
                 copyBtn.style.display = 'none';
+                // 图片可以下载，显示下载按钮
+                downloadBtn.style.display = 'block';
                 // 图片不需要字体大小控制，隐藏字体控制
                 document.getElementById('fontSizeControls').style.display = 'none';
                 // 清除原始内容数据
@@ -1186,6 +1253,12 @@
                 if (dropdownCopy) {
                     dropdownCopy.disabled = true;
                     dropdownCopy.classList.add('disabled');
+                }
+                // 启用下拉菜单中的下载按钮
+                const dropdownDownload = document.getElementById('dropdownDownload');
+                if (dropdownDownload) {
+                    dropdownDownload.disabled = false;
+                    dropdownDownload.classList.remove('disabled');
                 }
                 return;
             }
@@ -1199,23 +1272,77 @@
                 
                 const data = await response.json();
                 
-                if (data.error) {
+                // 检查是否为二进制文件
+                if (data.is_binary) {
+                    const fileName = data.name || path;
+                    codeTitle.textContent = fileName;
+                    document.getElementById('closeBtn').style.display = 'block';
+                    document.getElementById('downloadBtn').style.display = 'block';
+                    updateDropdownMenuVisibility();
+                    
+                    // 显示"使用浏览器打开"按钮
+                    // 添加 raw=true 参数，让后端直接返回原始文件而不是JSON
+                    const fileUrl = '/' + encodeURIComponent(path) + '?raw=true';
+                    codeContent.innerHTML = `
+                        <div class="empty-state" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;">
+                            <div style="font-size: 48px; opacity: 0.5;">📄</div>
+                            <div style="color: #858585; font-size: 14px;">此文件无法在代码查看器中显示</div>
+                            <button id="openInBrowserBtn" class="open-browser-btn">使用浏览器打开</button>
+                        </div>
+                    `;
+                    
+                    // 绑定按钮点击事件
+                    const openBtn = document.getElementById('openInBrowserBtn');
+                    if (openBtn) {
+                        openBtn.addEventListener('click', () => {
+                            window.open(fileUrl, '_blank');
+                        });
+                    }
+                    
+                    // 隐藏复制按钮和字体控制
+                    copyBtn.style.display = 'none';
+                    document.getElementById('fontSizeControls').style.display = 'none';
+                    codeContent.dataset.rawContent = '';
+                    
+                    // 禁用下拉菜单中的复制按钮
+                    const dropdownCopy = document.getElementById('dropdownCopy');
+                    if (dropdownCopy) {
+                        dropdownCopy.disabled = true;
+                        dropdownCopy.classList.add('disabled');
+                    }
+                    // 启用下拉菜单中的下载按钮
+                    const dropdownDownload = document.getElementById('dropdownDownload');
+                    if (dropdownDownload) {
+                        dropdownDownload.disabled = false;
+                        dropdownDownload.classList.remove('disabled');
+                    }
+                    return;
+                }
+                
+                if (data.error && !data.is_binary) {
                     codeContent.innerHTML = `<div class="empty-state">${escapeHtml(data.error)}</div>`;
                     document.getElementById('closeBtn').style.display = 'none';
+                    document.getElementById('downloadBtn').style.display = 'none';
                     return;
                 }
                 
                 codeTitle.textContent = data.name || path;
                 copyBtn.style.display = 'block';
+                downloadBtn.style.display = 'block';
                 document.getElementById('fontSizeControls').style.display = 'flex';
                 document.getElementById('closeBtn').style.display = 'block';
                 updateDropdownMenuVisibility();
                 
-                // 非图片文件，启用复制按钮
+                // 非图片文件，启用复制按钮和下载按钮
                 const dropdownCopy = document.getElementById('dropdownCopy');
                 if (dropdownCopy) {
                     dropdownCopy.disabled = false;
                     dropdownCopy.classList.remove('disabled');
+                }
+                const dropdownDownload = document.getElementById('dropdownDownload');
+                if (dropdownDownload) {
+                    dropdownDownload.disabled = false;
+                    dropdownDownload.classList.remove('disabled');
                 }
                 
                 // 获取文件扩展名以确定语言
@@ -1340,6 +1467,7 @@
                 console.error('加载文件失败:', error);
                 codeContent.innerHTML = '<div class="empty-state">加载失败，请重试</div>';
                 document.getElementById('closeBtn').style.display = 'none';
+                document.getElementById('downloadBtn').style.display = 'none';
             }
         }
 
@@ -1349,6 +1477,7 @@
             const codeContent = document.getElementById('codeContent');
             const codeTitle = document.getElementById('codeTitle');
             const copyBtn = document.getElementById('copyBtn');
+            const downloadBtn = document.getElementById('downloadBtn');
             const closeBtn = document.getElementById('closeBtn');
             const fontSizeControls = document.getElementById('fontSizeControls');
             const refreshBtn = document.getElementById('refreshBtn');
@@ -1357,17 +1486,23 @@
             codeContent.innerHTML = '<div class="empty-state">请从左侧选择文件查看代码</div>';
             codeTitle.textContent = '选择一个文件查看代码';
             copyBtn.style.display = 'none';
+            downloadBtn.style.display = 'none';
             closeBtn.style.display = 'none';
             fontSizeControls.style.display = 'none';
             
             // 清除原始内容数据
             codeContent.dataset.rawContent = '';
             
-            // 重置下拉菜单中的复制按钮状态
+            // 重置下拉菜单中的复制按钮和下载按钮状态
             const dropdownCopy = document.getElementById('dropdownCopy');
             if (dropdownCopy) {
                 dropdownCopy.disabled = false;
                 dropdownCopy.classList.remove('disabled');
+            }
+            const dropdownDownload = document.getElementById('dropdownDownload');
+            if (dropdownDownload) {
+                dropdownDownload.disabled = false;
+                dropdownDownload.classList.remove('disabled');
             }
             
             // 更新刷新按钮提示
@@ -1448,7 +1583,7 @@
             const originalText = btn.textContent;
             
             if (success) {
-                btn.textContent = 'Copied!';
+                btn.textContent = '已复制!';
                 btn.classList.add('copied');
                 setTimeout(() => {
                     btn.textContent = originalText;
@@ -1457,6 +1592,19 @@
             } else {
                 alert('复制失败，请手动选择复制');
             }
+        });
+
+        // 下载文件
+        document.getElementById('downloadBtn').addEventListener('click', () => {
+            if (!currentFile) return;
+            
+            const downloadUrl = '/api/download/' + encodeURIComponent(currentFile);
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = currentFile.split('/').pop();
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         });
 
         // HTML转义
@@ -1684,6 +1832,24 @@
                     } else {
                         alert('复制失败，请手动选择复制');
                     }
+                    
+                    closeDropdown();
+                });
+            }
+            
+            // 下载按钮
+            const dropdownDownload = document.getElementById('dropdownDownload');
+            if (dropdownDownload) {
+                dropdownDownload.addEventListener('click', () => {
+                    if (!currentFile) return;
+                    
+                    const downloadUrl = '/api/download/' + encodeURIComponent(currentFile);
+                    const link = document.createElement('a');
+                    link.href = downloadUrl;
+                    link.download = currentFile.split('/').pop();
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
                     
                     closeDropdown();
                 });
