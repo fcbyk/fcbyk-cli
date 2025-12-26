@@ -541,6 +541,26 @@
             color: #858585;
             font-size: 14px;
         }
+        /* 图片预览样式 */
+        .image-preview-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            padding: 20px;
+            overflow: auto;
+            background-color: #1e1e1e;
+        }
+        .preview-image {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        body.light-theme .image-preview-container {
+            background-color: #ffffff;
+        }
         /* 目录树样式 */
         .file-tree {
             padding: 12px 8px;
@@ -639,6 +659,20 @@
         /* 文件类型图标 - 确保权重足够，不会被文件夹样式覆盖 */
         .tree-item[data-type="file"] .tree-item-icon::before {
             content: '📄' !important;
+            font-size: 14px;
+        }
+        /* 图片文件图标 */
+        .tree-item[data-type="file"][data-ext="jpg"] .tree-item-icon::before,
+        .tree-item[data-type="file"][data-ext="jpeg"] .tree-item-icon::before,
+        .tree-item[data-type="file"][data-ext="png"] .tree-item-icon::before,
+        .tree-item[data-type="file"][data-ext="gif"] .tree-item-icon::before,
+        .tree-item[data-type="file"][data-ext="bmp"] .tree-item-icon::before,
+        .tree-item[data-type="file"][data-ext="webp"] .tree-item-icon::before,
+        .tree-item[data-type="file"][data-ext="svg"] .tree-item-icon::before,
+        .tree-item[data-type="file"][data-ext="ico"] .tree-item-icon::before,
+        .tree-item[data-type="file"][data-ext="tiff"] .tree-item-icon::before,
+        .tree-item[data-type="file"][data-ext="tif"] .tree-item-icon::before {
+            content: '🖼️' !important;
             font-size: 14px;
         }
         /* 滚动条样式 */
@@ -1126,6 +1160,37 @@
             codeContent.innerHTML = '<div class="loading">加载文件</div>';
             copyBtn.style.display = 'none';
             
+            // 先检查是否为图片文件，如果是图片，直接显示，不需要调用API
+            if (isImageFile(path)) {
+                const fileName = path.split('/').pop();
+                codeTitle.textContent = fileName || path;
+                document.getElementById('closeBtn').style.display = 'block';
+                updateDropdownMenuVisibility();
+                
+                // 显示图片
+                const imageUrl = '/' + encodeURIComponent(path);
+                codeContent.innerHTML = `
+                    <div class="image-preview-container">
+                        <img src="${imageUrl}" alt="${escapeHtml(fileName || path)}" class="preview-image" 
+                             onerror="this.parentElement.innerHTML='<div class=\\'empty-state\\'>图片加载失败</div>';" />
+                    </div>
+                `;
+                // 图片不需要复制功能，隐藏复制按钮
+                copyBtn.style.display = 'none';
+                // 图片不需要字体大小控制，隐藏字体控制
+                document.getElementById('fontSizeControls').style.display = 'none';
+                // 清除原始内容数据
+                codeContent.dataset.rawContent = '';
+                // 禁用下拉菜单中的复制按钮
+                const dropdownCopy = document.getElementById('dropdownCopy');
+                if (dropdownCopy) {
+                    dropdownCopy.disabled = true;
+                    dropdownCopy.classList.add('disabled');
+                }
+                return;
+            }
+            
+            // 非图片文件，通过API获取内容
             try {
                 const response = await fetch('/' + encodeURIComponent(path));
                 if (!response.ok) {
@@ -1145,6 +1210,13 @@
                 document.getElementById('fontSizeControls').style.display = 'flex';
                 document.getElementById('closeBtn').style.display = 'block';
                 updateDropdownMenuVisibility();
+                
+                // 非图片文件，启用复制按钮
+                const dropdownCopy = document.getElementById('dropdownCopy');
+                if (dropdownCopy) {
+                    dropdownCopy.disabled = false;
+                    dropdownCopy.classList.remove('disabled');
+                }
                 
                 // 获取文件扩展名以确定语言
                 const ext = path.split('.').pop().toLowerCase();
@@ -1288,6 +1360,16 @@
             closeBtn.style.display = 'none';
             fontSizeControls.style.display = 'none';
             
+            // 清除原始内容数据
+            codeContent.dataset.rawContent = '';
+            
+            // 重置下拉菜单中的复制按钮状态
+            const dropdownCopy = document.getElementById('dropdownCopy');
+            if (dropdownCopy) {
+                dropdownCopy.disabled = false;
+                dropdownCopy.classList.remove('disabled');
+            }
+            
             // 更新刷新按钮提示
             if (refreshBtn) {
                 refreshBtn.title = '刷新目录树';
@@ -1312,6 +1394,13 @@
                 'hpp': 'cpp',
             };
             return langMap[ext] || 'text';
+        }
+
+        // 检测文件是否为图片
+        function isImageFile(filename) {
+            const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'ico', 'tiff', 'tif'];
+            const ext = filename.split('.').pop().toLowerCase();
+            return imageExtensions.includes(ext);
         }
 
         // 复制代码到剪贴板的通用函数

@@ -157,7 +157,10 @@ def serve_file(filename):
         return serve_directory(filename)
     
     if ide_mode:
-        # IDE模式下，返回文件内容用于预览
+        # IDE模式下，如果是图片文件，直接返回图片
+        if is_image_file(file_path):
+            return send_file(file_path)
+        # 否则返回文件内容用于预览
         return get_file_content(filename)
     
     return send_from_directory(shared_directory, normalized_path)
@@ -283,6 +286,12 @@ def get_file_tree(base_path='', relative_path=''):
     items.sort(key=lambda x: (not x['is_dir'], x['name'].lower()))
     return items
 
+def is_image_file(filename):
+    """检测文件是否为图片"""
+    image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg', '.ico', '.tiff', '.tif'}
+    ext = os.path.splitext(filename)[1].lower()
+    return ext in image_extensions
+
 def get_file_content(relative_path):
     """获取文件内容（用于IDE模式）"""
     # 将URL路径中的 / 转换为系统路径分隔符
@@ -297,6 +306,14 @@ def get_file_content(relative_path):
     if not os.path.exists(file_path) or os.path.isdir(file_path):
         abort(404, description="File not found")
     
+    # 如果是图片文件，返回图片信息（前端会直接请求图片URL）
+    if is_image_file(file_path):
+        return jsonify({
+            'is_image': True,
+            'path': relative_path,
+            'name': os.path.basename(relative_path)
+        })
+    
     try:
         # 尝试以文本方式读取
         with open(file_path, 'r', encoding='utf-8') as f:
@@ -304,7 +321,8 @@ def get_file_content(relative_path):
         return jsonify({
             'content': content,
             'path': relative_path,
-            'name': os.path.basename(relative_path)
+            'name': os.path.basename(relative_path),
+            'is_image': False
         })
     except UnicodeDecodeError:
         # 二进制文件，返回错误
