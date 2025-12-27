@@ -9,6 +9,10 @@ from datetime import datetime
 import urllib.request
 import urllib.error
 
+from fcbyk.cli_support.output import echo_network_urls
+from fcbyk.utils.network import get_private_networks
+
+
 app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), '..', 'web'))
 shared_directory = None
 display_name = "共享文件夹"  # 默认显示名称
@@ -446,8 +450,8 @@ def _lansend_impl(port, directory, name, password, no_browser, ide=False):
     else:
         upload_password = None
     
-    hostname = socket.gethostname()
-    local_ip = socket.gethostbyname(hostname)
+    private_networks = get_private_networks()
+    local_ip = private_networks[0]['ips'][0]
     
     mode_text = "IDE Code Viewer" if ide_mode else "File Sharing Server"
     click.echo(f"\n * {mode_text}")
@@ -455,9 +459,7 @@ def _lansend_impl(port, directory, name, password, no_browser, ide=False):
     click.echo(f" * Display Name: {display_name}")
     if upload_password:
         click.echo(f" * Upload Password: Enabled")
-    click.echo(f" * Local URL: http://localhost:{port}")
-    click.echo(f" * Local URL: http://127.0.0.1:{port}")
-    click.echo(f" * Network URL: http://{local_ip}:{port}")
+    echo_network_urls(private_networks, port, include_virtual=True)
     
     try:
         pyperclip.copy("http://{}:{}".format(local_ip, port))

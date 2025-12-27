@@ -1,9 +1,10 @@
 import click
-import os
 import json
 import requests
+from fcbyk.cli_support.output import show_config
+from fcbyk.utils.config import get_config_path, save_config, get_effective_config
 
-config_file = os.path.join(os.path.expanduser('~'), '.fcbyk', 'openai.json')
+config_file = get_config_path('fcbyk', 'openai.json')
 
 default_config = {
     'model': 'deepseek-chat',
@@ -11,40 +12,6 @@ default_config = {
     'api_key': None,
     'stream': False,
 }
-
-def load_config():
-    if not os.path.exists(config_file):
-        os.makedirs(os.path.dirname(config_file), exist_ok=True)
-        with open(config_file, 'w') as f:
-            json.dump(default_config, f, indent=2)
-        return default_config.copy()
-    try:
-        with open(config_file, 'r') as f:
-            config = json.load(f)
-    except Exception:
-        config = default_config.copy()
-        with open(config_file, 'w') as f:
-            json.dump(config, f, indent=2)
-    updated = False
-    for k, v in default_config.items():
-        if k not in config:
-            config[k] = v
-            updated = True
-    if updated:
-        with open(config_file, 'w') as f:
-            json.dump(config, f, indent=2)
-    return config
-
-def show_config(ctx, param, value):
-    if not value:
-        return
-    config = load_config()
-    click.echo(f'config file: {config_file}')
-    click.echo(f'model: {config.get("model")}')
-    click.echo(f'api_key: {config.get("api_key")}')
-    click.echo(f'base_url: {config.get("base_url")}')
-    click.echo(f'stream: {config.get("stream")}')
-    ctx.exit()
 
 def chat_api(messages, model, api_key, base_url, stream=False, timeout=30):
     url = base_url.rstrip('/') + "/v1/chat/completions"
@@ -128,29 +95,47 @@ def get_reply_from_response(response, stream=False):
             print(f'[流式响应异常] {e}')
         return reply
 
+
 @click.command(name='ai', help='use openai api to chat in terminal')
-@click.option('--config', '-c', is_flag=True, expose_value=False, callback=show_config, help='show config')
+@click.option(
+    "--config", "-c",
+    is_flag=True,
+    callback=lambda ctx, param, value: show_config(
+        ctx, param, value, config_file, default_config
+    ),
+    expose_value=False,
+    is_eager=True,
+    help="show config and exit"
+)
 @click.option('--model', '-m', help='set model')
 @click.option('--api-key', '-k', help='set api key')
 @click.option('--base-url', '-u', help='set base url')
 @click.option('--stream', '-s', help='set stream, 0 for false, 1 for true')
 @click.pass_context
 def ai(ctx, model, api_key, base_url, stream):
-    if not model and not api_key and not base_url and not stream:
-        config = load_config()
-        model = config['model']
-        api_key = config['api_key']
-        base_url = config['base_url']
-        stream_flag = config['stream']
-        if not api_key or api_key in [None, '', 'none']:
+    # CLI 参数字典
+    cli_options = ctx.params.copy()
+    cli_options.pop('config', None)
+
+    # 获取最终生效配置
+    effective_config = get_effective_config(cli_options, config_file, default_config)
+
+    if not any([model, api_key, base_url, stream]):
+        # 聊天模式
+        if not effective_config['api_key']:
             click.echo('未配置 api_key，请先通过 --api-key 或配置文件设置。')
             return
+
         messages = [
             {
                 "role": "system", 
-                "content": "You are a helpful assistant. Respond in plain text suitable for a console environment. Avoid using Markdown, code blocks, or any rich formatting. Use simple line breaks and spaces for alignment."
+                "content": (
+                    "You are a helpful assistant. Respond in plain text suitable for a console environment. "
+                    "Avoid using Markdown, code blocks, or any rich formatting. Use simple line breaks and spaces for alignment."
+                )
             }
         ]
+
         while True:
             try:
                 user_input = input('You: ')
@@ -159,30 +144,26 @@ def ai(ctx, model, api_key, base_url, stream):
                 if user_input.strip() == '':
                     continue
                 messages.append({"role": "user", "content": user_input})
-                response = chat_api(messages, model, api_key, base_url, stream_flag)
+                response = chat_api(
+                    messages,
+                    effective_config['model'],
+                    effective_config['api_key'],
+                    effective_config['base_url'],
+                    effective_config['stream']
+                )
                 if response is None:
-                    print('请求失败，请检查网络或API Key配置。')
+                    click.echo('请求失败，请检查网络或API Key配置。')
                     continue
-                reply = get_reply_from_response(response, stream_flag)
+                reply = get_reply_from_response(response, effective_config['stream'])
                 messages.append({"role": "assistant", "content": reply})
             except KeyboardInterrupt:
-                print('\n已退出对话。')
+                click.echo('\n已退出对话。')
                 break
             except Exception as e:
-                print(f'[主循环异常] {e}')
+                click.echo(f'[主循环异常] {e}')
                 continue
-        return
     else:
-        config = load_config()
-        if model:
-            config['model'] = model
-        if api_key:
-            config['api_key'] = api_key
-        if base_url:
-            config['base_url'] = base_url
-        if stream:
-            config['stream'] = True if stream == '1' else False
-        with open(config_file, 'w') as f:
-            json.dump(config, f, indent=2)
+        # 保存配置模式
+        save_config(effective_config, config_file)
         click.echo('config saved')
         ctx.exit()

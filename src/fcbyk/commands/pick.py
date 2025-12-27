@@ -9,10 +9,12 @@ import socket
 import uuid
 from typing import Optional, Iterable, Dict, Set
 from flask import Flask, jsonify, render_template, request, send_file, url_for
+from fcbyk.utils.config import get_config_path, load_json_config, save_config
+from fcbyk.cli_support.output import show_config
 from datetime import datetime
 import threading, asyncio
 
-config_file = os.path.join(os.path.expanduser('~'), '.fcbyk', 'pick.json')
+config_file = get_config_path('fcbyk', 'pick.json')
 SERVER_SESSION_ID = str(uuid.uuid4())
 ADMIN_PASSWORD = None
 
@@ -54,7 +56,7 @@ def style_css():
 @app.route('/api/items')
 def api_items():
     """返回当前配置中的抽奖项"""
-    config = load_config()
+    config = load_json_config(config_file, default_config)
     return jsonify({'items': config.get('items', [])})
 
 
@@ -249,52 +251,13 @@ def download_file(filename):
 @app.route('/api/pick', methods=['POST'])
 def api_pick_item():
     """从配置列表中随机抽取一项"""
-    config = load_config()
+    config = load_json_config(config_file, default_config)
     items = config.get('items', [])
     if not items:
         return jsonify({'error': 'no items available'}), 400
     selected = random.choice(items)
     return jsonify({'item': selected, 'items': items})
 
-
-def load_config():
-    """加载配置文件"""
-    if not os.path.exists(config_file):
-        os.makedirs(os.path.dirname(config_file), exist_ok=True)
-        with open(config_file, 'w', encoding='utf-8') as f:
-            json.dump(default_config, f, indent=2, ensure_ascii=False)
-        return default_config.copy()
-    try:
-        with open(config_file, 'r', encoding='utf-8') as f:
-            config = json.load(f)
-    except Exception:
-        config = default_config.copy()
-        with open(config_file, 'w', encoding='utf-8') as f:
-            json.dump(config, f, indent=2, ensure_ascii=False)
-    updated = False
-    for k, v in default_config.items():
-        if k not in config:
-            config[k] = v
-            updated = True
-    if updated:
-        with open(config_file, 'w', encoding='utf-8') as f:
-            json.dump(config, f, indent=2, ensure_ascii=False)
-    return config
-
-def save_config(config):
-    """保存配置文件"""
-    os.makedirs(os.path.dirname(config_file), exist_ok=True)
-    with open(config_file, 'w', encoding='utf-8') as f:
-        json.dump(config, f, indent=2, ensure_ascii=False)
-
-def show_config(ctx, param, value):
-    """显示配置信息"""
-    if not value:
-        return
-    config = load_config()
-    click.echo(f'Config file: {config_file}')
-    click.echo(f'Items list: {config.get("items", [])}')
-    ctx.exit()
 
 def pick_item(items):
     """执行抽奖动画"""
@@ -466,7 +429,16 @@ def admin_codes_add():
 
 
 @click.command(name='pick', help='Randomly pick one item from the list')
-@click.option('--config', '-c', is_flag=True, expose_value=False, callback=show_config, help='Show configuration')
+@click.option(
+    "--config", "-c",
+    is_flag=True,
+    callback=lambda ctx, param, value: show_config(
+        ctx, param, value, config_file, default_config
+    ),
+    expose_value=False,
+    is_eager=True,
+    help="show configuration and exit"
+)
 @click.option('--add', '-a', multiple=True, help='Add item to list (can be used multiple times)')
 @click.option('--remove', '-r', multiple=True, help='Remove item from list (can be used multiple times)')
 @click.option('--clear', is_flag=True, help='Clear the list')
@@ -481,7 +453,7 @@ def admin_codes_add():
 @click.argument('items', nargs=-1)
 @click.pass_context
 def pick(ctx, add, remove, clear, show_list, web, port, no_browser, files, gen_codes, show_codes, password, items):
-    config = load_config()
+    config = load_json_config(config_file, default_config)
     
     # 显示配置
     if show_list:
@@ -497,7 +469,7 @@ def pick(ctx, add, remove, clear, show_list, web, port, no_browser, files, gen_c
     # 清空列表
     if clear:
         config['items'] = []
-        save_config(config)
+        save_config(config, config_file)
         click.echo("List cleared")
         return
     
@@ -511,7 +483,7 @@ def pick(ctx, add, remove, clear, show_list, web, port, no_browser, files, gen_c
             else:
                 click.echo(f"Item already exists: {item}")
         config['items'] = items_list
-        save_config(config)
+        save_config(config, config_file)
         return
     
     # 移除元素
@@ -524,7 +496,7 @@ def pick(ctx, add, remove, clear, show_list, web, port, no_browser, files, gen_c
             else:
                 click.echo(f"Item does not exist: {item}")
         config['items'] = items_list
-        save_config(config)
+        save_config(config, config_file)
         return
     
     # 文件抽奖模式（优先）
