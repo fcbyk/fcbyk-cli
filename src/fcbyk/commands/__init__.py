@@ -3,6 +3,6 @@ from .ai import ai
 from .pick import pick
 from .jiahao import jiahao
 from .popup import popup
-from .slide import slide
+from .slide.cli import slide
 
 __all__ = ['lansend', 'ls', 'ai', 'pick', 'jiahao', 'popup', 'slide']

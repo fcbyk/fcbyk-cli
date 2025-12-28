@@ -11,6 +11,7 @@ import urllib.error
 
 from fcbyk.cli_support.output import echo_network_urls
 from fcbyk.utils.network import get_private_networks
+from fcbyk.utils.asset_downloader import create_web_assets_downloader
 
 
 app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), '..', 'web'))
@@ -21,7 +22,7 @@ first_upload_log = True  # 控制首次日志前空一行
 ide_mode = False  # IDE模式标志
 
 # 静态资源配置
-ASSETS_DIR = os.path.join(os.path.dirname(__file__), '..', 'web', 'assets')
+ASSETS_DIR = os.path.join(os.path.dirname(__file__), '..', 'web', 'static','assets')
 PRISM_VERSION = '1.29.0'
 STATIC_RESOURCES = {
     'prism-tomorrow.min.css': f'https://cdn.jsdelivr.net/npm/prismjs@{PRISM_VERSION}/themes/prism-tomorrow.min.css',
@@ -30,6 +31,8 @@ STATIC_RESOURCES = {
     'prism-cpp.min.js': f'https://cdn.jsdelivr.net/npm/prismjs@{PRISM_VERSION}/components/prism-cpp.min.js',
     'prism-python.min.js': f'https://cdn.jsdelivr.net/npm/prismjs@{PRISM_VERSION}/components/prism-python.min.js',
 }
+# 创建资源下载器
+downloader = create_web_assets_downloader(STATIC_RESOURCES)
 
 def init_app(directory=None, name=None, password=None, ide=False):
     global shared_directory, display_name, upload_password, ide_mode
@@ -39,51 +42,6 @@ def init_app(directory=None, name=None, password=None, ide=False):
     if password:
         upload_password = password
     ide_mode = ide
-
-def download_static_resource(filename, url):
-    """下载单个静态资源文件"""
-    try:
-        click.echo(f"  Downloading {filename}...", nl=False)
-        urllib.request.urlretrieve(url, os.path.join(ASSETS_DIR, filename))
-        click.echo(" ✓")
-        return True
-    except Exception as e:
-        click.echo(f" ✗ Failed: {e}")
-        return False
-
-def ensure_assets_dir():
-    """确保 assets 目录存在"""
-    if not os.path.exists(ASSETS_DIR):
-        os.makedirs(ASSETS_DIR)
-
-def check_and_download_assets():
-    """检查并下载所需的静态资源（首次运行时）"""
-    ensure_assets_dir()
-    
-    missing_files = []
-    for filename in STATIC_RESOURCES.keys():
-        file_path = os.path.join(ASSETS_DIR, filename)
-        if not os.path.exists(file_path):
-            missing_files.append(filename)
-    
-    if missing_files:
-        click.echo("\nFirst time running IDE mode, downloading static resources...")
-        click.echo("Please ensure network connection is available to download resources from CDN.\n")
-        
-        success_count = 0
-        for filename in missing_files:
-            url = STATIC_RESOURCES[filename]
-            if download_static_resource(filename, url):
-                success_count += 1
-        
-        if success_count == len(missing_files):
-            click.echo(f"\n✓ All static resources downloaded successfully ({success_count}/{len(missing_files)})")
-        else:
-            click.echo(f"\n⚠ Some static resources failed to download ({success_count}/{len(missing_files)})")
-            click.echo("Code highlighting may be limited, but text files can still be viewed normally.")
-    else:
-        # 所有文件都存在，无需下载
-        pass
 
 
 def _format_size(num_bytes):
@@ -439,7 +397,7 @@ def _lansend_impl(port, directory, name, password, no_browser, ide=False):
     
     # IDE 模式：检查并下载静态资源
     if ide_mode:
-        check_and_download_assets()
+        downloader.download_missing()
     
     if name:
         display_name = name
