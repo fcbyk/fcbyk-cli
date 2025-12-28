@@ -1,0 +1,193 @@
+ * {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  color: #fff;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* 触摸板模式 */
+.touchpad-mode {
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh; /* 使用动态视口高度，适配移动浏览器 */
+  height: calc(var(--vh, 1vh) * 100); /* 回退方案：使用 JavaScript 计算的视口高度 */
+}
+
+.touchpad-wrapper {
+  flex: 1;
+  display: flex;
+  width: 100%;
+  position: relative;
+}
+
+.touchpad-area {
+  flex: 1;
+  width: 100%;
+  background: rgba(0, 0, 0, 0.3);
+  position: relative;
+  touch-action: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.touchpad-hint {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 18px;
+  pointer-events: none;
+  text-align: center;
+  z-index: 1;
+}
+
+.touchpad-controls {
+  display: flex;
+  width: 100%;
+  height: 100px;
+  min-height: 100px;
+  gap: 0;
+  background: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+  position: relative;
+  /* 适配 iOS Safari 的安全区域 */
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.touchpad-btn {
+  flex: 1;
+  width: 50%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0;
+  font-size: 18px;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.1s ease;
+  user-select: none;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: manipulation; /* 阻止双击缩放 */
+
+  &:last-child {
+    border-right: none;
+  }
+
+  &:active {
+    background: rgba(255, 255, 255, 0.3);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+/* 密码输入界面 */
+.login-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.login-box {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 40px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.login-title {
+  font-size: 28px;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.login-input {
+  width: 100%;
+  padding: 15px;
+  font-size: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  margin-bottom: 20px;
+  box-sizing: border-box;
+
+  &::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  &:focus {
+    outline: none;
+    border-color: rgba(255, 255, 255, 0.6);
+  }
+}
+
+.login-btn {
+  width: 100%;
+  padding: 15px;
+  font-size: 18px;
+  font-weight: bold;
+  border: none;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.3s ease;
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.3);
+  }
+
+  &:active:not(:disabled) {
+    background: rgba(255, 255, 255, 0.4);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.error-message {
+  color: #ff6b6b;
+  text-align: center;
+  margin-top: 15px;
+  font-size: 14px;
+  min-height: 20px;
+}

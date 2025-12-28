@@ -8,4 +8,4 @@ __pycache__
 .pytest_cache
 .vscode
 
-src/fcbyk/web/static/assets
+src/fcbyk/web/static
