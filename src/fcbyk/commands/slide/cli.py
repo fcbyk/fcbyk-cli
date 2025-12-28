@@ -35,9 +35,6 @@ def slide(port):
     # 创建服务
     service = SlideService(password)
 
-    # 检查并下载静态资源（socket.io）
-    service.check_and_download_assets()
-    
     # 创建 Flask 应用和 SocketIO
     app, socketio = create_slide_app(service)
     

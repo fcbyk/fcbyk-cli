@@ -5,8 +5,6 @@ slide 业务逻辑层
 import os
 from typing import Tuple, Optional
 
-from fcbyk.utils.asset_downloader import create_web_assets_downloader
-
 
 # 在 CI 环境中，如果没有 DISPLAY 环境变量，设置一个默认值以避免导入 pyautogui 时出错
 if 'DISPLAY' not in os.environ:
@@ -71,12 +69,6 @@ class SlideService:
         # 防止 pyautogui 的安全机制（如果鼠标移到屏幕角落会触发异常）
         pyautogui.FAILSAFE = False
         
-        # 创建资源下载器
-        self.downloader = create_web_assets_downloader(self.STATIC_RESOURCES)
-    
-    def check_and_download_assets(self):
-        """检查并下载所需的静态资源（首次运行时）"""
-        self.downloader.download_missing()
     
     def verify_password(self, password: str) -> bool:
         """
