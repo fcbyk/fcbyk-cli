@@ -4,6 +4,22 @@ import { resolve } from 'path'
 import { readdirSync, statSync } from 'fs'
 import { fileURLToPath } from 'url'
 import type { Plugin } from 'vite'
+import os from 'os'
+
+function getLocalNetworkAddress() {
+  const interfaces = os.networkInterfaces()
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name] || []) {
+      if (
+        iface.family === 'IPv4' &&
+        !iface.internal
+      ) {
+        return iface.address
+      }
+    }
+  }
+  return 'localhost'
+}
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
 
@@ -43,7 +59,11 @@ function mpaPlugin(): Plugin {
       // 服务器启动后打印所有页面路径
       server.httpServer?.once('listening', () => {
         const port = (server.config.server.port || 5173).toString()
-        const host = server.config.server.host || 'localhost'
+        const rawHost = server.config.server.host
+        const host =
+          rawHost === '0.0.0.0' || rawHost === true
+            ? getLocalNetworkAddress()
+            : rawHost || 'localhost'
         const protocol = server.config.server.https ? 'https' : 'http'
 
         Object.keys(pageEntries).forEach(pageName => {
@@ -67,8 +87,11 @@ function mpaPlugin(): Plugin {
           const htmlPath = pageEntries[pageName]
           const projectRoot = resolve(__dirname)
 
-          // 访问页面根路径，重写为 HTML 文件路径
-          if (pathParts.length === 1 || (pathParts.length === 2 && pathParts[1] === '')) {
+          // 访问页面根路径或前端路由路径（如 /pick/f），重写为 HTML 文件路径
+          // 这样前端路由可以正常工作
+          if (pathParts.length === 1 || (pathParts.length === 2 && pathParts[1] === '') || 
+              (pathParts.length === 2 && !pathParts[1].includes('.'))) {
+            // 第二个路径段不包含点号，可能是前端路由（如 /pick/f）
             let relativePath = htmlPath.replace(projectRoot, '').replace(/\\/g, '/')
             if (!relativePath.startsWith('/')) relativePath = '/' + relativePath
               ; (req as any).url = relativePath
@@ -84,7 +107,10 @@ function mpaPlugin(): Plugin {
               if (!relativePath.startsWith('/')) relativePath = '/' + relativePath
                 ; (req as any).url = relativePath
             } catch {
-              // 资源不存在，继续正常处理
+              // 资源不存在，可能是前端路由，返回 HTML 文件
+              let relativePath = htmlPath.replace(projectRoot, '').replace(/\\/g, '/')
+              if (!relativePath.startsWith('/')) relativePath = '/' + relativePath
+                ; (req as any).url = relativePath
             }
           }
         }
