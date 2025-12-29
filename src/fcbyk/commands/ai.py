@@ -26,7 +26,9 @@ def chat_api(messages, model, api_key, base_url, stream=False, timeout=30):
     }
     try:
         resp = requests.post(url, headers=headers, json=payload, stream=stream, timeout=timeout)
+        
         if not stream:
+            # 非流式模式：直接返回完整响应
             try:
                 resp.raise_for_status()
                 data = resp.json()
@@ -45,23 +47,30 @@ def chat_api(messages, model, api_key, base_url, stream=False, timeout=30):
                 print(f"[响应解析错误] {e}")
                 return None
         else:
-            # 流式返回，逐行yield内容
-            for line in resp.iter_lines():
-                if line:
-                    line = line.decode('utf-8')
-                    if line.startswith('data: '):
-                        data = line[6:]
-                        if data.strip() == '[DONE]':
-                            break
-                        try:
-                            chunk = json.loads(data)
-                            if 'error' in chunk:
-                                print(f"[API错误] {chunk['error'].get('message', str(chunk['error']))}")
-                                return
-                            yield chunk
-                        except Exception as e:
-                            print(f"[流式解析错误] {e}")
-                            continue
+            # 流式模式：返回生成器
+            def stream_generator():
+                try:
+                    for line in resp.iter_lines():
+                        if line:
+                            line = line.decode('utf-8')
+                            if line.startswith('data: '):
+                                data = line[6:]
+                                if data.strip() == '[DONE]':
+                                    break
+                                try:
+                                    chunk = json.loads(data)
+                                    if 'error' in chunk:
+                                        print(f"[API错误] {chunk['error'].get('message', str(chunk['error']))}")
+                                        return
+                                    yield chunk
+                                except Exception as e:
+                                    print(f"[流式解析错误] {e}")
+                                    continue
+                except Exception as e:
+                    print(f'[流式读取异常] {e}')
+            
+            return stream_generator()
+            
     except requests.Timeout:
         print('[请求超时] 请检查网络或稍后重试。')
         return None
@@ -75,7 +84,9 @@ def chat_api(messages, model, api_key, base_url, stream=False, timeout=30):
 def get_reply_from_response(response, stream=False):
     if not stream:
         try:
-            return response['choices'][0]['message']['content']
+            reply = response['choices'][0]['message']['content']
+            print('\033[94mAI：\033[0m', reply)
+            return reply
         except Exception as e:
             if isinstance(response, dict) and 'error' in response:
                 print(f"[API错误] {response['error'].get('message', str(response['error']))}")
