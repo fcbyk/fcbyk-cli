@@ -2,7 +2,19 @@
  * Pick API 服务
  */
 
-import type { PickApiResponse, FileListApiResponse, FilePickApiResponse, FileResultApiResponse, AdminCodesApiResponse, AdminAddCodeApiResponse } from './types'
+import type { PickApiResponse, FileListApiResponse, FilePickApiResponse, FileResultApiResponse, AdminCodesApiResponse, AdminAddCodeApiResponse, InfoApiResponse } from './types'
+
+/** 获取启动信息 */
+export async function fetchInfo(): Promise<InfoApiResponse> {
+  try {
+    const response = await fetch('/api/info')
+    const data: InfoApiResponse = await response.json()
+    return data
+  } catch (error) {
+    console.error('Failed to fetch info:', error)
+    throw new Error((error as Error).message || '获取启动信息失败')
+  }
+}
 
 /** 获取候选项列表 */
 export async function fetchItems(): Promise<string[]> {

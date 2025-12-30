@@ -71,3 +71,8 @@ export interface PickApiResponse {
     success?: boolean
     error?: string
   }
+
+  /** 启动信息 API 响应 */
+  export interface InfoApiResponse {
+    files_mode: boolean
+  }

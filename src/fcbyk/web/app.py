@@ -1,6 +1,50 @@
 import os
 from flask import Flask, redirect, send_from_directory
 
+import os
+from flask import Flask, send_from_directory
+
+def create_spa(
+    entry_html: str,
+    root: str = "dist",
+    page = None,
+    cli_data=None
+) -> Flask:
+    """
+    entry_html: SPA 入口文件，如 'slide.html'
+    dist/
+      ├─ slide.html
+      └─ assets/
+         ├─ xxx.js
+         └─ xxx.css
+    """
+    app = Flask(
+        __name__,
+        static_folder=f"{root}/assets",
+        static_url_path="/assets"
+    )
+
+    dist_root = os.path.join(app.root_path, root)
+
+    # SPA 入口
+    @app.route("/")
+    def index():
+        return send_from_directory(dist_root, entry_html)
+
+    # 前端路由列表 - 统一返回index主页
+    if page:
+        for url in page:
+            def page():
+                return send_from_directory(dist_root, entry_html)
+            # 保证每个路由的 endpoint 唯一
+            endpoint = f"page_{url.strip('/').replace('/', '_') or 'root'}"
+            app.add_url_rule(url, endpoint, page)
+
+    if cli_data:
+        app.cli_data = cli_data
+
+    return app
+
 
 def create_app(
     default_page,

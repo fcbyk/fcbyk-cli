@@ -6,4 +6,11 @@ import './style.scss'
 const app = createApp(App)
 
 app.use(router)
-app.mount('#app')
+
+// 等待路由就绪后再挂载应用
+router.isReady().then(() => {
+  app.mount('#app')
+}).catch((error) => {
+  console.error('[App] Router ready error:', error)
+  app.mount('#app')
+})

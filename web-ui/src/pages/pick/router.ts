@@ -17,6 +17,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import ItemPick from './ItemPick.vue'
 import FilePick from './FilePick.vue'
 import Admin from './Admin.vue'
+import { fetchInfo } from './api'
 
 // 动态获取 base 路径
 // 开发环境：路径包含 /pick/，base 是 /pick/
@@ -48,6 +49,56 @@ const router = createRouter({
       component: Admin
     }
   ]
+})
+
+// 缓存启动信息，避免每次路由切换都请求
+let cachedInfo: { files_mode: boolean } | null = null
+let infoPromise: Promise<{ files_mode: boolean }> | null = null
+
+async function getInfo(): Promise<{ files_mode: boolean }> {
+  if (cachedInfo) {
+    return cachedInfo
+  }
+  if (infoPromise) {
+    return infoPromise
+  }
+  infoPromise = fetchInfo()
+  cachedInfo = await infoPromise
+  return cachedInfo
+}
+
+// 路由守卫：根据文件模式进行路由跳转
+router.beforeEach(async (to, _from, next) => {
+  // 获取当前路径（去除 base 路径）
+  const path = to.path
+  const basePath = getBasePath()
+  // 标准化路径：移除 base 路径前缀
+  const normalizedPath = basePath !== '/' ? path.replace(basePath, '') || '/' : path
+  
+  try {
+    const info = await getInfo()
+    
+    // 如果是文件模式，访问 / 时自动跳转到 /f
+    if (normalizedPath === '/' && info.files_mode) {
+      next('/f')
+      return
+    }
+    
+    // 如果不是文件模式，访问 /f 或 /admin 时跳转到 /
+    if ((normalizedPath === '/f' || normalizedPath === '/admin') && !info.files_mode) {
+      next('/')
+      return
+    }
+  } catch (error) {
+    // 如果获取启动信息失败，对于 /f 和 /admin 路径，默认跳转到 /
+    // 因为如果后端不支持文件模式，这些路径不应该存在
+    if (normalizedPath === '/f' || normalizedPath === '/admin') {
+      next('/')
+      return
+    }
+  }
+  
+  next()
 })
 
 export default router
