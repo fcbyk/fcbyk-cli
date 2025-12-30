@@ -7,7 +7,7 @@ from functools import wraps
 from flask import jsonify, request, session
 from flask_socketio import SocketIO, disconnect
 
-from fcbyk.web.app import create_app
+from fcbyk.web.app import create_spa
 from .service import SlideService
 
 
@@ -22,7 +22,7 @@ def create_slide_app(service: SlideService):
         (Flask应用, SocketIO实例)
     """
     # 使用工厂函数创建应用
-    app = create_app("slide.html")
+    app = create_spa("slide.html")
     
     # 设置 secret_key 用于 session
     app.secret_key = os.urandom(24)

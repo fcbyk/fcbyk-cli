@@ -12,6 +12,7 @@
 - `pick`：随机抽取一个元素（可用于抽奖、随机选择等）
 - `jiahao`：黑客终端模拟器
 - `popup`：弹窗效果
+- `slide`：同一局域网内，手机控制电脑PTT翻页
 
 ## 安装
 
@@ -23,8 +24,17 @@ pip install fcbyk-cli
 
 #### 从源码安装（可按需调整代码）
 
+- 前端构建
 ```bash
 git clone https://github.com/fcbyk/fcbyk-cli.git
+cd web-ui
+npm install
+npm run build:flatten
+```
+
+- 后端安装
+```bash
+cd ..
 cd fcbyk-cli
 pip install -e .
 ```

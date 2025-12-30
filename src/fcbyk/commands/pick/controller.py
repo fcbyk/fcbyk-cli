@@ -18,7 +18,7 @@ default_config = {
 }
 
 # Flask 应用（模板目录复用 web 目录）
-app = create_spa("pick.html","static",["/admin","/f"])
+app = create_spa(entry_html = "pick.html", page = ["/admin","/f"])
 
 # Web 模式状态
 files_mode_root = None  # 指定目录或单文件路径
