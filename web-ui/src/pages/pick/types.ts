@@ -54,3 +54,20 @@ export interface PickApiResponse {
     name: string
     size: number
   }
+
+  /** 兑换码信息 */
+  export interface CodeInfo {
+    code: string
+    used: boolean
+  }
+
+  /** 兑换码列表 API 响应 */
+  export interface AdminCodesApiResponse {
+    codes: CodeInfo[]
+  }
+
+  /** 新增兑换码 API 响应 */
+  export interface AdminAddCodeApiResponse {
+    success?: boolean
+    error?: string
+  }

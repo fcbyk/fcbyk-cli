@@ -16,6 +16,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import ItemPick from './ItemPick.vue'
 import FilePick from './FilePick.vue'
+import Admin from './Admin.vue'
 
 // 动态获取 base 路径
 // 开发环境：路径包含 /pick/，base 是 /pick/
@@ -40,6 +41,11 @@ const router = createRouter({
       path: '/f',
       name: 'file-pick',
       component: FilePick
+    },
+    {
+      path: '/admin',
+      name: 'admin',
+      component: Admin
     }
   ]
 })

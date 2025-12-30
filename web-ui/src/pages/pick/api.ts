@@ -2,7 +2,7 @@
  * Pick API 服务
  */
 
-import type { PickApiResponse, FileListApiResponse, FilePickApiResponse, FileResultApiResponse } from './types'
+import type { PickApiResponse, FileListApiResponse, FilePickApiResponse, FileResultApiResponse, AdminCodesApiResponse, AdminAddCodeApiResponse } from './types'
 
 /** 获取候选项列表 */
 export async function fetchItems(): Promise<string[]> {
@@ -62,5 +62,61 @@ export async function getFileResult(code: string): Promise<FileResultApiResponse
   } catch (error) {
     console.error('Failed to get file result:', error)
     throw new Error((error as Error).message || '获取结果失败')
+  }
+}
+
+/** 管理员登录 */
+export async function adminLogin(password: string): Promise<void> {
+  try {
+    const response = await fetch('/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password })
+    })
+    if (!response.ok) {
+      throw new Error('密码错误')
+    }
+  } catch (error) {
+    console.error('Failed to login:', error)
+    throw new Error((error as Error).message || '登录失败')
+  }
+}
+
+/** 获取兑换码列表 */
+export async function fetchAdminCodes(password: string): Promise<AdminCodesApiResponse> {
+  try {
+    const response = await fetch('/api/admin/codes', {
+      headers: { 'X-Admin-Password': password }
+    })
+    if (!response.ok) {
+      throw new Error('获取列表失败')
+    }
+    const data: AdminCodesApiResponse = await response.json()
+    return data
+  } catch (error) {
+    console.error('Failed to fetch admin codes:', error)
+    throw new Error((error as Error).message || '获取列表失败')
+  }
+}
+
+/** 新增兑换码 */
+export async function addAdminCode(password: string, code: string): Promise<AdminAddCodeApiResponse> {
+  try {
+    const response = await fetch('/api/admin/codes/add', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-Password': password
+      },
+      body: JSON.stringify({ code })
+    })
+    const data: AdminAddCodeApiResponse = await response.json()
+    if (!response.ok) {
+      throw new Error(data.error || '添加失败')
+    }
+    return data
+  } catch (error) {
+    console.error('Failed to add admin code:', error)
+    throw new Error((error as Error).message || '添加失败')
   }
 }
