@@ -1,14 +1,11 @@
 import os
 from flask import Flask, redirect, send_from_directory
 
-import os
-from flask import Flask, send_from_directory
-
 def create_spa(
     entry_html: str,
     root: str = "dist",
-    page = None,
-    cli_data=None
+    page=None,
+    cli_data=None,
 ) -> Flask:
     """
     entry_html: SPA 入口文件，如 'slide.html'
@@ -31,14 +28,15 @@ def create_spa(
     def index():
         return send_from_directory(dist_root, entry_html)
 
-    # 前端路由列表 - 统一返回index主页
+    # 前端路由列表 - 统一返回入口主页
     if page:
         for url in page:
-            def page():
+            def view(entry_html=entry_html, dist_root=dist_root):
                 return send_from_directory(dist_root, entry_html)
+
             # 保证每个路由的 endpoint 唯一
             endpoint = f"page_{url.strip('/').replace('/', '_') or 'root'}"
-            app.add_url_rule(url, endpoint, page)
+            app.add_url_rule(url, endpoint, view)
 
     if cli_data:
         app.cli_data = cli_data

@@ -3,8 +3,6 @@ lansend controller 层
 负责 Flask 路由注册、请求解析、调用 service 并返回响应
 """
 
-from __future__ import annotations
-
 import os
 from typing import Optional
 

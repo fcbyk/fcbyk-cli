@@ -8,8 +8,6 @@
 - 可选自动打开浏览器
 """
 
-from __future__ import annotations
-
 import os
 import webbrowser
 
@@ -23,7 +21,7 @@ from .controller import create_lansend_app
 from .service import LansendConfig, LansendService
 
 
-def _lansend_impl(port: int, directory: str, name: str | None, password: bool, no_browser: bool, ide: bool = False):
+def _lansend_impl(port: int, directory: str, name=None, password: bool = False, no_browser: bool = False, ide: bool = False):
     if not os.path.exists(directory):
         click.echo(f"Error: Directory {directory} does not exist")
         return

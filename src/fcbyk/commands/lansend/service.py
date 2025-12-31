@@ -3,8 +3,6 @@ lansend service 层
 负责纯业务逻辑：路径/文件处理、目录树、内容读取等
 """
 
-from __future__ import annotations
-
 import os
 import re
 from dataclasses import dataclass
