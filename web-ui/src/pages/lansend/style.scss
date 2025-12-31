@@ -399,6 +399,96 @@ body {
   font-size: 14px;
 }
 
+/* UploadTab 登录态（简约风） */
+.login-gate {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.login-card {
+  width: min(380px, 92%);
+  padding: 22px 20px;
+}
+
+.login-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+  text-align: center;
+}
+
+.login-subtitle {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #6b7280;
+  text-align: center;
+}
+
+.login-actions {
+  margin-top: 18px;
+  display: flex;
+  justify-content: center;
+}
+
+.login-btn {
+  appearance: none;
+  border: 1px solid #111827;
+  background: transparent;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.login-btn:hover {
+  color: #2ecc71;
+  border-color: #2ecc71;
+} 
+
+// .login-btn:active {
+//   background: #0b1220;
+//   border-color: #0b1220;
+// }
+
+.login-error {
+  margin-top: 12px;
+  font-size: 12px;
+  color: #ef4444;
+  text-align: center;
+}
+
+.login-tip {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #9ca3af;
+  text-align: center;
+}
+
+.login-password-input {
+  margin-top: 14px;
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 20px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  outline: none;
+  background: #ffffff;
+  color: #111827;
+}
+
+.login-password-input:focus {
+  border-color: #111827;
+}
+
 .queue-info {
   margin-top: 10px;
   font-size: 12px;
