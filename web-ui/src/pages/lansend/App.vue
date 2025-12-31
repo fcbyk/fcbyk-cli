@@ -44,7 +44,7 @@
         </div>
       </div>
 
-      <!-- 标签页内容 -->
+      <!-- 标签页内容（仅保留下载/上传。预览改为独立层，覆盖整个 tabs-container 内容区） -->
       <div class="tabs-content">
         <!-- 下载内容（移动端 Tab 展示；桌面端继续显示左侧列表） -->
         <div v-show="activeTab === 'download'" class="tab-pane download-pane">
@@ -82,16 +82,16 @@
             @drop="handleDrop"
           />
         </div>
+      </div>
 
-        <!-- 预览内容 -->
-        <div v-show="activeTab === 'preview' && previewFile" class="tab-pane">
-          <PreviewTab
-            :preview-file="previewFile"
-            :preview-loading="previewLoading"
-            :preview-error="previewError"
-            @close="closePreview"
-          />
-        </div>
+      <!-- 预览层：不放在 tabs-content 内，避免 tabs-content 的 padding/布局影响；需要占满整个内容区 -->
+      <div v-show="activeTab === 'preview' && previewFile" class="preview-layer">
+        <PreviewTab
+          :preview-file="previewFile"
+          :preview-loading="previewLoading"
+          :preview-error="previewError"
+          @close="closePreview"
+        />
       </div>
     </div>
   </div>

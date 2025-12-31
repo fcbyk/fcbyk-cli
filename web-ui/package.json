@@ -9,6 +9,8 @@
     "build:flatten": "pnpm build && pnpm flatten"
   },
   "dependencies": {
+    "@highlightjs/vue-plugin": "^2.1.0",
+    "highlight.js": "^11.11.1",
     "socket.io-client": "^4.5.4",
     "vue": "^3.4.0",
     "vue-router": "^4.6.4"
