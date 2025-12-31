@@ -11,28 +11,28 @@ import urllib.error
 
 from fcbyk.cli_support.output import echo_network_urls
 from fcbyk.utils.network import get_private_networks
-from fcbyk.utils.asset_downloader import create_web_assets_downloader
+# from fcbyk.utils.asset_downloader import create_web_assets_downloader
+from ..web.app import create_spa
 
 
-app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), '..', 'web'))
+app = create_spa("lansend.html")
 shared_directory = None
 display_name = "共享文件夹"  # 默认显示名称
 upload_password = None  # 上传密码
 first_upload_log = True  # 控制首次日志前空一行
-ide_mode = False  # IDE模式标志
 
 # 静态资源配置
-ASSETS_DIR = os.path.join(os.path.dirname(__file__), '..', 'web', 'static','assets')
-PRISM_VERSION = '1.29.0'
-STATIC_RESOURCES = {
-    'prism-tomorrow.min.css': f'https://cdn.jsdelivr.net/npm/prismjs@{PRISM_VERSION}/themes/prism-tomorrow.min.css',
-    'prism-core.min.js': f'https://cdn.jsdelivr.net/npm/prismjs@{PRISM_VERSION}/components/prism-core.min.js',
-    'prism-c.min.js': f'https://cdn.jsdelivr.net/npm/prismjs@{PRISM_VERSION}/components/prism-c.min.js',  # C++ 依赖 C
-    'prism-cpp.min.js': f'https://cdn.jsdelivr.net/npm/prismjs@{PRISM_VERSION}/components/prism-cpp.min.js',
-    'prism-python.min.js': f'https://cdn.jsdelivr.net/npm/prismjs@{PRISM_VERSION}/components/prism-python.min.js',
-}
+# ASSETS_DIR = os.path.join(os.path.dirname(__file__), '..', 'web', 'dist','assets')
+# PRISM_VERSION = '1.29.0'
+# STATIC_RESOURCES = {
+#     'prism-tomorrow.min.css': f'https://cdn.jsdelivr.net/npm/prismjs@{PRISM_VERSION}/themes/prism-tomorrow.min.css',
+#     'prism-core.min.js': f'https://cdn.jsdelivr.net/npm/prismjs@{PRISM_VERSION}/components/prism-core.min.js',
+#     'prism-c.min.js': f'https://cdn.jsdelivr.net/npm/prismjs@{PRISM_VERSION}/components/prism-c.min.js',  # C++ 依赖 C
+#     'prism-cpp.min.js': f'https://cdn.jsdelivr.net/npm/prismjs@{PRISM_VERSION}/components/prism-cpp.min.js',
+#     'prism-python.min.js': f'https://cdn.jsdelivr.net/npm/prismjs@{PRISM_VERSION}/components/prism-python.min.js',
+# }
 # 创建资源下载器
-downloader = create_web_assets_downloader(STATIC_RESOURCES)
+# downloader = create_web_assets_downloader(STATIC_RESOURCES)
 
 def init_app(directory=None, name=None, password=None, ide=False):
     global shared_directory, display_name, upload_password, ide_mode
@@ -87,48 +87,6 @@ def get_path_parts(current_path):
                     'path': current
                 })
     return parts
-
-@app.route('/')
-def index():
-    if not shared_directory:
-        return "Shared directory not specified. Use -d to set directory."
-    if ide_mode:
-        return serve_ide_view('')
-    return serve_directory('')
-
-@app.route('/<path:filename>')
-def serve_file(filename):
-    if not shared_directory:
-        abort(404, description="Shared directory not specified")
-    
-    # 将URL路径中的 / 转换为系统路径分隔符
-    normalized_path = filename.replace('/', os.sep)
-    file_path = os.path.join(shared_directory, normalized_path)
-    
-    # 防止路径逃逸
-    file_path = os.path.abspath(file_path)
-    if not file_path.startswith(os.path.abspath(shared_directory)):
-        abort(404, description="Invalid path")
-    
-    if not os.path.exists(file_path):
-        abort(404, description="File not found")
-    
-    if os.path.isdir(file_path):
-        if ide_mode:
-            return serve_ide_view(filename)
-        return serve_directory(filename)
-    
-    if ide_mode:
-        # IDE模式下，如果请求参数包含 raw=true，直接返回原始文件（用于二进制文件）
-        if request.args.get('raw') == 'true':
-            return send_file(file_path)
-        # IDE模式下，如果是图片文件，直接返回图片
-        if is_image_file(file_path):
-            return send_file(file_path)
-        # 否则返回文件内容用于预览
-        return get_file_content(filename)
-    
-    return send_from_directory(shared_directory, normalized_path)
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -300,6 +258,13 @@ def get_file_content(relative_path):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/file/<path:filename>')
+def api_file(filename):
+    """API: 获取文件内容（用于预览）"""
+    if not shared_directory:
+        return jsonify({'error': 'Shared directory not specified'}), 400
+    return get_file_content(filename)
+
 @app.route('/api/tree')
 def api_tree():
     """API: 获取目录树"""
@@ -307,6 +272,48 @@ def api_tree():
         return jsonify({'error': 'Shared directory not specified'}), 400
     tree = get_file_tree(shared_directory)
     return jsonify({'tree': tree})
+
+@app.route('/api/directory')
+def api_directory():
+    """API: 获取目录信息（用于 lansend.html）"""
+    if not shared_directory:
+        return jsonify({'error': 'Shared directory not specified'}), 400
+    
+    # 从请求参数获取相对路径
+    relative_path = request.args.get('path', '').strip('/')
+    
+    current_path = os.path.join(shared_directory, relative_path) if relative_path else shared_directory
+    
+    # 检查路径是否存在且为目录
+    if not os.path.exists(current_path) or not os.path.isdir(current_path):
+        return jsonify({'error': 'Directory not found'}), 404
+    
+    # 获取文件列表
+    items = []
+    for name in os.listdir(current_path):
+        full_path = os.path.join(current_path, name)
+        item_path = os.path.join(relative_path, name) if relative_path else name
+        items.append({
+            'name': name,
+            'path': item_path.replace('\\', '/'),  # 统一使用 / 作为路径分隔符
+            'is_dir': os.path.isdir(full_path)
+        })
+    
+    items.sort(key=lambda x: (not x['is_dir'], x['name'].lower()))
+    
+    # 获取路径部分
+    path_parts = get_path_parts(relative_path)
+    
+    share_name = os.path.basename(shared_directory)
+    
+    return jsonify({
+        'display_name': display_name,
+        'share_name': share_name,
+        'relative_path': relative_path,
+        'path_parts': path_parts,
+        'items': items,
+        'require_password': bool(upload_password)
+    })
 
 @app.route('/api/download/<path:filename>')
 def api_download(filename):
@@ -331,57 +338,9 @@ def api_download(filename):
     except Exception as e:
         abort(500, description=f"Error downloading file: {str(e)}")
 
-@app.route('/assets/<path:filename>')
-def serve_asset(filename):
-    """提供静态资源文件"""
-    # 安全检查：只允许访问预定义的文件
-    if filename not in STATIC_RESOURCES:
-        abort(404, description="Asset not found")
-    
-    file_path = os.path.join(ASSETS_DIR, filename)
-    if not os.path.exists(file_path):
-        abort(404, description="Asset file not found")
-    
-    try:
-        return send_file(file_path)
-    except Exception as e:
-        abort(500, description=f"Error serving asset: {str(e)}")
-
-def serve_ide_view(relative_path):
-    """IDE模式视图"""
-    share_name = os.path.basename(shared_directory)
-    return render_template('ide.html',
-                         relative_path=relative_path,
-                         share_name=share_name,
-                         display_name=display_name)
-
-def serve_directory(relative_path):
-    current_path = os.path.join(shared_directory, relative_path)
-    items = []
-    
-    for name in os.listdir(current_path):
-        full_path = os.path.join(current_path, name)
-        item_path = os.path.join(relative_path, name)
-        items.append({
-            'name': name,
-            'path': item_path,
-            'is_dir': os.path.isdir(full_path)
-        })
-    
-    items.sort(key=lambda x: (not x['is_dir'], x['name'].lower()))
-    share_name = os.path.basename(shared_directory)  # 使用实际的文件夹名称作为路径显示
-    
-    return render_template('lansend.html',
-                         current_path=relative_path or '根目录',
-                         relative_path=relative_path,
-                         path_parts=get_path_parts(relative_path),
-                         items=items,
-                         share_name=share_name,
-                         display_name=display_name,
-                         require_password=bool(upload_password))  # 传递显示名称到模板
 
 def _lansend_impl(port, directory, name, password, no_browser, ide=False):
-    """lansend 命令的实际实现"""
+
     global shared_directory, display_name, upload_password, ide_mode
     
     if not os.path.exists(directory):
@@ -393,12 +352,7 @@ def _lansend_impl(port, directory, name, password, no_browser, ide=False):
         return
     
     shared_directory = os.path.abspath(directory)
-    ide_mode = ide
-    
-    # IDE 模式：检查并下载静态资源
-    if ide_mode:
-        downloader.download_missing()
-    
+
     if name:
         display_name = name
     
@@ -411,8 +365,6 @@ def _lansend_impl(port, directory, name, password, no_browser, ide=False):
     private_networks = get_private_networks()
     local_ip = private_networks[0]['ips'][0]
     
-    mode_text = "IDE Code Viewer" if ide_mode else "File Sharing Server"
-    click.echo(f"\n * {mode_text}")
     click.echo(f" * Directory: {shared_directory}")
     click.echo(f" * Display Name: {display_name}")
     if upload_password:
@@ -429,6 +381,7 @@ def _lansend_impl(port, directory, name, password, no_browser, ide=False):
         webbrowser.open("http://{}:{}".format(local_ip, port))
 
     app.run(host='0.0.0.0', port=port)
+
 
 @click.command(help='Start a local web server for sharing files over LAN')
 @click.option(
@@ -456,14 +409,9 @@ def _lansend_impl(port, directory, name, password, no_browser, ide=False):
     is_flag=True,
     help="Disable automatic browser opening"
 )
-@click.option(
-    "--ide",
-    is_flag=True,
-    default=False,
-    help="Enable IDE mode for code viewing (read-only code browser)"
-)
-def lansend(port, directory, name, password, no_browser, ide):
+def lansend(port, directory, name, password, no_browser, ide=False):
     _lansend_impl(port, directory, name, password, no_browser, ide)
+
 
 @click.command(name='ls', help='alias for lansend')
 @click.option(
@@ -491,12 +439,5 @@ def lansend(port, directory, name, password, no_browser, ide):
     is_flag=True,
     help="Disable automatic browser opening"
 )
-@click.option(
-    "--ide",
-    is_flag=True,
-    default=False,
-    help="Enable IDE mode for code viewing (read-only code browser)"
-)
-def ls(port, directory, name, password, no_browser, ide):
-    """ls 是 lansend 的别名"""
-    _lansend_impl(port, directory, name, password, no_browser, ide) 
+def ls(port, directory, name, password, no_browser, ide=False):
+    _lansend_impl(port, directory, name, password, no_browser, ide)
