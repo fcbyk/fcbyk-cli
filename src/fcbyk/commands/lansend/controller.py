@@ -4,9 +4,11 @@ lansend controller 层
 """
 
 import os
+import re
+import mimetypes
 from typing import Optional
 
-from flask import abort, jsonify, request, send_file
+from flask import abort, jsonify, request, send_file, Response, stream_with_context
 
 from fcbyk.web.app import create_spa
 from .service import LansendService
@@ -140,6 +142,68 @@ def register_routes(app, service: LansendService):
             return jsonify({"error": "Shared directory not specified"}), 400
         except FileNotFoundError:
             return jsonify({"error": "Directory not found"}), 404
+
+    @app.route("/api/preview/<path:filename>")
+    def api_preview(filename):
+        try:
+            file_path = service.resolve_file_path(filename)
+        except (ValueError, PermissionError):
+            abort(404)
+
+        if not os.path.exists(file_path) or os.path.isdir(file_path):
+            abort(404)
+
+        file_size = os.path.getsize(file_path)
+        range_header = request.headers.get("Range", None)
+
+        start = 0
+        end = file_size - 1
+
+        status_code = 200
+        mimetype = mimetypes.guess_type(file_path)[0] or "application/octet-stream"
+        headers = {
+            "Content-Type": mimetype,
+            "Content-Length": str(file_size),
+            "Accept-Ranges": "bytes",
+        }
+
+        if range_header:
+            range_match = re.search(r"bytes=(\d+)-(\d*)", range_header)
+            if range_match:
+                start = int(range_match.group(1))
+                if range_match.group(2):
+                    end = int(range_match.group(2))
+                else:
+                    end = file_size - 1
+
+                if start >= file_size or end >= file_size:
+                    return Response(
+                        "Requested Range Not Satisfiable",
+                        status=416,
+                        headers={"Content-Range": f"bytes */{file_size}"},
+                    )
+
+                length = end - start + 1
+                headers["Content-Length"] = str(length)
+                headers["Content-Range"] = f"bytes {start}-{end}/{file_size}"
+                status_code = 206
+
+        def generate_chunks(f, start_pos, size):
+            with f:
+                f.seek(start_pos)
+                bytes_to_read = size
+                while bytes_to_read > 0:
+                    chunk_size = 1024 * 1024  # 1MB chunks
+                    data = f.read(min(chunk_size, bytes_to_read))
+                    if not data:
+                        break
+                    bytes_to_read -= len(data)
+                    yield data
+
+        file_handle = open(file_path, "rb")
+        response_body = generate_chunks(file_handle, start, end - start + 1)
+
+        return Response(stream_with_context(response_body), status=status_code, headers=headers)
 
     @app.route("/api/download/<path:filename>")
     def api_download(filename):
