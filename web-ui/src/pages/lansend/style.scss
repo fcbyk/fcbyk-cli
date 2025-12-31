@@ -82,6 +82,21 @@ body {
   border-bottom: 1px solid #e4e7ed;
   background-color: #fff;
   flex-shrink: 0;
+  align-items: stretch;
+  overflow-x: auto;
+  overflow-y: hidden;
+
+  /* 避免横向滚动条太显眼（仍可滚动） */
+  &::-webkit-scrollbar {
+    height: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 3px;
+  }
 }
 
 .tab-item {
@@ -93,6 +108,7 @@ body {
   transition: all 0.3s;
   user-select: none;
   position: relative;
+  flex: 0 0 auto;
 
   &.mobile-only {
     display: none;
@@ -106,6 +122,41 @@ body {
     color: #409eff;
     border-bottom-color: #409eff;
     font-weight: 500;
+  }
+}
+
+
+.tab-item-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 220px;
+
+  .tab-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 170px;
+  }
+
+  .tab-close {
+    border: none;
+    background: transparent;
+    color: #909399;
+    cursor: pointer;
+    padding: 0;
+    width: 18px;
+    height: 18px;
+    line-height: 18px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+      background-color: #f0f0f0;
+      color: #333;
+    }
   }
 }
 
@@ -386,47 +437,6 @@ body {
   padding: 10px 20px;
 }
 
-.preview-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-  flex-shrink: 0;
-  border-bottom: 1px solid #eee;
-  padding: 0 20px 10px 20px;
-
-  h2 {
-    margin: 0;
-    font-size: 18px;
-    color: #2c3e50;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    flex: 1;
-  }
-
-  .close-btn {
-    background: none;
-    border: none;
-    font-size: 28px;
-    color: #999;
-    cursor: pointer;
-    padding: 0;
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
-    flex-shrink: 0;
-    margin-left: 10px;
-
-    &:hover {
-      background-color: #f0f0f0;
-      color: #333;
-    }
-  }
-}
 
 .preview-content {
   flex: 1;

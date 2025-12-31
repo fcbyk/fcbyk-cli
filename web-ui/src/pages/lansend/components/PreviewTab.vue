@@ -1,9 +1,5 @@
 <template>
   <div v-if="previewFile" class="tab-pane preview-pane">
-    <div class="preview-header">
-      <h2>{{ previewFile.name }}</h2>
-      <button @click="$emit('close')" class="close-btn">×</button>
-    </div>
     <div class="preview-content">
       <div v-if="previewLoading" class="preview-loading">加载中...</div>
       <div v-else-if="previewError" class="preview-error">{{ previewError }}</div>
@@ -45,9 +41,4 @@ const videoSrc = computed(() => {
   // 走后端新增的 Range 预览接口，支持拖动进度条/快进
   return `/api/preview/${encodeURI(props.previewFile.path)}`
 })
-
-defineEmits<{
-  (e: 'close'): void
-}>()
 </script>
-

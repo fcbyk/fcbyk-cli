@@ -49,13 +49,19 @@ class LansendService:
 
     @staticmethod
     def get_path_parts(current_path: str) -> List[Dict[str, str]]:
+        """把相对路径拆成面包屑。
+
+        注意：这里必须统一使用 URL 风格的 "/" 分隔符。
+        在 Windows 上如果用 os.path.join，会生成 "\\"，从而导致前端面包屑拼接/跳转异常。
+        """
         parts: List[Dict[str, str]] = []
         if current_path:
             path_parts = current_path.split("/")
             current = ""
             for part in path_parts:
                 if part:
-                    current = os.path.join(current, part)
+                    # 强制使用 "/" 作为分隔符，避免 Windows 反斜杠污染 API 返回
+                    current = f"{current}/{part}" if current else part
                     parts.append({"name": part, "path": current})
         return parts
 

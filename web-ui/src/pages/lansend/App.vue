@@ -14,11 +14,7 @@
     </div>
 
     <!-- 可拖拽分隔条 -->
-    <div 
-      class="resizer" 
-      @mousedown="startResize"
-      @touchstart="startResize"
-    ></div>
+    <div class="resizer" @mousedown="startResize" @touchstart="startResize"></div>
 
     <!-- 标签页容器（上传和预览） -->
     <div class="tabs-container" :style="{ width: tabsContainerWidth + 'px' }">
@@ -31,20 +27,20 @@
         >
           文件下载
         </div>
-        <div
-          class="tab-item"
-          :class="{ active: activeTab === 'upload' }"
-          @click="activeTab = 'upload'"
-        >
+        <div class="tab-item" :class="{ active: activeTab === 'upload' }" @click="activeTab = 'upload'">
           文件上传
         </div>
+
+        <!-- 单实例预览：tab 上展示当前预览文件名，并可关闭 -->
         <div
-          class="tab-item"
+          class="tab-item tab-item-file"
+          v-show="previewFile"
           :class="{ active: activeTab === 'preview' }"
           @click="activeTab = 'preview'"
-          :style="{ display: previewFile ? 'block' : 'none' }"
+          :title="previewFile?.name"
         >
-          文件预览
+          <span class="tab-title">{{ previewFile?.name }}</span>
+          <button class="tab-close" @click.stop="closePreview" aria-label="关闭">×</button>
         </div>
       </div>
 
@@ -146,7 +142,7 @@ const {
   processUploadQueue
 } = useLansendUpload()
 
-// 预览 + tab
+// 预览 + tab（单实例预览）
 const { previewFile, previewLoading, previewError, activeTab, previewFileContent, closePreview } = useLansendPreview()
 
 // 根据后端 requirePassword 决定是否可上传
@@ -204,7 +200,7 @@ function startResize(e: MouseEvent | TouchEvent) {
   resizeStartX.value = clientX
   resizeStartFileWidth.value = fileContainerWidth.value
   resizeStartTabsWidth.value = tabsContainerWidth.value
-  
+
   document.addEventListener('mousemove', handleResize)
   document.addEventListener('mouseup', stopResize)
   document.addEventListener('touchmove', handleResize)
@@ -215,22 +211,22 @@ function startResize(e: MouseEvent | TouchEvent) {
 // 处理拖拽调整
 function handleResize(e: MouseEvent | TouchEvent) {
   if (!isResizing.value) return
-  
+
   const container = document.querySelector('.main-container') as HTMLElement
   if (!container) return
-  
+
   const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
   const deltaX = clientX - resizeStartX.value
   const containerRect = container.getBoundingClientRect()
   const newFileWidth = Math.max(200, Math.min(containerRect.width - 304, resizeStartFileWidth.value + deltaX))
   const newTabsWidth = containerRect.width - newFileWidth - 4 // 减去分隔条宽度
-  
+
   fileContainerWidth.value = newFileWidth
   tabsContainerWidth.value = newTabsWidth
-  
+
   // 保存到 sessionStorage
   sessionStorage.setItem('lansendFileContainerWidth', newFileWidth.toString())
-  
+
   e.preventDefault()
 }
 
@@ -274,12 +270,10 @@ async function handleItemClick(item: DirectoryItem) {
     // 点击目录，切换到该目录
     navigateToPath(item.path)
   } else {
-    // 点击文件，预览文件内容
+    // 点击文件：单实例预览（直接切换内容）
     await previewFileContent(item.path, item.name)
   }
 }
-
-
 
 // 处理密码验证
 function handleVerifyPassword() {
@@ -306,14 +300,13 @@ function handleDrop(e?: DragEvent) {
   }
 }
 
-
 // 处理文件上传
 function handleFiles(files: File[]) {
   if (files.length === 0) return
-  
+
   // 添加文件到上传队列
   enqueueFiles(files)
-  
+
   // 开始处理上传队列
   processUploadQueue({
     currentPath: currentPath.value,
@@ -357,4 +350,3 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', syncLayoutByWidth)
 })
 </script>
-

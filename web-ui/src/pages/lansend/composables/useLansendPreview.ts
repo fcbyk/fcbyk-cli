@@ -2,17 +2,24 @@ import { ref } from 'vue'
 import { getFileContent } from '../api'
 import type { PreviewFile } from '../types'
 
+export type LansendActiveTab = 'download' | 'upload' | 'preview'
+
 export function useLansendPreview() {
   const previewFile = ref<PreviewFile | null>(null)
   const previewLoading = ref(false)
   const previewError = ref('')
-  const activeTab = ref<'download' | 'upload' | 'preview'>('upload')
+  const activeTab = ref<LansendActiveTab>('upload')
 
   async function previewFileContent(path: string, name: string) {
     previewLoading.value = true
     previewError.value = ''
-    previewFile.value = null
     activeTab.value = 'preview'
+
+    // 单实例预览：点击不同文件时直接切换预览内容
+    previewFile.value = {
+      path,
+      name
+    }
 
     try {
       const fileData = await getFileContent(path)
@@ -35,17 +42,10 @@ export function useLansendPreview() {
     previewError.value = ''
 
     const mobile = window.matchMedia('(max-width: 768px)').matches
-    
-    if (mobile) {
-      if (activeTab.value === 'preview') {
-        activeTab.value = 'download'
-      }
-    }else{
-      if (activeTab.value === 'preview') {
-        activeTab.value = 'upload'
-      }
-    }
 
+    if (activeTab.value === 'preview') {
+      activeTab.value = mobile ? 'download' : 'upload'
+    }
   }
 
   return {
@@ -57,4 +57,3 @@ export function useLansendPreview() {
     closePreview
   }
 }
-
