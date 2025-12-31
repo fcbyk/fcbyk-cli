@@ -33,11 +33,19 @@ export function useLansendPreview() {
   function closePreview() {
     previewFile.value = null
     previewError.value = ''
-    // 关闭预览不应强制跳转到“上传”，否则会打断用户当前所在的Tab。
-    // 保持在当前Tab（通常是预览Tab），由用户自行切换。
-    if (activeTab.value === 'preview') {
-      activeTab.value = 'download'
+
+    const mobile = window.matchMedia('(max-width: 768px)').matches
+    
+    if (mobile) {
+      if (activeTab.value === 'preview') {
+        activeTab.value = 'download'
+      }
+    }else{
+      if (activeTab.value === 'preview') {
+        activeTab.value = 'upload'
+      }
     }
+
   }
 
   return {

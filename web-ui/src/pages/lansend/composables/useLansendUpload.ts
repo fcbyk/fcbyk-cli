@@ -2,7 +2,6 @@ import { computed, ref } from 'vue'
 import { verifyUploadPassword, uploadFile } from '../api'
 import { sleep } from '@/utils/time'
 import { formatFileSize } from '@/utils/files'
-import { currentTime } from '@/utils/time'
 
 let completeInfoTimer: ReturnType<typeof setTimeout> | null = null
 
