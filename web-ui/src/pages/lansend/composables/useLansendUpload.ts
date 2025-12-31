@@ -1,5 +1,10 @@
 import { computed, ref } from 'vue'
 import { verifyUploadPassword, uploadFile } from '../api'
+import { sleep } from '@/utils/time'
+import { formatFileSize } from '@/utils/files'
+import { currentTime } from '@/utils/time'
+
+let completeInfoTimer: ReturnType<typeof setTimeout> | null = null
 
 const PASSWORD_KEY = 'lansendUploadPassword'
 
@@ -20,6 +25,8 @@ export function useLansendUpload() {
   const currentFileName = ref('')
   const currentFileSize = ref(0)
   const currentFileLoaded = ref(0)
+  const completeInfo = ref('')
+  const showCompleteInfoFlag = ref(false)
 
   const canUpload = computed(() => {
     return isPasswordVerified.value
@@ -47,12 +54,24 @@ export function useLansendUpload() {
     return '拖拽文件到此处或点击选择文件'
   })
 
-  function formatFileSize(bytes: number): string {
-    if (bytes === 0) return '0 B'
-    const k = 1024
-    const sizes = ['B', 'KB', 'MB', 'GB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i]
+  function showCompleteInfo(uploaded: number, renamed: number) {
+    // 避免上一次的定时器把本次的提示提前清掉
+    if (completeInfoTimer) {
+      clearTimeout(completeInfoTimer)
+      completeInfoTimer = null
+    }
+
+    showCompleteInfoFlag.value = true
+    completeInfo.value = `已成功上传 ${uploaded} 个文件`
+    if (renamed > 0) {
+      completeInfo.value += `，${renamed} 个文件因重名已自动重命名`
+    }
+
+    completeInfoTimer = setTimeout(() => {
+      showCompleteInfoFlag.value = false
+      completeInfo.value = ''
+      completeInfoTimer = null
+    }, 15000)
   }
 
   const uploadStatus = computed(() => {
@@ -139,11 +158,24 @@ export function useLansendUpload() {
     onRefresh?: () => void
   }) {
     if (uploadQueue.value.length === 0) {
-      isUploading.value = false
+      // 保存当前的上传和重命名计数
+      const uploaded = uploadedCount.value
+      const renamed = renamedFiles.value.length
+      
       params.onRefresh?.()
+      await sleep(2000)
+      
+      // 显示完成信息时使用保存的计数
+      showCompleteInfo(uploaded, renamed)
+      
+      // 重置计数
+      uploadedCount.value = 0
+      renamedFiles.value = []
+      isUploading.value = false
       return
     }
 
+    showCompleteInfoFlag.value = false
     isUploading.value = true
 
     const file = uploadQueue.value.shift()!
@@ -213,6 +245,9 @@ export function useLansendUpload() {
     currentFileName,
     currentFileSize,
     currentFileLoaded,
+
+    completeInfo,
+    showCompleteInfoFlag,
 
     // computed
     canUpload,

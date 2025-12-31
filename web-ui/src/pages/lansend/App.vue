@@ -77,6 +77,8 @@
             :queue-length="queueLength"
             :overall-progress="overallProgress"
             :upload-status="uploadStatus"
+            :complete-info="completeInfo"
+            :show-complete-info-flag="showCompleteInfoFlag"
             @verify-password="handleVerifyPassword"
             @files-selected="handleFiles"
             @dragover="handleDragOver"
@@ -108,6 +110,7 @@ import type { DirectoryItem } from './types'
 import { useLansendDirectory } from './composables/useLansendDirectory'
 import { useLansendUpload } from './composables/useLansendUpload'
 import { useLansendPreview } from './composables/useLansendPreview'
+import { sleep } from '@/utils/time'
 
 // 目录
 const {
@@ -135,6 +138,8 @@ const {
   overallProgress,
   uploadHint,
   uploadStatus,
+  completeInfo,
+  showCompleteInfoFlag,
   verifyPassword,
   restorePasswordFromSession,
   enqueueFiles,
@@ -317,11 +322,10 @@ function handleFiles(files: File[]) {
     onWrongPassword: () => {
       passwordError.value = '密码错误，请重试'
     },
-    onRefresh: () => {
+    onRefresh: async () => {
       // 上传完成后刷新目录
-      setTimeout(() => {
-        loadDirectoryWithAuth(currentPath.value)
-      }, 2000)
+      await sleep(2000)
+      loadDirectoryWithAuth(currentPath.value)
     }
   })
 }

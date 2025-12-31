@@ -48,6 +48,7 @@
         队列中还有 {{ queueLength }} 个文件等待上传
       </div>
     </div>
+    <div v-if="showCompleteInfoFlag" class="complete-info">{{ completeInfo }}</div>
   </div>
 </template>
 
@@ -66,6 +67,8 @@ const props = defineProps<{
   queueLength: number
   overallProgress: number
   uploadStatus: string
+  completeInfo: string
+  showCompleteInfoFlag: boolean
 }>()
 
 const emit = defineEmits<{
