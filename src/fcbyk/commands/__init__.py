@@ -1,4 +1,4 @@
-from .lansend import lansend, ls
+from .lansend.cli import lansend, ls
 from .ai import ai
 from .pick.cli import pick
 from .jiahao import jiahao
