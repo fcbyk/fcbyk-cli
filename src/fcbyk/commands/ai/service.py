@@ -1,6 +1,19 @@
 """
 ai 业务逻辑层
-封装与 OpenAI 兼容 Chat Completions 接口的请求、响应解析
+
+类:
+- AIServiceError: 异常类，三种错误类型（network_error/api_key_error/backend_error）
+- AIService: OpenAI 兼容的 Chat Completions 客户端
+  - chat(req) -> JsonDict | Iterable[JsonDict]: 发起对话请求
+  - _parse_response(resp) -> JsonDict: 解析非流式响应
+  - _stream_chunks(resp) -> Generator: 解析流式响应
+
+数据类:
+- ChatRequest: 请求参数封装（messages, model, api_key, api_url, stream, timeout）
+
+函数:
+- extract_assistant_reply(response: JsonDict) -> str: 从非流式响应提取回复
+- extract_assistant_reply_from_stream(chunks: Iterable[JsonDict]) -> str: 从流式响应拼接回复
 """
 
 import json
@@ -18,37 +31,40 @@ class ChatRequest:
     messages: List[JsonDict]
     model: str
     api_key: str
-    base_url: str
+    api_url: str
     stream: bool = False
     timeout: int = 30
 
 
 class AIServiceError(RuntimeError):
-    """AI 服务错误（网络、HTTP、协议、API error 等统一封装）"""
+    
+    @classmethod
+    def network_error(cls):
+        return cls("网络错误")
+    
+    @classmethod
+    def api_key_error(cls):
+        return cls("API Key 错误")
+    
+    @classmethod
+    def backend_error(cls, detail: str = ""):
+        msg = "后端逻辑错误"
+        if detail:
+            msg += f": {detail}"
+        return cls(msg)
 
 
 class AIService:
-    """OpenAI 兼容 Chat Completions 客户端"""
 
     def __init__(self, session: Optional[requests.Session] = None):
         self._session = session or requests.Session()
 
-    @staticmethod
-    def _chat_completions_url(base_url: str) -> str:
-        return base_url.rstrip('/') + "/v1/chat/completions"
-
     def chat(self, req: ChatRequest) -> Union[JsonDict, Iterable[JsonDict]]:
-        """
-        发起对话请求。
-
-        Returns:
-            - stream=False: 返回完整 JSON dict
-            - stream=True: 返回可迭代的 chunk（generator）
-        """
+        """发起对话请求，返回完整响应或流式 chunks"""
+        
         if not req.api_key:
-            raise AIServiceError("api_key 不能为空")
+            raise AIServiceError.api_key_error()
 
-        url = self._chat_completions_url(req.base_url)
         headers = {
             "Authorization": f"Bearer {req.api_key}",
             "Content-Type": "application/json",
@@ -61,61 +77,39 @@ class AIService:
 
         try:
             resp = self._session.post(
-                url,
-                headers=headers,
-                json=payload,
-                stream=req.stream,
-                timeout=req.timeout,
+                req.api_url, headers=headers, json=payload,
+                stream=req.stream, timeout=req.timeout
             )
+            
+            # 401/403 判定为 API Key 错误
+            if resp.status_code in (401, 403):
+                raise AIServiceError.api_key_error()
+            
+            resp.raise_for_status()
 
             if not req.stream:
-                return self._parse_non_stream_response(resp)
+                return self._parse_response(resp)
             return self._stream_chunks(resp)
 
-        except requests.Timeout as e:
-            raise AIServiceError("请求超时，请检查网络或稍后重试") from e
-        except requests.ConnectionError as e:
-            raise AIServiceError("网络错误：无法连接到API服务器") from e
+        except (requests.Timeout, requests.ConnectionError):
+            raise AIServiceError.network_error()
         except AIServiceError:
             raise
         except Exception as e:
-            raise AIServiceError(f"请求异常：{e}") from e
+            raise AIServiceError.backend_error(str(e))
 
-    def _parse_non_stream_response(self, resp: requests.Response) -> JsonDict:
-        try:
-            resp.raise_for_status()
-        except requests.HTTPError as e:
-            # 尝试解析标准 error
-            try:
-                err = resp.json()
-                message = err.get('error', {}).get('message') or str(err)
-            except Exception:
-                message = str(e)
-            raise AIServiceError(f"HTTP错误：{message}") from e
-
+    def _parse_response(self, resp: requests.Response) -> JsonDict:
         try:
             data = resp.json()
+            if 'error' in data:
+                raise AIServiceError.backend_error(data['error'].get('message', ''))
+            return data
+        except AIServiceError:
+            raise
         except Exception as e:
-            raise AIServiceError(f"响应解析错误：{e}") from e
-
-        if isinstance(data, dict) and 'error' in data:
-            message = data['error'].get('message', str(data['error']))
-            raise AIServiceError(f"API错误：{message}")
-
-        return data
+            raise AIServiceError.backend_error(f"响应解析失败: {e}")
 
     def _stream_chunks(self, resp: requests.Response) -> Generator[JsonDict, None, None]:
-        """将 SSE data: 行解析为 JSON chunk"""
-        try:
-            resp.raise_for_status()
-        except requests.HTTPError as e:
-            try:
-                err = resp.json()
-                message = err.get('error', {}).get('message') or str(err)
-            except Exception:
-                message = str(e)
-            raise AIServiceError(f"HTTP错误：{message}") from e
-
         try:
             for line in resp.iter_lines():
                 if not line:
@@ -125,38 +119,33 @@ class AIService:
                 if not text.startswith('data: '):
                     continue
 
-                data = text[6:]
-                if data.strip() == '[DONE]':
+                data = text[6:].strip()
+                if data == '[DONE]':
                     break
 
                 try:
                     chunk = json.loads(data)
-                except Exception:
-                    # 忽略无法解析的 chunk
+                    if 'error' in chunk:
+                        raise AIServiceError.backend_error(chunk['error'].get('message', ''))
+                    yield chunk
+                except json.JSONDecodeError:
                     continue
-
-                if isinstance(chunk, dict) and 'error' in chunk:
-                    message = chunk['error'].get('message', str(chunk['error']))
-                    raise AIServiceError(f"API错误：{message}")
-
-                yield chunk
+                except AIServiceError:
+                    raise
 
         except AIServiceError:
             raise
         except Exception as e:
-            raise AIServiceError(f"流式读取异常：{e}") from e
+            raise AIServiceError.backend_error(f"流式读取失败: {e}")
 
 
 def extract_assistant_reply(response: JsonDict) -> str:
-    """从非流式响应中提取 assistant 回复文本"""
     return response['choices'][0]['message']['content']
 
 
 def extract_assistant_reply_from_stream(chunks: Iterable[JsonDict]) -> str:
-    """从流式 chunks 中拼接 assistant 回复文本"""
     reply = ""
     for chunk in chunks:
         delta = chunk['choices'][0]['delta'].get('content', '')
         reply += delta
     return reply
-

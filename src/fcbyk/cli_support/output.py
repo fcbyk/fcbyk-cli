@@ -22,7 +22,7 @@ def show_config(
     ctx: click.Context,
     param: Any,
     value: bool,
-    config_file: str,
+    config_file_url: str,
     default_config: Dict[str, Any]
 ) -> None:
     """
@@ -36,15 +36,15 @@ def show_config(
         ctx (click.Context): click 上下文对象
         param (Any): click 参数对象
         value (bool): 是否触发显示
-        config_file (str): 配置文件路径
+        config_file_url (str): 配置文件路径
         default_config (Dict[str, Any]): 默认配置字典
     """
     if not value:
         return
 
-    config = load_json_config(config_file, default_config)
+    config = load_json_config(config_file_url, default_config)
     
-    click.echo(colored_key_value("config file", config_file))
+    click.echo(colored_key_value("config file", config_file_url))
 
     for key, val in config.items():
         click.echo(colored_key_value(key, val))
