@@ -1,16 +1,31 @@
 """
 jiahao 业务逻辑层
 
-实现黑客终端模拟器的核心功能，包括：
-- 终端效果生成（二进制雨、矩阵、代码等）
-- 终端控制（光标、颜色、清屏等）
-- 多线程管理
+类:
+- DisplayMode: 显示模式枚举（binary/code/matrix/glitch）
+- TerminalSize: 终端尺寸数据类（columns, rows）
+  - detect() -> TerminalSize: 自动检测终端尺寸
+- TerminalControl: 终端 ANSI 控制封装
+  - clear_screen(): 清屏
+  - hide_cursor(): 隐藏光标
+  - show_cursor(): 显示光标
+  - move_cursor(x, y): 移动光标到指定位置
+- HackerTerminal: 黑客终端模拟器核心类
+  - run(): 主运行入口
+  - show_completion_screen(): 显示完成界面
+  - _setup(): 初始化终端状态
+  - _main_loop(): 主渲染循环
+  - _cleanup(): 清理终端状态
+  - _generate_screen() -> List[str]: 根据模式生成屏幕内容
+  - _render_screen(lines, elapsed): 渲染屏幕内容到终端
+  - _render_status(elapsed): 渲染底部状态栏
+  - _generate_binary_screen() -> List[str]: 生成二进制雨效果
+  - _generate_matrix_screen() -> List[str]: 生成矩阵字符效果
+  - _generate_code_screen() -> List[str]: 生成代码片段效果
+  - _generate_glitch_screen() -> List[str]: 生成故障艺术效果
 
-注意：
-- 已移除倒计时线程，避免与主线程抢 stdout 导致抖动/乱闪
-- 内容区从第一行开始刷屏，不再保留顶部标题栏
-
-兼容：Python 3.6
+函数:
+- enable_windows_ansi() -> bool: 在 Windows 上启用 ANSI 支持
 """
 
 import random
@@ -110,7 +125,7 @@ class HackerTerminal:
         self.size = TerminalSize.detect()
         self.stop_event = Event()
 
-        # 字符集
+        # 各模式使用的字符集
         self.binary_chars = "01"
         self.hex_chars = "0123456789ABCDEF"
         self.matrix_chars = "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン"
@@ -118,7 +133,7 @@ class HackerTerminal:
         self.glitch_chars = "░▒▓█▀▄▌▐■□▲►▼◄◆◇○●◎☆★☯☮☣☢☠♛♕♔♚"
         self.alphanum_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
-        # 系统名称
+        # 模拟入侵的系统名称列表
         self.systems = [
             "GOV-SECURE-NET", "PENTAGON-ALPHA", "CIA-CLOUD-7",
             "NSA-QUANTUM", "MILITARY-GRID", "SWIFT-CORE",
@@ -175,24 +190,18 @@ class HackerTerminal:
             print("\n".join(lines))
             return
 
-        # 内容区从第一行开始刷新：回到 (1,1) 后整屏覆盖输出
         self.terminal.move_cursor(1, 1)
 
-        # 为了更顺滑，逐行输出并补齐到终端宽度，覆盖上一帧残留字符。
-        # 同时补足“空行”，避免本帧内容行数少于上一帧时底部残留。
         cols = self.size.columns
         rows = self.size.rows
-        # 末尾一般不要写到最后一列（某些终端会自动换行），所以用 cols-1
         pad_width = max(0, cols - 1)
-
-        # 内容区高度：除去底部 2 行状态栏
         content_height = max(0, rows - 2)
 
-        # 输出内容行（超出内容区则截断）
+        # 输出内容行
         for i in range(min(len(lines), content_height)):
             sys.stdout.write(lines[i].ljust(pad_width) + '\n')
 
-        # 补足剩余空行，清掉上一次更长帧的残留
+        # 补足空行清除上一帧残留
         remaining = content_height - min(len(lines), content_height)
         if remaining > 0:
             blank = ' ' * pad_width + '\n'
@@ -209,7 +218,7 @@ class HackerTerminal:
         rows = self.size.rows
         cols = self.size.columns
 
-        # 在倒数第三行显示系统信息
+        # 倒数第三行：系统信息
         if rows > 2:
             self.terminal.move_cursor(1, rows - 2)
             system_info = "\033[0;36mTARGET: {target:<20} | BREACH: {breach:5.1f}% | THREAT: {threat:>3}%\033[0m".format(
@@ -219,7 +228,7 @@ class HackerTerminal:
             )
             sys.stdout.write(system_info.ljust(max(0, cols - 1)))
 
-        # 在倒数第二行显示进度条
+        # 倒数第二行：进度条
         if rows > 1:
             self.terminal.move_cursor(1, rows - 1)
             progress = min(elapsed / self.duration, 1.0)
@@ -259,6 +268,7 @@ class HackerTerminal:
                 else:
                     line.append(" ")
 
+            # 随机插入十六进制块
             if random.random() < 0.05 and cols > 8:
                 pos = random.randint(0, cols - 8)
                 hex_block = "".join(random.choice(self.hex_chars) for _ in range(8))
@@ -280,6 +290,7 @@ class HackerTerminal:
             for _ in range(cols):
                 if random.random() < self.density * 0.8:
                     char = random.choice(self.matrix_chars + self.alphanum_chars)
+                    # 根据行位置计算亮度，模拟字符下落效果
                     brightness = int((float(row) / max(1.0, float(rows))) * 10) + random.randint(0, 5)
                     if brightness > 8:
                         line.append("\033[1;32m{c}\033[0m".format(c=char))
@@ -334,6 +345,7 @@ class HackerTerminal:
             ),
         ]
 
+        # 随机插入代码片段到屏幕中
         for _ in range(random.randint(2, min(5, max(1, rows // 3)))):
             if rows > 3 and cols > 50:
                 r = random.randint(0, rows - 2)
@@ -364,6 +376,7 @@ class HackerTerminal:
                 else:
                     line.append(" ")
 
+            # 随机插入高亮故障块
             if random.random() < 0.1 and cols > 5:
                 pos = random.randint(0, cols - 5)
                 glitch = "".join(random.choice(self.glitch_chars) for _ in range(4))
@@ -415,6 +428,7 @@ class HackerTerminal:
             "\033[1;31m" + "█" * cols + "\033[0m",
         ])
 
+        # 居中显示完成界面
         total = len(lines)
         start_row = max(1, (rows - total) // 2)
         self.terminal.clear_screen()

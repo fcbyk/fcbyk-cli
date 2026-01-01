@@ -1,4 +1,10 @@
-"""jiahao 命令行接口模块"""
+"""
+jiahao 命令行接口模块
+
+函数:
+- select_mode_interactively(current: str) -> DisplayMode: 交互式选择显示模式（支持方向键/ws键）
+- jiahao(duration, speed, density): CLI 主入口，启动黑客终端模拟器
+"""
 
 import sys
 import time
@@ -10,7 +16,6 @@ from .service import DisplayMode, HackerTerminal, enable_windows_ansi
 
 
 def select_mode_interactively(current: str) -> DisplayMode:
-    """使用上下键选择模式并按回车确认"""
     modes = [DisplayMode.BINARY, DisplayMode.CODE, DisplayMode.MATRIX, DisplayMode.GLITCH]
     descriptions: Dict[DisplayMode, str] = {
         DisplayMode.BINARY: 'Matrix-style binary rain',
@@ -37,6 +42,7 @@ def select_mode_interactively(current: str) -> DisplayMode:
     while True:
         ch = click.getchar()
 
+        # 处理特殊按键序列（方向键在不同平台下的编码）
         seq = ch
         if ch in ('\x1b', '\xe0', '\x00'):
             second = click.getchar()
@@ -56,6 +62,7 @@ def select_mode_interactively(current: str) -> DisplayMode:
         else:
             continue
 
+        # 清除之前的输出并重新渲染
         if sys.stdout.isatty():
             sys.stdout.write('\033[F' * lines_to_render)
             sys.stdout.write('\033[J')
@@ -72,7 +79,6 @@ def select_mode_interactively(current: str) -> DisplayMode:
 def jiahao(duration: int, speed: float, density: float):
     click.clear()
 
-    # 尝试启用 Windows ANSI（不强依赖）
     enable_windows_ansi()
     ansi_enabled = sys.stdout.isatty()
 
@@ -103,5 +109,6 @@ def jiahao(duration: int, speed: float, density: float):
     except Exception as e:
         click.echo(f"\n\033[1;31m[!] 错误: {e}\033[0m")
     finally:
+        # 恢复光标显示
         sys.stdout.write('\033[?25h')
         sys.stdout.flush()
