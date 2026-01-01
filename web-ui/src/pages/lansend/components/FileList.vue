@@ -26,7 +26,14 @@
             <span class="file-link">{{ item.name }}</span>
           </span>
         </div>
-        <a v-if="!item.is_dir" :href="`/api/download/${item.path}`" class="download-btn" download @click.stop>下载</a>
+        <a
+          v-if="!ideMode && !item.is_dir"
+          :href="`/api/download/${item.path}`"
+          class="download-btn"
+          download
+          @click.stop
+          >下载</a
+        >
       </li>
     </ul>
   </div>
@@ -41,6 +48,7 @@ defineProps<{
   items: DirectoryItem[]
   loading: boolean
   error: string
+  ideMode?: boolean
 }>()
 
 const emit = defineEmits<{

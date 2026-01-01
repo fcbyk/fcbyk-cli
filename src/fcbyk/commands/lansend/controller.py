@@ -29,6 +29,12 @@ def _try_int(v) -> Optional[int]:
 
 
 def register_routes(app, service: LansendService):
+    @app.route("/api/config")
+    def api_config():
+        return jsonify({
+            "ide_mode": bool(getattr(service.config, "ide_mode", False)),
+        })
+
     @app.route("/upload", methods=["POST"])
     def upload_file():
         ip = request.remote_addr or "unknown ip"

@@ -75,6 +75,7 @@ def _lansend_impl(port: int, directory: str, name=None, password: bool = False, 
     help="Prompt to set upload password (default: no password, or 123456 if skipped)",
 )
 @click.option("-nb", "--no-browser", is_flag=True, help="Disable automatic browser opening")
+@click.option("--ide/--no-ide", default=True, help="IDE mode: text-share layout (default: on)")
 def lansend(port, directory, name, password, no_browser, ide: bool = False):
     _lansend_impl(port, directory, name, password, no_browser, ide)
 
@@ -91,6 +92,7 @@ def lansend(port, directory, name, password, no_browser, ide: bool = False):
     help="Prompt to set upload password (default: no password, or 123456 if skipped)",
 )
 @click.option("-nb", "--no-browser", is_flag=True, help="Disable automatic browser opening")
+@click.option("--ide", is_flag=True, default=False, help="IDE mode: disable upload UI (default: off)")
 def ls(port, directory, name, password, no_browser, ide: bool = False):
     _lansend_impl(port, directory, name, password, no_browser, ide)
 
