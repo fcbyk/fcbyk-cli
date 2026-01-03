@@ -42,7 +42,11 @@ def _lansend_impl(port: int, directory: str, name=None, password: bool = False, 
     config.upload_password = service.pick_upload_password(password, ide, click)
 
     private_networks = get_private_networks()
-    local_ip = private_networks[0]["ips"][0]
+    if private_networks:
+        local_ip = private_networks[0]["ips"][0]
+    else:
+        local_ip = "127.0.0.1"
+        click.echo(" * Warning: No private network interface found, using localhost")
 
     click.echo(f" * Directory: {shared_directory}")
     click.echo(f" * Display Name: {config.display_name}")

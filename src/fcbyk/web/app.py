@@ -1,5 +1,5 @@
 import os
-from flask import Flask, redirect, send_from_directory
+from flask import Flask, redirect, send_from_directory, make_response
 
 def create_spa(
     entry_html: str,
@@ -26,13 +26,22 @@ def create_spa(
     # SPA 入口
     @app.route("/")
     def index():
-        return send_from_directory(dist_root, entry_html)
+        response = make_response(send_from_directory(dist_root, entry_html))
+        # 禁用缓存，防止切换应用时显示旧的 HTML
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response
 
     # 前端路由列表 - 统一返回入口主页
     if page:
         for url in page:
             def view(entry_html=entry_html, dist_root=dist_root):
-                return send_from_directory(dist_root, entry_html)
+                response = make_response(send_from_directory(dist_root, entry_html))
+                response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+                response.headers['Pragma'] = 'no-cache'
+                response.headers['Expires'] = '0'
+                return response
 
             # 保证每个路由的 endpoint 唯一
             endpoint = f"page_{url.strip('/').replace('/', '_') or 'root'}"
