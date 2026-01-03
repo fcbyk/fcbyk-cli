@@ -12,6 +12,7 @@ from flask import abort, jsonify, request, send_file, Response, stream_with_cont
 
 from fcbyk.web.app import create_spa
 from .service import LansendService
+import urllib.parse
 
 
 def create_lansend_app(service: LansendService):
@@ -211,20 +212,49 @@ def register_routes(app, service: LansendService):
 
         return Response(stream_with_context(response_body), status=status_code, headers=headers)
 
+
     @app.route("/api/download/<path:filename>")
     def api_download(filename):
+        # 1️⃣ 解析并校验路径（安全）
         try:
             file_path = service.resolve_file_path(filename)
-        except ValueError:
-            abort(404, description="Shared directory not specified")
-        except PermissionError:
-            abort(404, description="Invalid path")
+        except (ValueError, PermissionError):
+            abort(404)
 
         if not os.path.exists(file_path) or os.path.isdir(file_path):
-            abort(404, description="File not found")
+            abort(404)
 
-        try:
-            return send_file(file_path, as_attachment=True)
-        except Exception as e:
-            abort(500, description=f"Error downloading file: {str(e)}")
+        # 2️⃣ 基本信息
+        file_size = os.path.getsize(file_path)
+        raw_name = os.path.basename(file_path)
+        safe_name = urllib.parse.quote(raw_name)
+
+        # 3️⃣ 先准备响应头
+        headers = {
+            "Content-Type": "application/octet-stream",
+            "Content-Length": str(file_size),
+            "Content-Disposition": (
+                f"attachment; filename=\"{raw_name}\"; "
+                f"filename*=UTF-8''{safe_name}"
+            ),
+            "Accept-Ranges": "bytes",
+            "Cache-Control": "no-cache",
+        }
+
+        # 4️⃣ 流式生成器（不阻塞、不占内存）
+        def generate():
+            with open(file_path, "rb") as f:
+                while True:
+                    chunk = f.read(8192)  # 8KB
+                    if not chunk:
+                        break
+                    yield chunk
+
+        # 5️⃣ 返回 Response（点击即响应）
+        return Response(
+            stream_with_context(generate()),
+            headers=headers,
+            status=200
+        )
+
 
