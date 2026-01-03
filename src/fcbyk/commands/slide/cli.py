@@ -40,8 +40,12 @@ def slide(port):
     
     # 获取网络信息
     private_networks = get_private_networks()
-    local_ip = private_networks[0]['ips'][0]
-    
+    if private_networks:
+        local_ip = private_networks[0]["ips"][0]
+    else:
+        local_ip = "127.0.0.1"
+        click.echo(" * Warning: No private network interface found, using localhost")
+        
     # 显示启动信息
     click.echo(f"\n * PPT Remote Control Server")
     echo_network_urls(private_networks, port, include_virtual=True)

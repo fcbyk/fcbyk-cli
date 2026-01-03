@@ -1,6 +1,21 @@
 """
 lansend controller 层
-负责 Flask 路由注册、请求解析、调用 service 并返回响应
+
+负责 Flask 路由注册、请求解析、调用 service 并返回响应。
+
+函数:
+- create_lansend_app(service) -> Flask: 创建并配置 Flask 应用
+- _try_int(v) -> Optional[int]: 安全地将值转换为整数
+- register_routes(app, service): 注册所有 API 路由
+
+路由:
+- /api/config: 获取配置信息（ide_mode）
+- /upload: 文件上传接口（支持密码验证）
+- /api/file/<path:filename>: 获取文件内容（文本/图片/二进制）
+- /api/tree: 获取递归文件树
+- /api/directory: 获取目录列表信息
+- /api/preview/<path:filename>: 预览文件（支持 Range 请求，用于视频/音频流式播放）
+- /api/download/<path:filename>: 下载文件（流式传输）
 """
 
 import os
@@ -50,7 +65,6 @@ def register_routes(app, service: LansendService):
                 return jsonify({"message": "password ok"})
             return jsonify({"error": "upload password not set"}), 400
 
-        # shared_directory 必须存在
         try:
             target_dir = service.abs_target_dir(rel_path)
         except ValueError:
@@ -60,7 +74,6 @@ def register_routes(app, service: LansendService):
             service.log_upload(ip, 0, "failed (invalid path)", rel_path)
             return jsonify({"error": "invalid path"}), 400
 
-        # 密码校验
         if service.config.upload_password:
             if "password" not in request.form:
                 service.log_upload(ip, 0, "failed (upload password required)", rel_path)
@@ -95,6 +108,7 @@ def register_routes(app, service: LansendService):
             service.log_upload(ip, 0, f"failed (target directory missing: {rel_path or 'root'})", rel_path)
             return jsonify({"error": "target directory not found"}), 400
 
+        # 处理文件名冲突：自动重命名为 name_1.ext, name_2.ext 等
         target_path = os.path.join(target_dir, filename)
         renamed = False
         if os.path.exists(target_path):
@@ -174,6 +188,7 @@ def register_routes(app, service: LansendService):
             "Accept-Ranges": "bytes",
         }
 
+        # 处理 Range 请求（用于视频/音频的断点续传和流式播放）
         if range_header:
             range_match = re.search(r"bytes=(\d+)-(\d*)", range_header)
             if range_match:
@@ -195,6 +210,7 @@ def register_routes(app, service: LansendService):
                 headers["Content-Range"] = f"bytes {start}-{end}/{file_size}"
                 status_code = 206
 
+        # 流式生成器：按 1MB 块读取
         def generate_chunks(f, start_pos, size):
             with f:
                 f.seek(start_pos)
@@ -215,7 +231,6 @@ def register_routes(app, service: LansendService):
 
     @app.route("/api/download/<path:filename>")
     def api_download(filename):
-        # 1️⃣ 解析并校验路径（安全）
         try:
             file_path = service.resolve_file_path(filename)
         except (ValueError, PermissionError):
@@ -224,12 +239,10 @@ def register_routes(app, service: LansendService):
         if not os.path.exists(file_path) or os.path.isdir(file_path):
             abort(404)
 
-        # 2️⃣ 基本信息
         file_size = os.path.getsize(file_path)
         raw_name = os.path.basename(file_path)
         safe_name = urllib.parse.quote(raw_name)
 
-        # 3️⃣ 先准备响应头
         headers = {
             "Content-Type": "application/octet-stream",
             "Content-Length": str(file_size),
@@ -241,16 +254,14 @@ def register_routes(app, service: LansendService):
             "Cache-Control": "no-cache",
         }
 
-        # 4️⃣ 流式生成器（不阻塞、不占内存）
         def generate():
             with open(file_path, "rb") as f:
                 while True:
-                    chunk = f.read(8192)  # 8KB
+                    chunk = f.read(8192)
                     if not chunk:
                         break
                     yield chunk
 
-        # 5️⃣ 返回 Response（点击即响应）
         return Response(
             stream_with_context(generate()),
             headers=headers,

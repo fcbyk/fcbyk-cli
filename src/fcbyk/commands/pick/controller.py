@@ -1,3 +1,36 @@
+"""
+pick controller 层
+
+负责 Flask 路由注册、请求解析、调用 service 并返回响应。
+
+常量:
+- config_file: 配置文件路径
+- SERVER_SESSION_ID: 服务器会话 ID（用于区分不同服务器实例）
+- default_config: 默认配置
+
+全局变量:
+- app: Flask 应用实例（SPA 模式，支持 /admin 和 /f 路由）
+- files_mode_root: 文件模式根目录（None 表示列表抽奖模式）
+- ADMIN_PASSWORD: 管理员密码
+- service: PickService 实例
+
+函数:
+- _get_client_ip() -> str: 获取客户端 IP（优先 X-Forwarded-For）
+- start_web_server(port, no_browser, files_root, codes, admin_password): 启动抽奖 Web 服务器
+
+路由:
+- /api/info: 获取启动信息（是否文件模式）
+- /api/items: 获取当前配置中的抽奖项
+- /api/files: 列出文件列表并返回当前抽奖状态
+- /api/files/pick: 从文件列表随机抽取一个文件（支持兑换码和 IP 两种模式）
+- /api/files/result/<code>: 查询兑换码的抽奖结果（用于页面刷新后恢复）
+- /api/files/download/<path:filename>: 下载指定文件（带路径安全检查）
+- /api/pick: 从配置列表中随机抽取一项
+- /api/admin/login: 管理员登录验证
+- /api/admin/codes: 获取兑换码列表（需要管理员权限）
+- /api/admin/codes/add: 新增兑换码（需要管理员权限）
+"""
+
 import os
 import click
 import socket
@@ -17,11 +50,11 @@ default_config = {
     'items': []
 }
 
-# Flask 应用（模板目录复用 web 目录）
+# Flask 应用（SPA 模式，支持 /admin 和 /f 路由）
 app = create_spa(entry_html = "pick.html", page = ["/admin","/f"])
 
 # Web 模式状态
-files_mode_root = None  # 指定目录或单文件路径
+files_mode_root = None  # 指定目录或单文件路径（None 表示列表抽奖模式）
 ADMIN_PASSWORD = None
 
 # 服务实例
@@ -44,9 +77,10 @@ def api_items():
 
 
 def _get_client_ip():
-    """获取客户端 IP，优先 X-Forwarded-For"""
+    """获取客户端 IP，优先 X-Forwarded-For（支持代理场景）"""
     xff = request.headers.get('X-Forwarded-For', '')
     if xff:
+        # X-Forwarded-For 可能包含多个 IP，取第一个
         return xff.split(',')[0].strip()
     return request.remote_addr or 'unknown'
 
@@ -64,7 +98,7 @@ def api_files():
 
     resp['session_id'] = SERVER_SESSION_ID
 
-    # 如果配置了兑换码，则使用兑换码模式统计
+    # 兑换码模式优先，否则使用 IP 限制模式
     if service.redeem_codes:
         total = len(service.redeem_codes)
         used = sum(1 for v in service.redeem_codes.values() if v)
@@ -76,7 +110,6 @@ def api_files():
             'limit_per_code': 1,
         })
     else:
-        # 兼容旧逻辑：按 IP 限制
         client_ip = _get_client_ip()
         picked = service.ip_draw_records.get(client_ip)
         resp.update({
@@ -102,10 +135,9 @@ def api_files_pick():
     if not files:
         return jsonify({'error': 'no files available'}), 400
 
-    # 获取当前 IP，用于记录该 IP 已抽中过的文件，避免重复
     client_ip = _get_client_ip()
 
-    # 兑换码模式
+    # 兑换码模式优先
     if service.redeem_codes:
         data = request.get_json(silent=True) or {}
         code = str(data.get('code', '')).strip().upper()
@@ -124,7 +156,6 @@ def api_files_pick():
 
         selected = service.pick_file(candidates)
         service.redeem_codes[code] = True
-        # 记录当前 IP 抽中过的文件
         service.ip_file_history.setdefault(client_ip, set()).add(selected['name'])
         used = sum(1 for v in service.redeem_codes.values() if v)
         download_url = url_for('download_file', filename=selected['name'], _external=True)
@@ -143,13 +174,12 @@ def api_files_pick():
             'draw_count': used,
             'total_codes': len(service.redeem_codes),
             'used_codes': used,
-            'code': code,  # 返回兑换码，方便前端保存
+            'code': code,
         })
 
-    # 兼容旧逻辑：IP 限制
+    # IP 限制模式
     if client_ip in service.ip_draw_records:
         return jsonify({'error': 'already picked', 'picked': service.ip_draw_records[client_ip]}), 429
-    # 过滤掉当前 IP 已抽中过的文件
     used_by_ip = service.ip_file_history.get(client_ip, set())
     candidates = [f for f in files if f['name'] not in used_by_ip]
     if not candidates:
@@ -187,17 +217,16 @@ def api_files_result(code):
 
 @app.route('/api/files/download/<path:filename>', methods=['GET'])
 def download_file(filename):
-    """下载指定文件，受限于文件模式根目录"""
+    """下载指定文件，受限于文件模式根目录（带路径安全检查）"""
     if not files_mode_root:
         return jsonify({'error': 'files mode not enabled'}), 400
 
-    # 单文件模式：仅允许精确匹配文件名
     if os.path.isfile(files_mode_root):
         if filename != os.path.basename(files_mode_root):
             return jsonify({'error': 'file not found'}), 404
         return send_file(files_mode_root, as_attachment=True, download_name=filename)
 
-    # 目录模式：防止路径穿越
+    # 防止路径穿越攻击
     safe_root = os.path.abspath(files_mode_root)
     target_path = os.path.abspath(os.path.join(safe_root, filename))
     if not target_path.startswith(safe_root + os.sep) and target_path != safe_root:
@@ -269,15 +298,12 @@ def admin_codes_add():
     if not code:
         return jsonify({'error': '兑换码不能为空'}), 400
 
-    # 验证格式：只允许字母和数字
     if not all(c.isalnum() for c in code):
         return jsonify({'error': '兑换码只能包含字母和数字'}), 400
 
-    # 检查是否已存在
     if code in service.redeem_codes:
         return jsonify({'error': '兑换码已存在'}), 400
 
-    # 添加新兑换码
     service.redeem_codes[code] = False
     click.echo(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Admin added new redeem code: {code}")
     
@@ -300,10 +326,8 @@ def start_web_server(
     ADMIN_PASSWORD = admin_password
     files_mode_root = os.path.abspath(files_root) if files_root else None
     
-    # 初始化服务状态
     service.reset_state()
     if codes:
-        # 初始化兑换码使用状态
         service.redeem_codes = {str(c).strip().upper(): False for c in codes if str(c).strip()}
 
     hostname = socket.gethostname()
@@ -318,10 +342,8 @@ def start_web_server(
         click.echo(f" * Files root: {files_mode_root}")
     if not no_browser:
         try:
-            # 优先使用局域网地址自动打开，方便学生扫码或访问
             webbrowser.open(url_network)
             click.echo(" * Attempted to open picker page in browser (network URL)")
         except Exception:
             click.echo(" * Note: Could not auto-open browser, please visit the URL above")
-    # 监听 0.0.0.0 便于局域网访问
     app.run(host='0.0.0.0', port=port)

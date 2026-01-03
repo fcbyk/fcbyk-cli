@@ -1,3 +1,17 @@
+"""
+pick 命令行接口模块
+
+提供随机抽奖功能，支持列表抽奖和文件抽奖两种模式。
+
+常量:
+- config_file: 配置文件路径
+- default_config: 默认配置（items 列表）
+
+函数:
+- delayed_newline_simple(): 延迟打印空行（用于改善控制台输出体验）
+- pick(): Click 命令入口，处理所有参数和模式切换
+"""
+
 import click
 import threading
 import time
@@ -14,7 +28,7 @@ default_config = {
 
 
 def delayed_newline_simple():
-    """延迟打印空行"""
+    """延迟打印空行（用于改善控制台输出体验）"""
     time.sleep(2)
     click.echo()
 
@@ -47,7 +61,6 @@ def pick(ctx, add, remove, clear, show_list, web, port, no_browser, files, gen_c
     config = load_json_config(config_file, default_config)
     service = PickService(config_file, default_config)
     
-    # 显示配置
     if show_list:
         items_list = config.get('items', [])
         if items_list:
@@ -58,14 +71,12 @@ def pick(ctx, add, remove, clear, show_list, web, port, no_browser, files, gen_c
             click.echo("List is empty. Please use --add to add items")
         return
     
-    # 清空列表
     if clear:
         config['items'] = []
         save_config(config, config_file)
         click.echo("List cleared")
         return
     
-    # 添加元素
     if add:
         items_list = config.get('items', [])
         for item in add:
@@ -78,7 +89,6 @@ def pick(ctx, add, remove, clear, show_list, web, port, no_browser, files, gen_c
         save_config(config, config_file)
         return
     
-    # 移除元素
     if remove:
         items_list = config.get('items', [])
         for item in remove:
@@ -91,7 +101,6 @@ def pick(ctx, add, remove, clear, show_list, web, port, no_browser, files, gen_c
         save_config(config, config_file)
         return
     
-    # 文件抽奖模式（优先）
     if files:
         codes = None
         if gen_codes and gen_codes > 0:
@@ -108,20 +117,17 @@ def pick(ctx, add, remove, clear, show_list, web, port, no_browser, files, gen_c
         else:
             admin_password = '123456'
 
-        # 在启动Web服务器前，先启动延迟任务线程
         delay_thread = threading.Thread(target=delayed_newline_simple, daemon=True)
         delay_thread.start()
 
         start_web_server(port, no_browser, files_root=files, codes=codes, admin_password=admin_password)
         return
 
-    # Web 抽奖模式
     if web:
         start_web_server(port, no_browser)
         return
     
-    # 执行抽奖
-    # 如果命令行提供了参数，使用命令行参数；否则使用配置文件中的列表
+    # 优先使用命令行参数，否则使用配置文件中的列表
     if items:
         service.pick_item(list(items))
     else:

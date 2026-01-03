@@ -1,11 +1,12 @@
-"""lansend 命令行接口模块
-对外提供 lansend / ls 命令。
+"""
+lansend 命令行接口模块
 
-保持原有参数与行为：
-- 支持选择共享目录
-- 支持展示局域网访问地址并复制到剪贴板
-- 可选提示设置上传密码
-- 可选自动打开浏览器
+对外提供 lansend / ls 命令，用于在局域网内共享文件。
+
+函数:
+- _lansend_impl(port, directory, name, password, no_browser, ide): 启动文件共享服务的核心实现
+- lansend(): Click 命令入口，提供完整参数选项
+- ls(): Click 命令入口，lansend 的别名
 """
 
 import os
