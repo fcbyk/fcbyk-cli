@@ -1,10 +1,11 @@
 import os
 import tempfile
+
 import pytest
 from bs4 import BeautifulSoup
 
-from ..commands.lansend.service import LansendConfig, LansendService
-from ..commands.lansend.controller import create_lansend_app
+from fcbyk.commands.lansend.service import LansendConfig, LansendService
+from fcbyk.commands.lansend.controller import create_lansend_app
 
 
 @pytest.fixture
@@ -41,3 +42,4 @@ def test_template_rendering(client):
     # create_spa 渲染的是 SPA 页面，不保证特定 class 恒定存在，这里只检查存在性较高的节点
     app_root = soup.find(id='app')
     assert app_root is not None or soup.find('script') is not None
+

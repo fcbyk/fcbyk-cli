@@ -1,8 +1,9 @@
 import os
 import tempfile
 import pytest
-from ..commands.lansend.service import LansendConfig, LansendService
-from ..commands.lansend.controller import create_lansend_app
+
+from fcbyk.commands.lansend.service import LansendConfig, LansendService
+from fcbyk.commands.lansend.controller import create_lansend_app
 
 
 @pytest.fixture
@@ -16,7 +17,7 @@ def temp_dir():
 
 @pytest.fixture
 def lansend_service(temp_dir):
-    config = LansendConfig(shared_directory=temp_dir, display_name="Test Share")
+    config = LansendConfig(shared_directory=temp_dir)
     return LansendService(config)
 
 
@@ -90,7 +91,6 @@ def test_api_directory(client, temp_dir):
     response = client.get('/api/directory')
     assert response.status_code == 200
     data = response.json
-    assert data["display_name"] == "Test Share"
     assert any(item["name"] == "test.txt" for item in data["items"])
 
 
@@ -107,3 +107,4 @@ def test_api_download(client, temp_dir):
     assert response.status_code == 200
     assert response.data == b'test content'
     assert 'attachment' in response.headers.get('Content-Disposition', '')
+
