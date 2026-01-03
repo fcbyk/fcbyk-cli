@@ -8,11 +8,12 @@ body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background-color: #f5f5f5;
   color: #333;
-  padding: 3dvh 2%;
+  padding: 0;
+  margin: 0;
   width: 100%;
   max-width: 100vw;
-  overflow-x: hidden;
-  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
 }
 
 .main-container {
@@ -21,16 +22,21 @@ body {
   gap: 0;
   width: 100%;
   max-width: 100%;
-  margin: auto;
-  height: 94dvh;
+  margin: 0;
+  height: 100dvh;
+  max-height: 100dvh;
   align-items: stretch;
   position: relative;
+  padding: 12px 12px;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .file-container {
-  flex-shrink: 0;
+  flex: 0 0 auto;
   min-width: 200px;
   max-width: calc(100% - 320px);
+  min-height: 0;
   background-color: white;
   padding: 15px 20px;
   border-radius: 8px 0 0 8px;
@@ -45,7 +51,7 @@ body {
   width: 4px;
   background-color: #e4e7ed;
   cursor: col-resize;
-  flex-shrink: 0;
+  flex: 0 0 auto;
   position: relative;
   transition: background-color 0.2s;
   z-index: 10;
@@ -66,8 +72,9 @@ body {
 }
 
 .tabs-container {
-  flex-shrink: 0;
-  min-width: 300px;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
   background-color: white;
   border-radius: 0 8px 8px 0;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -88,7 +95,7 @@ body {
   overflow-y: hidden;
   z-index: 10;
 
-  /* 避免横向滚动条太显眼（仍可滚动） */
+
   &::-webkit-scrollbar {
     height: 6px;
   }
@@ -173,11 +180,22 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 20px;
   overflow: hidden;
+  min-height: 0;
+  min-width: 0;
 }
 
-/* IDE 模式：右侧空白提示居中 */
+/* 默认 Tab 内容内边距（不作用于 chat-tab-pane） */
+.tab-pane:not(.chat-tab-pane) {
+  padding: 20px;
+}
+
+/* 聊天 Tab：不需要内边距 */
+.tab-pane.chat-tab-pane {
+  padding: 0;
+}
+
+
 .empty-pane {
   flex: 1;
   display: flex;
@@ -330,7 +348,9 @@ body {
   align-items: center;
   justify-content: center;
   width: 100%;
+  max-width: 100%;
   min-height: 200px;
+  min-width: 0;
 
   &:hover {
     background-color: #f8f9fa;
@@ -420,7 +440,6 @@ body {
   font-size: 14px;
 }
 
-/* UploadTab 登录态（简约风） */
 .login-gate {
   flex: 1;
   min-height: 0;
@@ -473,11 +492,6 @@ body {
   color: #2ecc71;
   border-color: #2ecc71;
 } 
-
-// .login-btn:active {
-//   background: #0b1220;
-//   border-color: #0b1220;
-// }
 
 .login-error {
   margin-top: 12px;
@@ -545,7 +559,6 @@ body {
   flex-direction: column;
   height: 100%;
   min-height: 0;
-  /* 不要覆盖 .tab-pane 的 padding，否则会导致顶部内容（preview-header）贴到 tabs-header 上 */
   padding: 10px 20px;
 }
 
@@ -555,7 +568,6 @@ body {
   overflow: hidden;
   width: 100%;
   height: 100%;
-  /* 外层 .preview-pane 已有 padding，这里只保留底部空间，避免双重左右 padding */
   padding: 0;
   min-height: 0;
   display: flex;
@@ -623,10 +635,6 @@ body {
   position: relative;
 }
 
-/*
-  文本预览：行号 + 代码区共用一个滚动容器（保证滚动同步）
-  结构：.preview-text-scroller(滚动) => gutter(行号) + pre(代码)
-*/
 .preview-copy-btn {
   position: absolute;
   top: 15px;
@@ -651,7 +659,7 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* 类似 VitePress：鼠标移入代码块显示复制按钮；移动端默认显示 */
+
 .preview-text-wrap:hover .preview-copy-btn {
   opacity: 1;
   pointer-events: auto;
@@ -682,7 +690,6 @@ body {
   -webkit-overflow-scrolling: touch;
   border-radius: 4px;
 
-  /* 滚动条样式：与目录 tab（.file-list）保持一致 */
   &::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -711,8 +718,6 @@ body {
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
   font-size: 14px;
   line-height: 1.5;
-
-  /* 行号区在横向滚动时固定在左侧（同一滚动容器内 sticky） */
   position: sticky;
   left: 0;
   z-index: 1;
@@ -735,7 +740,6 @@ body {
   flex: 1 1 auto;
   min-width: 0;
 
-  /* pre 自己不滚动，滚动交给 .preview-text-scroller */
   overflow: visible;
 
   code {
@@ -748,27 +752,25 @@ body {
   }
 }
 
-/* 预览层：独立于 tabs-content，用于覆盖整个内容区 */
+
 .preview-layer {
   position: absolute;
-  /* 从 header 下方开始铺满；header 保持在更高层级 */
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 5; /* 低于 .tabs-header(10)，高于 tabs-content */
-  background-color: #fff; /* 遮挡下方内容 */
+  z-index: 5; 
+  background-color: #fff; 
   display: flex;
   flex-direction: column;
-  padding-top: 45px; /* 预留 header 高度，避免遮挡 border-bottom */
+  padding-top: 45px;
 
-  /* 预览层内的 preview-pane 不需要额外的 padding */
   .preview-pane {
     padding: 0;
   }
 }
 
-/* 响应式设计 */
+
 @media (max-width: 768px) {
   .tab-item.mobile-only {
     display: block;
@@ -784,42 +786,36 @@ body {
   body {
     padding: 0;
     margin: 0;
-    min-height: 100dvh;
-    /* 移动端需要允许页面滚动，否则在某些机型上内容会被裁切且无法滑动 */
-    overflow-x: hidden;
-    overflow-y: auto;
+    height: 100dvh;
+    overflow: hidden;
   }
 
   .main-container {
     flex-direction: column;
-    /* 移动端改为单列：只显示右侧 tabs，通过 tab 切换下载/上传/预览 */
     gap: 10px;
-    /* 使用 min-height 而不是固定 height，避免浏览器地址栏收起/展开导致内容跳动或被裁切 */
-    min-height: 100dvh;
-    height: auto;
+    height: 100dvh;
+    max-height: 100dvh;
     max-width: 100%;
     align-items: stretch;
     margin: 0;
     padding: 10px;
+    min-height: 0;
   }
 
-  /* 移动端：隐藏左侧下载列表容器，改为通过 tabs 展示 */
   .file-container {
     display: none;
   }
 
   .tabs-container {
     width: 100% !important;
-    /* 取消桌面端 JS 注入的像素宽度带来的影响 */
     max-width: 100%;
     min-width: 0;
 
-    /* 让两个面板在竖向布局下按比例占高，并且可以随内容变化 */
-    flex: 1 1 0;
-    height: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
 
     padding: 0;
-    min-height: 180px;
     border-radius: 8px;
   }
 
@@ -844,14 +840,12 @@ body {
   }
 
   .file-list {
-    /* 让列表使用剩余空间，而不是用固定 vh 计算 */
     height: auto;
     flex: 1;
     min-height: 0;
   }
 
   .current-path {
-    /* 在移动端保留内边距，避免贴边 */
     padding: 12px 15px 0 15px;
   }
 
@@ -863,8 +857,230 @@ body {
     min-height: 150px;
   }
 
-  .tab-pane {
+  .tab-pane:not(.chat-tab-pane) {
     padding: 15px;
+  }
+
+  .tab-pane.chat-tab-pane {
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .chat-tab {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .chat-messages {
+    flex: 1 1 auto;
+    min-height: 0;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .chat-input-container {
+    flex: 0 0 auto;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  }
+
+  .tab-pane.chat-tab-pane {
+    overscroll-behavior: contain;
+    touch-action: manipulation;
+  }
+
+  .chat-input {
+    scroll-margin-bottom: 80px;
+  }
+}
+
+.chat-tab {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+  }
+}
+
+.chat-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #999;
+  font-size: 14px;
+}
+
+.time-label {
+  text-align: center;
+  margin: 12px 0;
+  font-size: 12px;
+  color: #999;
+}
+
+.message-wrapper {
+  display: block;
+  margin-bottom: 4px;
+  padding: 0 15px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.message-content-wrapper {
+  display: flex;
+  gap: 8px;
+  width: fit-content;
+  max-width: 70%;
+  
+  .message-wrapper.own-message & {
+    flex-direction: row-reverse;
+    margin-left: auto;
+  }
+}
+
+.message-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #667eea;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.message-wrapper.own-message .message-avatar {
+  background: #f5576c;
+}
+
+.message-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.message-ip-label {
+  font-size: 12px;
+  color: #999;
+  margin-bottom: 4px;
+  padding: 0 4px;
+}
+
+.message-wrapper.own-message .message-ip-label {
+  text-align: right;
+}
+
+.chat-message {
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #f0f0f0;
+  position: relative;
+  word-wrap: break-word;
+  max-width: 100%;
+}
+
+.message-wrapper.own-message .chat-message {
+  background: #007bff;
+  color: white;
+}
+
+.message-content {
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.chat-input-container {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid #e0e0e0;
+  background: white;
+  flex-shrink: 0;
+}
+
+.chat-input {
+  flex: 1;
+  padding: 6px 8px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 14px;
+  outline: none;
+  font-family: inherit;
+  resize: none;
+  height: 35px;
+  max-height: 132px;
+  line-height: 1.5;
+  overflow-y: auto;
+  box-sizing: border-box;
+
+
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+
+  &::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+
+  &:focus {
+    border-color: #007bff;
+    outline: none;
+  }
+
+  &:disabled {
+    background: #f5f5f5;
+    cursor: not-allowed;
+  }
+}
+
+.chat-send-btn {
+  padding: 8px 16px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+
+  &:hover:not(:disabled) {
+    background: #0056b3;
+  }
+
+  &:disabled {
+    background: #ccc;
+    cursor: not-allowed;
   }
 }
 

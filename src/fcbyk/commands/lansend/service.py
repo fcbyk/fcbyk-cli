@@ -4,7 +4,7 @@ lansend 业务逻辑层
 负责纯业务逻辑：路径/文件处理、目录树、内容读取等。
 
 数据类:
-- LansendConfig: 配置封装（shared_directory, upload_password, un_download, un_upload）
+- LansendConfig: 配置封装（shared_directory, upload_password, un_download, un_upload, chat_enabled）
 
 类:
 - LansendService: 文件共享服务核心类
@@ -35,6 +35,7 @@ class LansendConfig:
     upload_password: Optional[str] = None
     un_download: bool = False
     un_upload: bool = False
+    chat_enabled: bool = False
 
 
 class LansendService:

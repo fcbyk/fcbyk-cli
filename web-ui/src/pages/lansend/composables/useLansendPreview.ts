@@ -2,7 +2,7 @@ import { ref } from 'vue'
 import { getFileContent } from '../api'
 import type { PreviewFile } from '../types'
 
-export type LansendActiveTab = 'directory' | 'upload' | 'preview' | 'empty'
+export type LansendActiveTab = 'directory' | 'upload' | 'preview' | 'empty' | 'chat'
 
 export function useLansendPreview() {
   const previewFile = ref<PreviewFile | null>(null)

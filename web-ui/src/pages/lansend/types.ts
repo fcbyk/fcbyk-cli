@@ -41,3 +41,15 @@ export interface UploadFileResponse {
   error?: string
 }
 
+export interface ChatMessage {
+  id: number
+  ip: string
+  message: string
+  timestamp: string
+}
+
+export interface ChatMessagesResponse {
+  messages: ChatMessage[]
+  current_ip?: string
+}
+

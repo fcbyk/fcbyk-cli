@@ -2,7 +2,9 @@ import type {
   DirectoryData,
   VerifyUploadPasswordResponse,
   PreviewFile,
-  UploadFileResponse
+  UploadFileResponse,
+  ChatMessage,
+  ChatMessagesResponse
 } from './types'
 
 /**
@@ -108,5 +110,33 @@ export function uploadFile(
     xhr.open('POST', '/upload')
     xhr.send(formData)
   })
+}
+
+/**
+ * 获取聊天消息列表
+ */
+export async function getChatMessages(): Promise<ChatMessagesResponse> {
+  const response = await fetch('/api/chat/messages')
+  if (!response.ok) {
+    throw new Error('Failed to load chat messages')
+  }
+  return await response.json()
+}
+
+/**
+ * 发送聊天消息
+ */
+export async function sendChatMessage(message: string): Promise<{ success: boolean; message: ChatMessage }> {
+  const response = await fetch('/api/chat/send', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ message }),
+  })
+  if (!response.ok) {
+    throw new Error('Failed to send message')
+  }
+  return await response.json()
 }
 

@@ -26,7 +26,7 @@
           :class="{ active: activeTab === 'directory' }"
           @click="activeTab = 'directory'"
         >
-          共享文件夹
+          文件夹
         </div>
         <div
           v-if="!unUpload"
@@ -34,7 +34,15 @@
           :class="{ active: activeTab === 'upload' }"
           @click="activeTab = 'upload'"
         >
-          文件上传
+          上传
+        </div>
+        <div
+          v-if="chatEnabled"
+          class="tab-item"
+          :class="{ active: activeTab === 'chat' }"
+          @click="activeTab = 'chat'"
+        >
+          聊天
         </div>
 
         <!-- 单实例预览：tab 上展示当前预览文件名，并可关闭 -->
@@ -93,6 +101,11 @@
             @drop="handleDrop"
           />
         </div>
+
+        <!-- 聊天内容 -->
+        <div v-if="chatEnabled" v-show="activeTab === 'chat'" class="tab-pane chat-tab-pane">
+          <ChatTab />
+        </div>
       </div>
 
       <!-- 预览层：不放在 tabs-content 内，避免 tabs-content 的 padding/布局影响；需要占满整个内容区 -->
@@ -113,6 +126,7 @@ import { ref, onMounted, computed, onBeforeUnmount } from 'vue'
 import FileList from './components/FileList.vue'
 import UploadTab from './components/UploadTab.vue'
 import PreviewTab from './components/PreviewTab.vue'
+import ChatTab from './components/ChatTab.vue'
 import type { DirectoryItem } from './types'
 import { useLansendDirectory } from './composables/useLansendDirectory'
 import { useLansendUpload } from './composables/useLansendUpload'
@@ -135,6 +149,7 @@ const {
 // 获取配置
 const unDownload = ref(false)
 const unUpload = ref(false)
+const chatEnabled = ref(false)
 onMounted(async () => {
   try {
     const response = await fetch('/api/config')
@@ -142,6 +157,7 @@ onMounted(async () => {
       const data = await response.json()
       unDownload.value = data.un_download === true
       unUpload.value = data.un_upload === true
+      chatEnabled.value = data.chat_enabled === true
       
       if (unUpload.value) {
         activeTab.value = previewFile.value ? 'preview' : 'empty'

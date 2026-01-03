@@ -8,27 +8,34 @@ lansend controller 层
 - _try_int(v) -> Optional[int]: 安全地将值转换为整数
 - register_routes(app, service): 注册所有 API 路由
 - register_upload_routes(app, service): 注册文件上传相关路由
+- register_chat_routes(app, service): 注册聊天相关路由
 
 路由:
-- /api/config: 获取配置信息（un_download, un_upload）
+- /api/config: 获取配置信息（un_download, un_upload, chat_enabled）
 - /upload: 文件上传接口（支持密码验证，仅在未禁用上传时注册）
 - /api/file/<path:filename>: 获取文件内容（文本/图片/二进制）
 - /api/tree: 获取递归文件树
 - /api/directory: 获取目录列表信息
 - /api/preview/<path:filename>: 预览文件（支持 Range 请求，用于视频/音频流式播放）
 - /api/download/<path:filename>: 下载文件（流式传输）
+- /api/chat/messages: 获取聊天消息列表（仅在启用聊天时注册）
+- /api/chat/send: 发送聊天消息（仅在启用聊天时注册）
 """
 
 import os
 import re
 import mimetypes
-from typing import Optional
+from datetime import datetime
+from typing import Optional, List, Dict, Any
 
 from flask import abort, jsonify, request, send_file, Response, stream_with_context
 
 from fcbyk.web.app import create_spa
 from .service import LansendService
 import urllib.parse
+
+# 聊天消息存储（内存中，服务重启后清空）
+_chat_messages: List[Dict[str, Any]] = []
 
 
 def create_lansend_app(service: LansendService):
@@ -45,11 +52,60 @@ def _try_int(v) -> Optional[int]:
         return None
 
 
+def _get_client_ip() -> str:
+    """获取客户端 IP，优先 X-Forwarded-For"""
+    xff = request.headers.get('X-Forwarded-For', '')
+    if xff:
+        # X-Forwarded-For 可能包含多个 IP，取第一个
+        return xff.split(',')[0].strip()
+    return request.remote_addr or 'unknown'
+
+
+def register_chat_routes(app, service: LansendService):
+    """注册聊天相关路由"""
+    @app.route("/api/chat/messages", methods=["GET"])
+    def get_chat_messages():
+        """获取聊天消息列表，同时返回当前客户端的 IP"""
+        return jsonify({
+            "messages": _chat_messages,
+            "current_ip": _get_client_ip()
+        })
+
+    @app.route("/api/chat/send", methods=["POST"])
+    def send_chat_message():
+        """发送聊天消息"""
+        data = request.get_json()
+        if not data or "message" not in data:
+            return jsonify({"error": "message is required"}), 400
+
+        message_text = data.get("message", "").rstrip()
+        if not message_text.strip():
+            return jsonify({"error": "message cannot be empty"}), 400
+
+        ip = _get_client_ip()
+        timestamp = datetime.now().isoformat()
+
+        message = {
+            "id": len(_chat_messages) + 1,
+            "ip": ip,
+            "message": message_text,
+            "timestamp": timestamp,
+        }
+
+        _chat_messages.append(message)
+
+        # 限制消息数量，避免内存占用过大（保留最近1000条）
+        if len(_chat_messages) > 1000:
+            _chat_messages.pop(0)
+
+        return jsonify({"success": True, "message": message})
+
+
 def register_upload_routes(app, service: LansendService):
     """注册文件上传相关路由"""
     @app.route("/upload", methods=["POST"])
     def upload_file():
-        ip = request.remote_addr or "unknown ip"
+        ip = _get_client_ip()
         rel_path = (request.form.get("path") or "").strip("/")
         size_hint = _try_int(request.form.get("size"))
 
@@ -133,10 +189,14 @@ def register_routes(app, service: LansendService):
         return jsonify({
             "un_download": bool(getattr(service.config, "un_download", False)),
             "un_upload": bool(getattr(service.config, "un_upload", False)),
+            "chat_enabled": bool(getattr(service.config, "chat_enabled", False)),
         })
 
     if not service.config.un_upload:
         register_upload_routes(app, service)
+
+    if service.config.chat_enabled:
+        register_chat_routes(app, service)
 
     @app.route("/api/file/<path:filename>")
     def api_file(filename):
