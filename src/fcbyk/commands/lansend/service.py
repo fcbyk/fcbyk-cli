@@ -4,7 +4,7 @@ lansend 业务逻辑层
 负责纯业务逻辑：路径/文件处理、目录树、内容读取等。
 
 数据类:
-- LansendConfig: 配置封装（shared_directory, display_name, upload_password, ide_mode）
+- LansendConfig: 配置封装（shared_directory, upload_password, un_download, un_upload）
 
 类:
 - LansendService: 文件共享服务核心类
@@ -19,7 +19,7 @@ lansend 业务逻辑层
   - get_directory_listing(relative_path) -> Dict: 获取目录列表信息
   - resolve_file_path(filename) -> str: 解析并验证文件路径（带安全检查）
   - read_file_content(relative_path) -> Dict: 读取文件内容（文本/图片/二进制）
-  - pick_upload_password(flag_password, ide, click_module) -> Optional[str]: 根据参数决定是否提示输入上传密码
+  - pick_upload_password(flag_password, un_upload, click_module) -> Optional[str]: 根据参数决定是否提示输入上传密码
 """
 
 import os
@@ -32,9 +32,9 @@ from typing import Any, Dict, List, Optional
 @dataclass
 class LansendConfig:
     shared_directory: Optional[str] = None
-    display_name: str = "共享文件夹"
     upload_password: Optional[str] = None
-    ide_mode: bool = False
+    un_download: bool = False
+    un_upload: bool = False
 
 
 class LansendService:
@@ -168,7 +168,6 @@ class LansendService:
 
         share_name = os.path.basename(base)
         return {
-            "display_name": self.config.display_name,
             "share_name": share_name,
             "relative_path": relative_path,
             "path_parts": self.get_path_parts(relative_path),
@@ -215,9 +214,9 @@ class LansendService:
                 "error": "Binary file cannot be displayed",
             }
 
-    def pick_upload_password(self, flag_password: bool, ide: bool, click_module) -> Optional[str]:
+    def pick_upload_password(self, flag_password: bool, un_upload: bool, click_module) -> Optional[str]:
         """根据参数决定是否提示输入上传密码（保持旧行为）。"""
-        if flag_password and not ide:
+        if flag_password and not un_upload:
             pw = click_module.prompt(
                 "Upload password (press Enter to use default: 123456)",
                 hide_input=True,

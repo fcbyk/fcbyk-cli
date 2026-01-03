@@ -27,7 +27,7 @@
           </span>
         </div>
         <a
-          v-if="!ideMode && !item.is_dir"
+          v-if="!unDownload && !item.is_dir"
           :href="`/api/download/${item.path}`"
           class="download-btn"
           download
@@ -48,7 +48,7 @@ defineProps<{
   items: DirectoryItem[]
   loading: boolean
   error: string
-  ideMode?: boolean
+  unDownload?: boolean
 }>()
 
 const emit = defineEmits<{

@@ -1,6 +1,6 @@
 <template>
   <div class="main-container">
-    <!-- 文件列表容器（下载） -->
+    <!-- 文件列表容器（目录） -->
     <div class="file-container" :style="{ width: fileContainerWidth + 'px' }">
       <FileList
         :share-name="shareName"
@@ -8,7 +8,7 @@
         :items="items"
         :loading="loading"
         :error="error"
-        :ide-mode="ideMode"
+        :un-download="unDownload"
         @navigate="navigateToPath"
         @item-click="handleItemClick"
       />
@@ -23,13 +23,13 @@
       <div class="tabs-header">
         <div
           class="tab-item mobile-only"
-          :class="{ active: activeTab === 'download' }"
-          @click="activeTab = 'download'"
+          :class="{ active: activeTab === 'directory' }"
+          @click="activeTab = 'directory'"
         >
-          文件下载
+          共享文件夹
         </div>
         <div
-          v-if="!ideMode"
+          v-if="!unUpload"
           class="tab-item"
           :class="{ active: activeTab === 'upload' }"
           @click="activeTab = 'upload'"
@@ -52,26 +52,26 @@
 
       <!-- 标签页内容（仅保留下载/上传。预览改为独立层，覆盖整个 tabs-container 内容区） -->
       <div class="tabs-content">
-        <!-- IDE 模式空页：还没点开文件时，右侧给出提示 -->
-        <div v-if="ideMode && activeTab === 'empty' && !previewFile" class="tab-pane empty-pane">
+        <!-- 无上传功能时的空页：还没点开文件时，右侧给出提示 -->
+        <div v-if="unUpload && activeTab === 'empty' && !previewFile" class="tab-pane empty-pane">
           <div class="empty-hint">点击左侧文件进行预览</div>
         </div>
-        <!-- 下载内容（移动端 Tab 展示；桌面端继续显示左侧列表） -->
-        <div v-show="activeTab === 'download'" class="tab-pane download-pane">
+        <!-- 文件目录内容（移动端 Tab 展示；桌面端继续显示左侧列表） -->
+        <div v-show="activeTab === 'directory'" class="tab-pane download-pane">
           <FileList
             :share-name="shareName"
             :path-parts="pathParts"
             :items="items"
             :loading="loading"
             :error="error"
-            :ide-mode="ideMode"
+            :un-download="unDownload"
             @navigate="navigateToPath"
             @item-click="handleItemClick"
           />
         </div>
 
         <!-- 上传内容 -->
-        <div v-if="!ideMode" v-show="activeTab === 'upload'" class="tab-pane">
+        <div v-if="!unUpload" v-show="activeTab === 'upload'" class="tab-pane">
           <UploadTab
             :can-upload="canUpload"
             :is-drag-over="isDragOver"
@@ -132,22 +132,22 @@ const {
   restorePathFromSession
 } = useLansendDirectory()
 
-// 获取 IDE 模式配置
-const ideMode = ref(false)
+// 获取配置
+const unDownload = ref(false)
+const unUpload = ref(false)
 onMounted(async () => {
   try {
     const response = await fetch('/api/config')
     if (response.ok) {
       const data = await response.json()
-      ideMode.value = data.ide_mode === true
+      unDownload.value = data.un_download === true
+      unUpload.value = data.un_upload === true
       
-      // IDE 模式：更纯粹的“目录 + 预览”布局
-      // 不切到下载 tab，而是切到一个空预览页（提示“点击文件进行预览”）
-      if (ideMode.value) {
+      if (unUpload.value) {
         activeTab.value = previewFile.value ? 'preview' : 'empty'
-        // 隐藏移动端的下载 tab，因为 IDE 模式下不需要
-        if (isMobileLayout.value && activeTab.value === 'download') {
-          activeTab.value = 'empty'
+        
+        if (isMobileLayout.value) {
+          activeTab.value = 'directory'
         }
       }
     }
@@ -185,9 +185,9 @@ const canUpload = computed(() => {
   return !requirePassword.value || canUploadVerified.value
 })
 
-// 关闭预览：IDE 模式下回到空白提示页
+// 关闭预览：无上传功能时回到空白提示页
 function closePreview() {
-  originalClosePreview({ ideMode: ideMode.value })
+  originalClosePreview({ unUpload: unUpload.value })
 }
 
 // 拖拽调整宽度相关
@@ -202,11 +202,11 @@ const isMobileLayout = ref(false)
 
 function syncLayoutByWidth() {
   const mobile = window.matchMedia('(max-width: 768px)').matches
-  // 从移动端切到桌面端时，不应继续停留在 download tab，否则会出现左右两边都是“文件下载”
+  // 从移动端切到桌面端时，不应继续停留在 directory tab，否则会出现左右两边都是"文件目录"
   if (isMobileLayout.value && !mobile) {
-    // 从移动端切到桌面端：左侧已经是“文件下载”，右侧就不要再停留在 download。
-    if (activeTab.value === 'download') {
-      activeTab.value = previewFile.value ? 'preview' : 'upload'
+    // 从移动端切到桌面端：左侧已经是"文件目录"，右侧就不要再停留在 directory。
+    if (activeTab.value === 'directory') {
+      activeTab.value = previewFile.value ? 'preview' : (unUpload.value ? 'empty' : 'upload')
     }
   }
   isMobileLayout.value = mobile
@@ -373,10 +373,10 @@ onMounted(() => {
   window.addEventListener('resize', initContainerWidths)
   window.addEventListener('resize', syncLayoutByWidth)
 
-  // 移动端刷新时，默认展示“文件下载”Tab（桌面端左侧已有下载列表，右侧默认上传更合理）
+  // 移动端刷新时，默认展示"文件目录"Tab（桌面端左侧已有目录列表，右侧默认上传更合理）
   const mobile = window.matchMedia('(max-width: 768px)').matches
   if (mobile && !previewFile.value) {
-    activeTab.value = 'download'
+    activeTab.value = 'directory'
   }
 
   // 从会话存储恢复路径

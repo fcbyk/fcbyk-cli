@@ -4,7 +4,7 @@ lansend 命令行接口模块
 对外提供 lansend / ls 命令，用于在局域网内共享文件。
 
 函数:
-- _lansend_impl(port, directory, name, password, no_browser, ide): 启动文件共享服务的核心实现
+- _lansend_impl(port, directory, password, no_browser, un_download, un_upload): 启动文件共享服务的核心实现
 - lansend(): Click 命令入口，提供完整参数选项
 - ls(): Click 命令入口，lansend 的别名
 """
@@ -22,7 +22,7 @@ from .controller import create_lansend_app
 from .service import LansendConfig, LansendService
 
 
-def _lansend_impl(port: int, directory: str, name=None, password: bool = False, no_browser: bool = False, ide: bool = False):
+def _lansend_impl(port: int, directory: str, password: bool = False, no_browser: bool = False, un_download: bool = False, un_upload: bool = False):
     if not os.path.exists(directory):
         click.echo(f"Error: Directory {directory} does not exist")
         return
@@ -35,12 +35,12 @@ def _lansend_impl(port: int, directory: str, name=None, password: bool = False, 
 
     config = LansendConfig(
         shared_directory=shared_directory,
-        display_name=name or "共享文件夹",
         upload_password=None,
-        ide_mode=ide,
+        un_download=un_download,
+        un_upload=un_upload,
     )
     service = LansendService(config)
-    config.upload_password = service.pick_upload_password(password, ide, click)
+    config.upload_password = service.pick_upload_password(password, un_upload, click)
 
     private_networks = get_private_networks()
     if private_networks:
@@ -50,7 +50,6 @@ def _lansend_impl(port: int, directory: str, name=None, password: bool = False, 
         click.echo(" * Warning: No private network interface found, using localhost")
 
     click.echo(f" * Directory: {shared_directory}")
-    click.echo(f" * Display Name: {config.display_name}")
     if config.upload_password:
         click.echo(" * Upload Password: Enabled")
     echo_network_urls(private_networks, port, include_virtual=True)
@@ -71,7 +70,6 @@ def _lansend_impl(port: int, directory: str, name=None, password: bool = False, 
 @click.command(help="Start a local web server for sharing files over LAN")
 @click.option("-p", "--port", default=80, help="Web server port (default: 80)")
 @click.option("-d", "--directory", default=".", help="Directory to share (default: current directory)")
-@click.option("-n", "--name", help="Display name for the page title (default: '共享文件夹')")
 @click.option(
     "-pw",
     "--password",
@@ -80,15 +78,15 @@ def _lansend_impl(port: int, directory: str, name=None, password: bool = False, 
     help="Prompt to set upload password (default: no password, or 123456 if skipped)",
 )
 @click.option("-nb", "--no-browser", is_flag=True, help="Disable automatic browser opening")
-@click.option("--ide/--no-ide", default=True, help="IDE mode: text-share layout (default: on)")
-def lansend(port, directory, name, password, no_browser, ide: bool = False):
-    _lansend_impl(port, directory, name, password, no_browser, ide)
+@click.option("-un-d","--un-download", is_flag=True, default=False, help="Hide download buttons in directory tab")
+@click.option("-un-up","--un-upload", is_flag=True, default=False, help="Disable upload functionality")
+def lansend(port, directory, password, no_browser, un_download: bool = False, un_upload: bool = False):
+    _lansend_impl(port, directory, password, no_browser, un_download, un_upload)
 
 
 @click.command(name="ls", help="alias for lansend")
 @click.option("-p", "--port", default=80, help="Web server port (default: 80)")
 @click.option("-d", "--directory", default=".", help="Directory to share (default: current directory)")
-@click.option("-n", "--name", help="Display name for the page title (default: '共享文件夹')")
 @click.option(
     "-pw",
     "--password",
@@ -97,7 +95,8 @@ def lansend(port, directory, name, password, no_browser, ide: bool = False):
     help="Prompt to set upload password (default: no password, or 123456 if skipped)",
 )
 @click.option("-nb", "--no-browser", is_flag=True, help="Disable automatic browser opening")
-@click.option("--ide", is_flag=True, default=False, help="IDE mode: disable upload UI (default: off)")
-def ls(port, directory, name, password, no_browser, ide: bool = False):
-    _lansend_impl(port, directory, name, password, no_browser, ide)
+@click.option("-un-d","--un-download", is_flag=True, default=False, help="Hide download buttons in directory tab")
+@click.option("-un-up","--un-upload", is_flag=True, default=False, help="Disable upload functionality")
+def ls(port, directory, password, no_browser, un_download: bool = False, un_upload: bool = False):
+    _lansend_impl(port, directory, password, no_browser, un_download, un_upload)
 

@@ -11,7 +11,7 @@
       </div>
       <div v-else-if="previewFile.is_binary" class="preview-binary">
         <p>无法预览二进制文件</p>
-        <a :href="`/api/download/${previewFile.path}`" class="download-btn" download>下载文件</a>
+        <a :href="`/api/preview/${encodeURI(previewFile.path)}`" class="download-btn" target="_blank">在浏览器打开</a>
       </div>
       <div v-else class="preview-text-wrap">
         <button

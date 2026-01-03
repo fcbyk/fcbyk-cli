@@ -14,7 +14,6 @@ export interface PathPart {
 }
 
 export interface DirectoryData {
-  display_name: string
   require_password: boolean
   relative_path: string
   share_name: string

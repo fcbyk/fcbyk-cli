@@ -7,10 +7,11 @@ lansend controller 层
 - create_lansend_app(service) -> Flask: 创建并配置 Flask 应用
 - _try_int(v) -> Optional[int]: 安全地将值转换为整数
 - register_routes(app, service): 注册所有 API 路由
+- register_upload_routes(app, service): 注册文件上传相关路由
 
 路由:
-- /api/config: 获取配置信息（ide_mode）
-- /upload: 文件上传接口（支持密码验证）
+- /api/config: 获取配置信息（un_download, un_upload）
+- /upload: 文件上传接口（支持密码验证，仅在未禁用上传时注册）
 - /api/file/<path:filename>: 获取文件内容（文本/图片/二进制）
 - /api/tree: 获取递归文件树
 - /api/directory: 获取目录列表信息
@@ -44,13 +45,8 @@ def _try_int(v) -> Optional[int]:
         return None
 
 
-def register_routes(app, service: LansendService):
-    @app.route("/api/config")
-    def api_config():
-        return jsonify({
-            "ide_mode": bool(getattr(service.config, "ide_mode", False)),
-        })
-
+def register_upload_routes(app, service: LansendService):
+    """注册文件上传相关路由"""
     @app.route("/upload", methods=["POST"])
     def upload_file():
         ip = request.remote_addr or "unknown ip"
@@ -129,6 +125,18 @@ def register_routes(app, service: LansendService):
         except Exception as e:
             service.log_upload(ip, 1, f"failed (save failed: {e})", rel_path, file_size)
             return jsonify({"error": "failed to save file"}), 500
+
+
+def register_routes(app, service: LansendService):
+    @app.route("/api/config")
+    def api_config():
+        return jsonify({
+            "un_download": bool(getattr(service.config, "un_download", False)),
+            "un_upload": bool(getattr(service.config, "un_upload", False)),
+        })
+
+    if not service.config.un_upload:
+        register_upload_routes(app, service)
 
     @app.route("/api/file/<path:filename>")
     def api_file(filename):

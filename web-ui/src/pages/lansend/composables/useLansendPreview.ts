@@ -2,7 +2,7 @@ import { ref } from 'vue'
 import { getFileContent } from '../api'
 import type { PreviewFile } from '../types'
 
-export type LansendActiveTab = 'download' | 'upload' | 'preview' | 'empty'
+export type LansendActiveTab = 'directory' | 'upload' | 'preview' | 'empty'
 
 export function useLansendPreview() {
   const previewFile = ref<PreviewFile | null>(null)
@@ -37,20 +37,19 @@ export function useLansendPreview() {
     }
   }
 
-  function closePreview(opts?: { ideMode?: boolean }) {
+  function closePreview(opts?: { unUpload?: boolean }) {
     previewFile.value = null
     previewError.value = ''
 
-    // IDE 模式：关闭预览回到空白提示页
-    if (opts?.ideMode) {
-      activeTab.value = 'empty'
+    const mobile = window.matchMedia('(max-width: 768px)').matches
+
+    if (opts?.unUpload) {
+      activeTab.value = mobile ? 'directory' : 'empty'
       return
     }
 
-    const mobile = window.matchMedia('(max-width: 768px)').matches
-
     if (activeTab.value === 'preview') {
-      activeTab.value = mobile ? 'download' : 'upload'
+      activeTab.value = mobile ? 'directory' : 'upload'
     }
   }
 

@@ -5,7 +5,6 @@ import type { DirectoryItem, PathPart } from '../types'
 const PATH_KEY = 'lansendCurrentPath'
 
 export function useLansendDirectory() {
-  const displayName = ref('加载中...')
   const shareName = ref('')
   const pathParts = ref<PathPart[]>([])
   const items = ref<DirectoryItem[]>([])
@@ -21,7 +20,6 @@ export function useLansendDirectory() {
 
     try {
       const data = await getDirectory(path)
-      displayName.value = data.display_name
       requirePassword.value = data.require_password
       currentPath.value = data.relative_path
       shareName.value = data.share_name
@@ -35,7 +33,6 @@ export function useLansendDirectory() {
     } catch (err) {
       console.error('加载目录失败:', err)
       error.value = '加载失败，请刷新页面重试'
-      displayName.value = '加载失败'
       return null
     } finally {
       loading.value = false
@@ -48,7 +45,6 @@ export function useLansendDirectory() {
   }
 
   return {
-    displayName,
     shareName,
     pathParts,
     items,
