@@ -346,4 +346,5 @@ def start_web_server(
             click.echo(" * Attempted to open picker page in browser (network URL)")
         except Exception:
             click.echo(" * Note: Could not auto-open browser, please visit the URL above")
-    app.run(host='0.0.0.0', port=port)
+    from waitress import serve
+    serve(app, host='0.0.0.0', port=port)

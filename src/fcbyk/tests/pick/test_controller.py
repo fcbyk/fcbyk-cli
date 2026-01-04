@@ -205,7 +205,15 @@ def test_start_web_server_sets_state_and_opens_browser(monkeypatch, tmp_path):
     # 避免真正启动 Flask 服务器
     ran = {}
 
-    monkeypatch.setattr(pick_controller.app, "run", lambda **kw: ran.update(kw))
+    # Mock waitress.serve（延迟导入，使用 sys.modules）
+    import sys
+    import types
+    mock_waitress = types.ModuleType('waitress')
+    def mock_serve(app, **kw):
+        ran.update(kw)
+    mock_waitress.serve = mock_serve
+    sys.modules['waitress'] = mock_waitress
+    
     monkeypatch.setattr(pick_controller.socket, "gethostname", lambda: "h")
     monkeypatch.setattr(pick_controller.socket, "gethostbyname", lambda h: "10.0.0.9")
 

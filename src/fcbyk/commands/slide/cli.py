@@ -58,5 +58,5 @@ def slide(port):
     except:
         click.echo(" * Warning: Could not copy URL to clipboard")
     
-    # 运行服务器
-    socketio.run(app, host='0.0.0.0', port=port, debug=False, allow_unsafe_werkzeug=True)
+    # 运行服务器（使用 socketio.run 以支持 WebSocket）
+    socketio.run(app, host='0.0.0.0', port=port, allow_unsafe_werkzeug=True)

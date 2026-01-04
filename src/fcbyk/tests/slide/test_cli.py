@@ -25,18 +25,14 @@ def test_slide_cli_uses_localhost_when_no_network(monkeypatch):
     monkeypatch.setattr(slide_cli.pyperclip, "copy", lambda *_: None)
 
     # mock create_slide_app 返回 (app, socketio)，且 socketio.run 不做事
-    class _Socket:
-        def __init__(self):
-            self.ran = False
-            self.kwargs = None
+    run_kwargs = {}
 
+    class MockSocketIO:
         def run(self, app, **kwargs):
-            self.ran = True
-            self.kwargs = kwargs
+            run_kwargs.update(kwargs)
 
-    sock = _Socket()
-
-    monkeypatch.setattr(slide_cli, "create_slide_app", lambda service: (object(), sock))
+    mock_socketio = MockSocketIO()
+    monkeypatch.setattr(slide_cli, "create_slide_app", lambda service: (object(), mock_socketio))
 
     # 避免输出 URL 列表逻辑
     monkeypatch.setattr(slide_cli, "echo_network_urls", lambda *a, **k: None)
@@ -48,8 +44,6 @@ def test_slide_cli_uses_localhost_when_no_network(monkeypatch):
 
     assert r.exit_code == 0
     assert "No private network interface found" in r.output
-    assert sock.ran is True
-    assert sock.kwargs["host"] == "0.0.0.0"
-    assert sock.kwargs["port"] == 1234
-    assert sock.kwargs["debug"] is False
+    assert run_kwargs["host"] == "0.0.0.0"
+    assert run_kwargs["port"] == 1234
 

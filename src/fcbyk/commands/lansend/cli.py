@@ -65,7 +65,8 @@ def _lansend_impl(port: int, directory: str, password: bool = False, no_browser:
         webbrowser.open(f"http://{local_ip}:{port}")
 
     app = create_lansend_app(service)
-    app.run(host="0.0.0.0", port=port)
+    from waitress import serve
+    serve(app, host="0.0.0.0", port=port)
 
 
 @click.command(help="Start a local web server for sharing files over LAN")

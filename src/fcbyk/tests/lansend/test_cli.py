@@ -37,14 +37,20 @@ def test_lansend_cli_impl_runs_app(monkeypatch, tmp_path):
     monkeypatch.setattr(lansend_cli.pyperclip, "copy", lambda *_: None)
     monkeypatch.setattr(lansend_cli.webbrowser, "open", lambda *_: None)
 
-    # app.run
+    # serve (waitress) - mock waitress 模块的 serve 函数
     ran = {}
 
-    class _App:
-        def run(self, **kw):
-            ran.update(kw)
+    def mock_serve(app, **kw):
+        ran.update(kw)
 
-    monkeypatch.setattr(lansend_cli, "create_lansend_app", lambda service: _App())
+    # Mock waitress 模块（在延迟导入之前，使用 sys.modules）
+    import sys
+    import types
+    mock_waitress = types.ModuleType('waitress')
+    mock_waitress.serve = mock_serve
+    sys.modules['waitress'] = mock_waitress
+    
+    monkeypatch.setattr(lansend_cli, "create_lansend_app", lambda service: object())
 
     lansend_cli._lansend_impl(port=1234, directory=".", password=False, no_browser=True)
 
