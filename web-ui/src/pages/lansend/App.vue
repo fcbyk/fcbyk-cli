@@ -84,7 +84,8 @@
             :can-upload="canUpload"
             :is-drag-over="isDragOver"
             :is-uploading="isUploading"
-            :upload-hint="uploadHint"
+            :upload-hint="mainUploadHint"
+            :upload-path-hint="uploadPathHint"
             :require-password="requirePassword"
             v-model:password="password"
             :password-error="passwordError"
@@ -143,7 +144,9 @@ const {
   requirePassword,
   currentPath,
   loadDirectory,
-  restorePathFromSession
+  restorePathFromSession,
+  startPolling,
+  stopPolling
 } = useLansendDirectory()
 
 // 获取配置
@@ -199,6 +202,26 @@ const { previewFile, previewLoading, previewError, activeTab, previewFileContent
 // 根据后端 requirePassword 决定是否可上传
 const canUpload = computed(() => {
   return !requirePassword.value || canUploadVerified.value
+})
+
+// 构建当前上传目录的显示路径
+const currentUploadPath = computed(() => {
+  if (!shareName.value) return ''
+  const parts = pathParts.value.map(p => p.name).join('/')
+  if (parts) {
+    return `/${shareName.value}/${parts}`
+  }
+  return `/${shareName.value}`
+})
+
+const mainUploadHint = computed(() => {
+  return uploadHint.value
+})
+
+const uploadPathHint = computed(() => {
+  const path = currentUploadPath.value
+  if (!path) return ''
+  return `文件将上传到：${path}`
 })
 
 // 关闭预览：无上传功能时回到空白提示页
@@ -360,6 +383,9 @@ function handleDrop(e?: DragEvent) {
 function handleFiles(files: File[]) {
   if (files.length === 0) return
 
+  // 上传时暂停轮询，避免冲突
+  stopPolling()
+
   // 添加文件到上传队列
   enqueueFiles(files)
 
@@ -375,6 +401,8 @@ function handleFiles(files: File[]) {
       // 上传完成后刷新目录
       await sleep(2000)
       loadDirectoryWithAuth(currentPath.value)
+      // 上传完成后恢复轮询
+      startPolling()
     }
   })
 }
@@ -397,12 +425,17 @@ onMounted(() => {
 
   // 从会话存储恢复路径
   const initialPath = restorePathFromSession()
-  loadDirectoryWithAuth(initialPath)
+  loadDirectoryWithAuth(initialPath).then(() => {
+    // 加载完成后开始轮询
+    startPolling()
+  })
 })
 
 // 清理事件监听器
 onBeforeUnmount(() => {
   window.removeEventListener('resize', initContainerWidths)
   window.removeEventListener('resize', syncLayoutByWidth)
+  // 停止轮询
+  stopPolling()
 })
 </script>

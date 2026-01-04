@@ -13,9 +13,17 @@ export function useLansendDirectory() {
   const requirePassword = ref(false)
   const currentPath = ref('')
 
-  async function loadDirectory(path: string = '') {
-    loading.value = true
-    error.value = ''
+  // 轮询相关
+  let pollTimer: number | null = null
+  let isPolling = false
+  let visibilityHandler: (() => void) | null = null
+  const POLL_INTERVAL = 5000 // 5秒轮询一次
+
+  async function loadDirectory(path: string = '', silent: boolean = false) {
+    if (!silent) {
+      loading.value = true
+      error.value = ''
+    }
     currentPath.value = path
 
     try {
@@ -32,16 +40,82 @@ export function useLansendDirectory() {
       return data
     } catch (err) {
       console.error('加载目录失败:', err)
-      error.value = '加载失败，请刷新页面重试'
+      if (!silent) {
+        error.value = '加载失败，请刷新页面重试'
+      }
       return null
     } finally {
-      loading.value = false
+      if (!silent) {
+        loading.value = false
+      }
     }
   }
 
   function restorePathFromSession() {
     const savedPath = sessionStorage.getItem(PATH_KEY)
     return savedPath !== null ? savedPath : ''
+  }
+
+  // 开始轮询
+  function startPolling() {
+    if (isPolling) return
+    isPolling = true
+
+    // 页面可见性检测
+    visibilityHandler = () => {
+      if (document.hidden) {
+        // 页面不可见时暂停轮询
+        if (pollTimer !== null) {
+          clearTimeout(pollTimer)
+          pollTimer = null
+        }
+      } else {
+        // 页面可见时恢复轮询
+        if (isPolling && pollTimer === null) {
+          const poll = async () => {
+            // 只在页面可见时执行轮询
+            if (!document.hidden && currentPath.value !== undefined) {
+              await loadDirectory(currentPath.value, true) // silent模式，不显示loading，轮询当前目录
+            }
+            
+            if (isPolling && !document.hidden) {
+              pollTimer = window.setTimeout(poll, POLL_INTERVAL)
+            }
+          }
+          pollTimer = window.setTimeout(poll, POLL_INTERVAL)
+        }
+      }
+    }
+
+    document.addEventListener('visibilitychange', visibilityHandler)
+
+    const poll = async () => {
+      // 只在页面可见时执行轮询
+      // 注意：currentPath.value 是响应式的，会自动跟随用户导航到的目录
+      if (!document.hidden && currentPath.value !== undefined) {
+        await loadDirectory(currentPath.value, true) // silent模式，不显示loading，轮询当前目录
+      }
+      
+      if (isPolling && !document.hidden) {
+        pollTimer = window.setTimeout(poll, POLL_INTERVAL)
+      }
+    }
+
+    // 立即开始第一次轮询
+    pollTimer = window.setTimeout(poll, POLL_INTERVAL)
+  }
+
+  // 停止轮询
+  function stopPolling() {
+    isPolling = false
+    if (pollTimer !== null) {
+      clearTimeout(pollTimer)
+      pollTimer = null
+    }
+    if (visibilityHandler) {
+      document.removeEventListener('visibilitychange', visibilityHandler)
+      visibilityHandler = null
+    }
   }
 
   return {
@@ -53,7 +127,9 @@ export function useLansendDirectory() {
     requirePassword,
     currentPath,
     loadDirectory,
-    restorePathFromSession
+    restorePathFromSession,
+    startPolling,
+    stopPolling
   }
 }
 

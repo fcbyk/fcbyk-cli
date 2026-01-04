@@ -51,6 +51,7 @@
       <div>
         <div class="upload-icon">📤</div>
         <p class="upload-hint">{{ uploadHint }}</p>
+        <p v-if="uploadPathHint" class="upload-path-hint">{{ uploadPathHint }}</p>
       </div>
       <input ref="fileInputRef" type="file" multiple style="display: none" @change="onFileSelect" />
     </div>
@@ -78,6 +79,7 @@ const props = defineProps<{
   isDragOver: boolean
   isUploading: boolean
   uploadHint: string
+  uploadPathHint?: string
   requirePassword: boolean
   password: string
   passwordError: string
