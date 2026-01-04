@@ -6,7 +6,6 @@ import sys
 
 from ..core.compatibility import (
     QAction,
-    QLabel,
     QMainWindow,
     QMenu,
     QSystemTrayIcon,
@@ -14,11 +13,16 @@ from ..core.compatibility import (
     QWidget,
     Qt,
 )
+
+from .lansend_page import LansendPage
 from .resources import create_app_icon
 
 
 class MainWindow(QMainWindow):
     """主窗口。
+
+    本窗口包含 GUI 的主框架（托盘、窗口激活等），具体命令页面（如 LANSend）
+    已拆分到独立模块，避免 main_window.py 继续膨胀。
 
     关闭按钮行为：默认不退出，而是隐藏到系统托盘；
     仅从托盘菜单选择“退出”才会真正关闭进程（类似网易云音乐）。
@@ -51,14 +55,9 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout()
         central_widget.setLayout(layout)
 
-        label = QLabel("Hello World!")
-        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        label.setStyleSheet("font-size: 24px; font-weight: bold;")
-        layout.addWidget(label)
-
-        info_label = QLabel("这是 fcbyk CLI 的图形化界面版本")
-        info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(info_label)
+        # 页面：后续其它命令页面可按相同模式新增
+        self._lansend_page = LansendPage(self)
+        layout.addWidget(self._lansend_page)
 
     def _setup_tray_icon(self):
         """初始化系统托盘与菜单。"""
@@ -79,7 +78,7 @@ class MainWindow(QMainWindow):
         menu.addSeparator()
 
         action_quit = QAction("退出", self)
-        action_quit.triggered.connect(self.quit_from_tray)
+        action_quit.triggered.connect(self._on_quit_request)
         menu.addAction(action_quit)
 
         self._tray_icon.setContextMenu(menu)
@@ -100,6 +99,17 @@ class MainWindow(QMainWindow):
 
         if reason in (trigger, double_click):
             self.show_and_raise()
+
+    def _on_quit_request(self):
+        """真正退出前：如果页面有后台任务，先停止。"""
+        try:
+            # 目前只有 LANSend
+            if getattr(self, "_lansend_page", None) is not None:
+                self._lansend_page.stop_if_running()
+        except Exception:
+            pass
+
+        self.quit_from_tray()
 
     def quit_from_tray(self):
         """从托盘菜单触发的真正退出。"""
@@ -212,4 +222,3 @@ class MainWindow(QMainWindow):
         else:
             self.raise_()
             self.activateWindow()
-

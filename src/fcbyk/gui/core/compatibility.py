@@ -16,6 +16,14 @@ try:
         QWidget,
         QSystemTrayIcon,
         QMenu,
+        QHBoxLayout,
+        QLineEdit,
+        QPushButton,
+        QFileDialog,
+        QCheckBox,
+        QMessageBox,
+        QTextEdit,
+        QSizePolicy,
     )
     from PySide6.QtCore import Qt, QByteArray
     from PySide6.QtNetwork import QLocalServer, QLocalSocket
@@ -33,6 +41,14 @@ except ImportError:  # pragma: no cover
             QWidget,
             QSystemTrayIcon,
             QMenu,
+            QHBoxLayout,
+            QLineEdit,
+            QPushButton,
+            QFileDialog,
+            QCheckBox,
+            QMessageBox,
+            QTextEdit,
+            QSizePolicy,
         )
         from PyQt5.QtCore import Qt, QByteArray
         from PyQt5.QtNetwork import QLocalServer, QLocalSocket
@@ -50,10 +66,18 @@ __all__ = [
     "QMainWindow",
     "QLabel",
     "QVBoxLayout",
+    "QHBoxLayout",
     "QWidget",
     "QSystemTrayIcon",
     "QMenu",
     "QAction",
+    "QLineEdit",
+    "QPushButton",
+    "QFileDialog",
+    "QCheckBox",
+    "QMessageBox",
+    "QTextEdit",
+    "QSizePolicy",
     "Qt",
     "QByteArray",
     "QLocalServer",
