@@ -42,9 +42,14 @@ def enable_windows_ansi():
     try:
         import colorama
         if sys.platform == 'win32':
-            colorama.just_fix_windows_console()
+            # colorama 0.4.6+ 使用 just_fix_windows_console()
+            # 旧版本使用 init()
+            if hasattr(colorama, 'just_fix_windows_console'):
+                colorama.just_fix_windows_console()
+            else:
+                colorama.init()
         return True
-    except ImportError:
+    except (ImportError, AttributeError):
         return False
 
 

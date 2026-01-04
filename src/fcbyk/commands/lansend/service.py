@@ -24,6 +24,7 @@ lansend 业务逻辑层
 
 import os
 import re
+import sys
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -94,16 +95,16 @@ class LansendService:
         file_size: Optional[int] = None,
     ) -> None:
         if self._first_upload_log:
-            print("", flush=True)
+            sys.stderr.write("\n")
+            sys.stderr.flush()
             self._first_upload_log = False
 
         ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         path_str = f"/{rel_path}" if rel_path else "/"
         size_str = self.format_size(file_size) if file_size is not None else "unknown size"
-        print(
-            f"[{ts}] {ip} upload {file_count} file(s), status: {status}, path: {path_str}, size: {size_str}",
-            flush=True,
-        )
+        log_msg = f"[{ts}] {ip} upload {file_count} file(s), status: {status}, path: {path_str}, size: {size_str}\n"
+        sys.stderr.write(log_msg)
+        sys.stderr.flush()
 
     # -------------------- 业务逻辑 --------------------
     def ensure_shared_directory(self) -> str:

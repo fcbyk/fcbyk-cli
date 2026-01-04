@@ -84,6 +84,10 @@ def test_jiahao_cli_main_flow_calls_terminal(monkeypatch):
     class _Stdout:
         def __init__(self):
             self.buf = []
+            self.closed = False
+            self.encoding = 'utf-8'
+            self.errors = 'strict'
+            self.mode = 'w'
 
         def write(self, s):
             self.buf.append(s)
@@ -93,6 +97,9 @@ def test_jiahao_cli_main_flow_calls_terminal(monkeypatch):
 
         def isatty(self):
             return False
+
+        def close(self):
+            self.closed = True
 
     out = _Stdout()
     monkeypatch.setattr("sys.stdout", out)
