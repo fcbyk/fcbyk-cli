@@ -22,6 +22,12 @@
 pip install fcbyk-cli
 ```
 
+> GUI为可选依赖
+
+```bash
+pip install fcbyk-cli[gui]
+```
+
 #### 从源码安装（可按需调整代码）
 
 - 前端构建
@@ -53,8 +59,19 @@ fcbyk --version
 
 ## 依赖项
 
-- click - 命令行界面框架
-- flask - Web框架
-- pyperclip - 剪贴板操作
-- requests - HTTP请求库
-- colorama - 终端颜色支持
+#### 核心依赖（install_requires）
+
+- click：命令行界面框架（针对 Python 版本做了兼容约束）
+- flask：Web 框架（部分功能用于提供本地/局域网服务）
+- flask-socketio / python-socketio：WebSocket 通信（用于局域网实时交互类功能）
+- pyperclip：剪贴板操作
+- requests：HTTP 请求库
+- colorama：终端颜色支持（Windows 下更友好）
+- pyautogui：自动化控制（如键鼠控制类功能）
+- psutil：系统信息与进程管理（不同 Python 版本有不同约束）
+- waitress：WSGI 服务器（部署/运行 Web 服务）
+
+#### 可选依赖（extras_require）
+
+- test：pytest、pytest-cov、beautifulsoup4
+- gui：PySide6（Python>=3.7）/ PyQt5（Python<3.7）
