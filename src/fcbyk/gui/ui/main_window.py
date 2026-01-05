@@ -1,7 +1,5 @@
 """主窗口实现。"""
 
-from __future__ import annotations
-
 import sys
 
 from ..core.compatibility import (
@@ -9,11 +7,13 @@ from ..core.compatibility import (
     QMainWindow,
     QMenu,
     QSystemTrayIcon,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
     Qt,
 )
 
+from .slide_page import SlidePage
 from .lansend_page import LansendPage
 from .resources import create_app_icon
 
@@ -55,9 +55,16 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout()
         central_widget.setLayout(layout)
 
+        # 顶部 Tabs
+        self._tabs = QTabWidget(self)
+        layout.addWidget(self._tabs)
+
         # 页面：后续其它命令页面可按相同模式新增
         self._lansend_page = LansendPage(self)
-        layout.addWidget(self._lansend_page)
+        self._slide_page = SlidePage(self)
+
+        self._tabs.addTab(self._lansend_page, "LANSend")
+        self._tabs.addTab(self._slide_page, "Slide")
 
     def _setup_tray_icon(self):
         """初始化系统托盘与菜单。"""
@@ -103,9 +110,12 @@ class MainWindow(QMainWindow):
     def _on_quit_request(self):
         """真正退出前：如果页面有后台任务，先停止。"""
         try:
-            # 目前只有 LANSend
+            # 目前：LANSend + Slide
             if getattr(self, "_lansend_page", None) is not None:
                 self._lansend_page.stop_if_running()
+            if getattr(self, "_slide_page", None) is not None:
+                # Slide 运行在子进程中，这里确保退出前停止子进程
+                self._slide_page.stop_if_running()
         except Exception:
             pass
 

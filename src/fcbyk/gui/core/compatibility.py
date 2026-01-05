@@ -24,6 +24,7 @@ try:
         QMessageBox,
         QTextEdit,
         QSizePolicy,
+        QTabWidget,
     )
     from PySide6.QtCore import Qt, QByteArray
     from PySide6.QtNetwork import QLocalServer, QLocalSocket
@@ -49,6 +50,7 @@ except ImportError:  # pragma: no cover
             QMessageBox,
             QTextEdit,
             QSizePolicy,
+            QTabWidget,
         )
         from PyQt5.QtCore import Qt, QByteArray
         from PyQt5.QtNetwork import QLocalServer, QLocalSocket
@@ -78,6 +80,7 @@ __all__ = [
     "QMessageBox",
     "QTextEdit",
     "QSizePolicy",
+    "QTabWidget",
     "Qt",
     "QByteArray",
     "QLocalServer",
