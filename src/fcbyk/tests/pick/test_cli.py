@@ -178,7 +178,8 @@ def test_pick_files_mode_prompts_password(monkeypatch, tmp_path):
 
     from click.testing import CliRunner
 
-    r = CliRunner().invoke(pick_cli.pick, ["--files", str(f), "--password"])
+    # 显式指定高端口，避免 CI/Linux 环境下默认 80 需要 root 权限导致提前退出
+    r = CliRunner().invoke(pick_cli.pick, ["--files", str(f), "--password", "--port", "8888"])
     assert r.exit_code == 0
     assert called["admin_password"] == "123456"
 

@@ -114,12 +114,24 @@ def pick(ctx, add, remove, clear, show_list, web, port, no_browser, files, gen_c
                     click.echo(f"  {c}")
 
         if password:
-            admin_password = click.prompt('Admin password (press Enter to use default: 123456)', hide_input=True, default='123456', show_default=False)
-            admin_password = admin_password if admin_password else '123456'
+            admin_password = click.prompt(
+                'Admin password (press Enter to use default: 123456)',
+                hide_input=True,
+                default='123456',
+                show_default=False,
+            )
+            if not admin_password:
+                admin_password = '123456'
         else:
             admin_password = '123456'
 
-        start_web_server(port, no_browser, files_root=files, codes=codes, admin_password=admin_password)
+        start_web_server(
+            port,
+            no_browser,
+            files_root=files,
+            codes=codes,
+            admin_password=admin_password,
+        )
         return
 
     if web:
