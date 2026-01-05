@@ -1,9 +1,8 @@
 """GUI 资源（图标等）。"""
 
-from __future__ import annotations
-
 import os
 import sys
+from typing import Optional
 
 from ..core.compatibility import (
     QColor,
@@ -17,7 +16,8 @@ from ..core.compatibility import (
 )
 
 
-def create_app_icon(*, prefer_titlebar_size: int | None = None) -> QIcon:
+def create_app_icon(*, prefer_titlebar_size=None) -> QIcon:
+    # type: (Optional[int]) -> QIcon
     """创建应用图标。
 
     优先加载 `favicon.png` / `favicon.svg`，否则程序生成 `:(` 图标。

@@ -9,13 +9,12 @@
 `_run_lansend_server_process`。因此该函数也放在本模块中，供子进程导入。
 """
 
-from __future__ import annotations
-
 import os
 import subprocess
 import sys
 import tempfile
 import webbrowser
+from typing import Optional
 
 from ..core.compatibility import (
     QCheckBox,
@@ -40,7 +39,7 @@ from fcbyk.utils.port import ensure_port_available
 def _run_lansend_server_process(
     port: int,
     shared_directory: str,
-    upload_password: str | None,
+    upload_password: Optional[str],
     un_download: bool,
     un_upload: bool,
     chat_enabled: bool,
@@ -70,13 +69,13 @@ class LansendPage(QWidget):
     - 后续新增其它命令页面时，可按相同模式扩展
     """
 
-    def __init__(self, parent: QWidget | None = None):
+    def __init__(self, parent=None):
         super().__init__(parent)
 
         # server 状态
-        self._server_proc: subprocess.Popen | None = None
+        self._server_proc = None  # type: Optional[subprocess.Popen]
         self._server_running = False
-        self._server_error: str | None = None
+        self._server_error = None  # type: Optional[str]
 
         # 日志文件放到 ~/.fcbyk/ 目录下（与 CLI 配置目录统一）
         try:
@@ -177,7 +176,7 @@ class LansendPage(QWidget):
         root_layout.addWidget(self._log, 1)
 
         # 初始状态渲染
-        self._last_url: str | None = None
+        self._last_url = None  # type: Optional[str]
         self._refresh_status_ui()
 
     # -----------------
@@ -222,7 +221,7 @@ class LansendPage(QWidget):
         if d:
             self._dir_input.setText(d)
 
-    def _parse_port(self) -> int | None:
+    def _parse_port(self):  # type: () -> Optional[int]
         raw = (self._port_input.text() or "").strip()
         if not raw:
             return None
@@ -360,7 +359,7 @@ class LansendPage(QWidget):
         chat = bool(self._chk_chat.isChecked())
 
         # 组装配置（service/app 在子进程中创建）
-        upload_password: str | None = None
+        upload_password = None  # type: Optional[str]
 
         # GUI 模式下，不引入 click 交互：
         # - 如果勾选“启用上传密码”且未禁用上传，则弹窗输入（可空 -> 默认 123456）
@@ -423,7 +422,7 @@ class LansendPage(QWidget):
 
         self._refresh_status_ui()
 
-    def _prompt_password(self, default_value: str = "123456") -> str | None:
+    def _prompt_password(self, default_value: str = "123456") -> Optional[str]:
         """弹窗提示用户输入上传密码。
 
         返回：

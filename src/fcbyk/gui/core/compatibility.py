@@ -3,8 +3,6 @@
 注意：本模块只负责提供 Qt 类引用与 HAS_GUI 标志，不包含业务逻辑。
 """
 
-from __future__ import annotations
-
 HAS_GUI = False
 
 try:
@@ -25,6 +23,12 @@ try:
         QTextEdit,
         QSizePolicy,
         QTabWidget,
+        QDialog,
+        QListWidget,
+        QRadioButton,
+        QSpinBox,
+        QGroupBox,
+        QButtonGroup,
     )
     from PySide6.QtCore import Qt, QByteArray
     from PySide6.QtNetwork import QLocalServer, QLocalSocket
@@ -51,6 +55,12 @@ except ImportError:  # pragma: no cover
             QTextEdit,
             QSizePolicy,
             QTabWidget,
+            QDialog,
+            QListWidget,
+            QRadioButton,
+            QSpinBox,
+            QGroupBox,
+            QButtonGroup,
         )
         from PyQt5.QtCore import Qt, QByteArray
         from PyQt5.QtNetwork import QLocalServer, QLocalSocket
@@ -81,6 +91,12 @@ __all__ = [
     "QTextEdit",
     "QSizePolicy",
     "QTabWidget",
+    "QDialog",
+    "QListWidget",
+    "QRadioButton",
+    "QSpinBox",
+    "QGroupBox",
+    "QButtonGroup",
     "Qt",
     "QByteArray",
     "QLocalServer",

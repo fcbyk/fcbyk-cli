@@ -1,7 +1,5 @@
 """单例/IPC：通过 Qt 本地套接字实现 GUI 单例与消息通信。"""
 
-from __future__ import annotations
-
 import sys
 import time
 from typing import Callable, Optional

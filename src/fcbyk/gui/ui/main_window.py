@@ -15,6 +15,7 @@ from ..core.compatibility import (
 
 from .slide_page import SlidePage
 from .lansend_page import LansendPage
+from .pick_page import PickPage
 from .resources import create_app_icon
 
 
@@ -62,9 +63,11 @@ class MainWindow(QMainWindow):
         # 页面：后续其它命令页面可按相同模式新增
         self._lansend_page = LansendPage(self)
         self._slide_page = SlidePage(self)
+        self._pick_page = PickPage(self)
 
         self._tabs.addTab(self._lansend_page, "LANSend")
         self._tabs.addTab(self._slide_page, "Slide")
+        self._tabs.addTab(self._pick_page, "Pick")
 
     def _setup_tray_icon(self):
         """初始化系统托盘与菜单。"""
@@ -116,6 +119,8 @@ class MainWindow(QMainWindow):
             if getattr(self, "_slide_page", None) is not None:
                 # Slide 运行在子进程中，这里确保退出前停止子进程
                 self._slide_page.stop_if_running()
+            if getattr(self, "_pick_page", None) is not None:
+                self._pick_page.stop_if_running()
         except Exception:
             pass
 

@@ -8,8 +8,6 @@
 我们直接调用 GUI 的实际入口函数。
 """
 
-from __future__ import annotations
-
 # 避免 runpy 对同名模块的二次执行：这里不再触发 `python -m fcbyk.gui.app`
 from .app import run_gui_standalone
 

@@ -1,7 +1,5 @@
 """进程相关工具：PID 文件、进程存在性检测。"""
 
-from __future__ import annotations
-
 import atexit
 import os
 import signal

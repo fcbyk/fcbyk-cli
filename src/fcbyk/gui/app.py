@@ -7,12 +7,11 @@ GUI 应用程序主模块
 - 作为直接运行时的入口点
 """
 
-from __future__ import annotations
-
 import os
 import subprocess
 import sys
 import tempfile
+from typing import Optional
 
 from .core.compatibility import HAS_GUI
 
@@ -29,7 +28,7 @@ if HAS_GUI:
     from .ui.main_window import MainWindow
     from .ui.resources import create_app_icon
 
-_window_instance: MainWindow | None = None
+_window_instance = None  # type: Optional[MainWindow]
 _local_server = None
 
 
