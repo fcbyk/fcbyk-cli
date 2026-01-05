@@ -89,8 +89,15 @@ class PickPage(QWidget):
         self._server_proc = None
         self._server_running = False
         self._server_error = None
-        self._server_log_file = os.path.join(tempfile.gettempdir(), "fcbyk_pick.log")
-        self._codes_dump_file = os.path.join(tempfile.gettempdir(), "fcbyk_pick_codes.txt")
+        # 日志/导出文件放到 ~/.fcbyk/ 目录下（与 CLI 配置目录统一）
+        try:
+            self._server_log_file = get_config_path("fcbyk", "fcbyk_pick.log")
+            self._codes_dump_file = get_config_path("fcbyk", "fcbyk_pick_codes.txt")
+            os.makedirs(os.path.dirname(self._server_log_file), exist_ok=True)
+        except Exception:
+            # 回退到系统临时目录
+            self._server_log_file = os.path.join(tempfile.gettempdir(), "fcbyk_pick.log")
+            self._codes_dump_file = os.path.join(tempfile.gettempdir(), "fcbyk_pick_codes.txt")
         self._build_ui()
 
     def _set_files_rows_visible(self, visible: bool) -> None:

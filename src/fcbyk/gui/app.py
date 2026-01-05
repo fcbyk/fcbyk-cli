@@ -11,6 +11,8 @@ import os
 import subprocess
 import sys
 import tempfile
+
+from ..utils.config import get_config_path
 from typing import Optional
 
 from .core.compatibility import HAS_GUI
@@ -145,21 +147,43 @@ def show_gui() -> str:
         return "activated"
 
     python_exe = sys.executable
+
+    # Windows 上优先使用 pythonw.exe（如果存在），这样 GUI 进程天然不依赖控制台。
+    # 这对 Win10 + Python3.6 + cmd 的场景尤其重要：即使父控制台关闭，GUI 也不应被连带结束。
+    if sys.platform == "win32":
+        try:
+            base, name = os.path.split(python_exe)
+            # 常见：python.exe -> pythonw.exe
+            if name.lower() == "python.exe":
+                pythonw = os.path.join(base, "pythonw.exe")
+                if os.path.exists(pythonw):
+                    python_exe = pythonw
+        except Exception:
+            pass
+
     # 注意：不能直接运行 app.py 文件（相对导入会失败），应以模块方式启动。
     # 用 `-m fcbyk.gui` 走包入口（__main__.py），避免 runpy 重复加载警告。
     cmd = [python_exe, "-m", "fcbyk.gui"]
 
     # 将子进程 stdout/stderr 写入日志，避免“启动没反应”时无法排查
-    log_file = os.path.join(tempfile.gettempdir(), "fcbyk_gui.log")
+    # 日志放在配置目录：~/.fcbyk/fcbyk_gui.log（Windows 下同样会展开到用户目录）
+    log_file = get_config_path("fcbyk", "fcbyk_gui.log")
     try:
+        os.makedirs(os.path.dirname(log_file), exist_ok=True)
         log_fp = open(log_file, "a", encoding="utf-8")
     except Exception:
         log_fp = None
 
     try:
         if sys.platform == "win32":
-            # Python 3.6 的 subprocess 可能没有 DETACHED_PROCESS 常量；这里做兼容处理。
-            creationflags = getattr(subprocess, "DETACHED_PROCESS", 0)
+            # 在 Win10 + Python3.6 下，如果只用 DETACHED_PROCESS，子进程仍可能绑定到父控制台。
+            # 这里额外加 CREATE_NEW_PROCESS_GROUP，并尽量隐藏/脱离控制台，避免关闭控制台导致 GUI 跟着退出。
+            DETACHED_PROCESS = getattr(subprocess, "DETACHED_PROCESS", 0)
+            CREATE_NEW_PROCESS_GROUP = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+            CREATE_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+
+            creationflags = DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW
+
             subprocess.Popen(
                 cmd,
                 creationflags=creationflags,

@@ -5,14 +5,38 @@ import os
 import signal
 import subprocess
 import sys
-import tempfile
+
+from ...utils.config import get_config_path
 import time
 
-PID_FILE = os.path.join(tempfile.gettempdir(), "fcbyk_gui.pid")
+# PID 文件放在配置目录：~/.fcbyk/fcbyk_gui.pid（Windows 下同样会展开到用户目录）
+PID_FILE = get_config_path("fcbyk", "fcbyk_gui.pid")
 
 
 def write_pid_file() -> None:
+    """写入 PID 文件。
+
+    额外逻辑：如果发现旧 PID 文件存在，但对应进程已不存在，则先删除旧 PID 文件，
+    避免异常退出导致的 PID 残留影响后续管理。
+    """
     try:
+        os.makedirs(os.path.dirname(PID_FILE), exist_ok=True)
+
+        # 清理残留 PID（例如崩溃/断电/强杀导致 atexit 未执行）
+        if os.path.exists(PID_FILE):
+            try:
+                with open(PID_FILE, "r", encoding="utf-8") as f:
+                    old_pid_str = f.read().strip()
+                old_pid = int(old_pid_str) if old_pid_str else 0
+            except Exception:
+                old_pid = 0
+
+            if old_pid and (not process_exists(old_pid)):
+                try:
+                    os.remove(PID_FILE)
+                except Exception:
+                    pass
+
         with open(PID_FILE, "w", encoding="utf-8") as f:
             f.write(str(os.getpid()))
     except Exception:
