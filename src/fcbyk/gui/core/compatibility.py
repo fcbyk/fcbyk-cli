@@ -64,8 +64,11 @@ except ImportError:  # pragma: no cover
         )
         from PyQt5.QtCore import Qt, QByteArray
         from PyQt5.QtNetwork import QLocalServer, QLocalSocket
-        from PyQt5.QtGui import QIcon, QPixmap, QPainter, QColor, QFont, QCursor, QAction
+        from PyQt5.QtGui import QIcon, QPixmap, QPainter, QColor, QFont, QCursor
         from PyQt5.QtSvg import QSvgRenderer
+
+        # PyQt5: QAction 位于 QtWidgets（而非 QtGui）
+        from PyQt5.QtWidgets import QAction
 
         HAS_GUI = True
     except ImportError:  # pragma: no cover

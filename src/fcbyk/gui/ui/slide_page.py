@@ -214,7 +214,7 @@ class SlidePage(QWidget):
                 stdin=subprocess.DEVNULL,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
-                creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0) if sys.platform == "win32" else 0,
             )
         except Exception as e:
             QMessageBox.critical(self, "启动失败", f"无法启动 Slide 服务：{e}")

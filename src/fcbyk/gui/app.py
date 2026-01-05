@@ -158,9 +158,11 @@ def show_gui() -> str:
 
     try:
         if sys.platform == "win32":
+            # Python 3.6 的 subprocess 可能没有 DETACHED_PROCESS 常量；这里做兼容处理。
+            creationflags = getattr(subprocess, "DETACHED_PROCESS", 0)
             subprocess.Popen(
                 cmd,
-                creationflags=subprocess.DETACHED_PROCESS,
+                creationflags=creationflags,
                 stdin=subprocess.DEVNULL,
                 stdout=log_fp or subprocess.DEVNULL,
                 stderr=log_fp or subprocess.DEVNULL,

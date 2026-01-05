@@ -3,8 +3,6 @@
 提供跨命令复用的端口占用检测。
 """
 
-from __future__ import annotations
-
 import socket
 
 
