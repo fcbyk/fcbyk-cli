@@ -42,7 +42,6 @@ class LansendConfig:
 class LansendService:
     def __init__(self, config: LansendConfig):
         self.config = config
-        self._first_upload_log = True
 
     # -------------------- 基础工具 --------------------
     @staticmethod
@@ -94,15 +93,11 @@ class LansendService:
         rel_path: str = "",
         file_size: Optional[int] = None,
     ) -> None:
-        if self._first_upload_log:
-            sys.stderr.write("\n")
-            sys.stderr.flush()
-            self._first_upload_log = False
 
         ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         path_str = f"/{rel_path}" if rel_path else "/"
         size_str = self.format_size(file_size) if file_size is not None else "unknown size"
-        log_msg = f"[{ts}] {ip} upload {file_count} file(s), status: {status}, path: {path_str}, size: {size_str}\n"
+        log_msg = f" [{ts}] {ip} upload {file_count} file(s), status: {status}, path: {path_str}, size: {size_str}\n"
         sys.stderr.write(log_msg)
         sys.stderr.flush()
 

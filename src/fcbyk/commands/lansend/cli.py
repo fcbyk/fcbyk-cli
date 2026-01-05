@@ -11,6 +11,7 @@ lansend 命令行接口模块
 
 import os
 import webbrowser
+from fcbyk.utils.port import ensure_port_available
 
 import click
 import pyperclip
@@ -42,7 +43,8 @@ def _lansend_impl(port: int, directory: str, password: bool = False, no_browser:
     )
     service = LansendService(config)
     config.upload_password = service.pick_upload_password(password, un_upload, click)
-
+    
+    click.echo()
     private_networks = get_private_networks()
     if private_networks:
         local_ip = private_networks[0]["ips"][0]
@@ -50,20 +52,30 @@ def _lansend_impl(port: int, directory: str, password: bool = False, no_browser:
         local_ip = "127.0.0.1"
         click.echo(" * Warning: No private network interface found, using localhost")
 
-    click.echo(f" * Directory: {shared_directory}")
+    try:
+        ensure_port_available(port, host="0.0.0.0")
+    except OSError as e:
+        click.echo(
+            f" Error: Port {port} is already in use (or you don't have permission). "
+            f" Please choose another port (e.g. --port {int(port) + 1})."
+        )
+        click.echo(f" Details: {e}")
+        return
+
+    click.echo(f" Directory: {shared_directory}")
     if config.upload_password:
-        click.echo(" * Upload Password: Enabled")
+        click.echo(" Upload Password: Enabled")
     echo_network_urls(private_networks, port, include_virtual=True)
 
     try:
         pyperclip.copy(f"http://{local_ip}:{port}")
-        click.echo(" * URL has been copied to clipboard")
+        click.echo(" URL has been copied to clipboard")
     except Exception:
-        click.echo(" * Warning: Could not copy URL to clipboard")
+        click.echo(" Warning: Could not copy URL to clipboard")
 
     if not no_browser:
         webbrowser.open(f"http://{local_ip}:{port}")
-
+    click.echo()
     app = create_lansend_app(service)
     from waitress import serve
     serve(app, host="0.0.0.0", port=port)

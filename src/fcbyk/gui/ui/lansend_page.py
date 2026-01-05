@@ -34,6 +34,7 @@ from ..core.compatibility import (
 from fcbyk.commands.lansend.controller import create_lansend_app
 from fcbyk.commands.lansend.service import LansendConfig, LansendService
 from fcbyk.utils.network import get_private_networks
+from fcbyk.utils.port import ensure_port_available
 
 
 def _run_lansend_server_process(
@@ -237,20 +238,11 @@ class LansendPage(QWidget):
     def _is_port_available(port: int, host: str = "0.0.0.0") -> bool:
         """检测端口是否可用。"""
 
-        import socket
-
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
-            # 不设置 SO_REUSEADDR：做“严格占用检测”，避免误判端口可用
-            s.bind((host, port))
+            ensure_port_available(port=port, host=host)
             return True
         except OSError:
             return False
-        finally:
-            try:
-                s.close()
-            except Exception:
-                pass
 
     def _build_local_url(self, port: int) -> str:
         private_networks = get_private_networks()

@@ -125,9 +125,6 @@ def test_pick_files_mode_generates_codes_and_calls_server(monkeypatch, tmp_path)
 
     monkeypatch.setattr(pick_cli, "PickService", _Svc)
 
-    # password=False => default 123456
-    monkeypatch.setattr(pick_cli.threading, "Thread", lambda target, daemon: type("T", (), {"start": lambda self: None})())
-
     called = {}
 
     def _start(port, no_browser, **kwargs):
@@ -168,7 +165,6 @@ def test_pick_files_mode_prompts_password(monkeypatch, tmp_path):
 
     monkeypatch.setattr(pick_cli, "PickService", _Svc)
 
-    monkeypatch.setattr(pick_cli.threading, "Thread", lambda target, daemon: type("T", (), {"start": lambda self: None})())
 
     # 用户输入空 => 使用默认 123456
     monkeypatch.setattr("click.prompt", lambda *a, **k: "")

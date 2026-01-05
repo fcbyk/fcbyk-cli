@@ -61,13 +61,13 @@ def echo_network_urls(networks: list, port: int, include_virtual: bool = False):
         include_virtual (bool): 是否显示虚拟网卡（如 VMware、Docker）
 
     输出示例：
-        * Local: http://localhost:5173
-        * Local: http://127.0.0.1:5173
-        * [Ethernet] Network URL: http://192.168.0.101:5173
+        Local: http://localhost:5173
+        Local: http://127.0.0.1:5173
+        [Ethernet] Network URL: http://192.168.0.101:5173
     """
     # 本地访问地址
     for host in ["localhost", "127.0.0.1"]:
-        click.echo(colored_key_value(" * Local", f"http://{host}:{port}", key_color=None, value_color="cyan"))
+        click.echo(colored_key_value(" Local", f"http://{host}:{port}", key_color=None, value_color="cyan"))
 
     # 局域网访问
     for net in networks:
@@ -75,6 +75,6 @@ def echo_network_urls(networks: list, port: int, include_virtual: bool = False):
             continue  # 跳过虚拟网卡
 
         for ip in net["ips"]:
-            click.echo(colored_key_value(f" * [{net['iface']}] Network URL:", f"http://{ip}:{port}", key_color=None, value_color="cyan"))
+            click.echo(colored_key_value(f" [{net['iface']}] Network URL:", f"http://{ip}:{port}", key_color=None, value_color="cyan"))
 
     

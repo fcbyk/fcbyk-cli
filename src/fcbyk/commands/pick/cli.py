@@ -13,24 +13,17 @@ pick 命令行接口模块
 """
 
 import click
-import threading
-import time
 from fcbyk.utils.config import get_config_path, load_json_config, save_config
 from fcbyk.cli_support.output import show_config
 from .service import PickService
 from .controller import start_web_server
+from fcbyk.utils.port import ensure_port_available
 
 config_file = get_config_path('fcbyk', 'pick.json')
 
 default_config = {
     'items': []
 }
-
-
-def delayed_newline_simple():
-    """延迟打印空行（用于改善控制台输出体验）"""
-    time.sleep(2)
-    click.echo()
 
 
 @click.command(name='pick', help='Randomly pick one item from the list')
@@ -60,6 +53,15 @@ def delayed_newline_simple():
 def pick(ctx, add, remove, clear, show_list, web, port, no_browser, files, gen_codes, show_codes, password, items):
     config = load_json_config(config_file, default_config)
     service = PickService(config_file, default_config)
+    
+    # 端口占用检测
+    if files or web:
+        try:
+            ensure_port_available(port, host="0.0.0.0")
+        except OSError as e:
+            click.echo(f" Error: Port {port} is already in use (or you don't have permission). Please choose another port (e.g. --port {int(port) + 1}).")
+            click.echo(f" Details: {e}")
+            return
     
     if show_list:
         items_list = config.get('items', [])
@@ -116,9 +118,6 @@ def pick(ctx, add, remove, clear, show_list, web, port, no_browser, files, gen_c
             admin_password = admin_password if admin_password else '123456'
         else:
             admin_password = '123456'
-
-        delay_thread = threading.Thread(target=delayed_newline_simple, daemon=True)
-        delay_thread.start()
 
         start_web_server(port, no_browser, files_root=files, codes=codes, admin_password=admin_password)
         return

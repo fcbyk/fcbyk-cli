@@ -335,16 +335,17 @@ def start_web_server(
     url_local = f"http://127.0.0.1:{port}"
     url_network = f"http://{local_ip}:{port}"
     click.echo()
-    click.echo(f" * Local URL: {url_local}")
-    click.echo(f" * Network URL: {url_network}")
-    click.echo(f" * Admin URL: {url_network}/admin")
+    click.echo(f" Local URL: {url_local}")
+    click.echo(f" Network URL: {url_network}")
+    click.echo(f" Admin URL: {url_network}/admin")
     if files_mode_root:
-        click.echo(f" * Files root: {files_mode_root}")
+        click.echo(f" Files root: {files_mode_root}")
     if not no_browser:
         try:
             webbrowser.open(url_network)
-            click.echo(" * Attempted to open picker page in browser (network URL)")
+            click.echo(" Attempted to open picker page in browser (network URL)")
         except Exception:
-            click.echo(" * Note: Could not auto-open browser, please visit the URL above")
+            click.echo(" Note: Could not auto-open browser, please visit the URL above")
+    click.echo()
     from waitress import serve
     serve(app, host='0.0.0.0', port=port)
