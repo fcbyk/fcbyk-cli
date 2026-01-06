@@ -2,12 +2,23 @@
   <div v-if="previewFile" class="tab-pane preview-pane">
     <div class="preview-content">
       <div v-if="previewLoading" class="preview-loading">加载中...</div>
-      <div v-else-if="previewError" class="preview-error">{{ previewError }}</div>
+      <div v-else-if="previewError" class="preview-error">
+        <div class="preview-error-msg">{{ previewError }}</div>
+        <a
+          v-if="shouldShowOpenInBrowser"
+          :href="openInBrowserHref"
+          class="download-btn"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          在浏览器打开
+        </a>
+      </div>
       <div v-else-if="isVideo" class="preview-video">
         <video :src="videoSrc" controls preload="metadata" playsinline />
       </div>
       <div v-else-if="previewFile.is_image" class="preview-image">
-        <img :src="`/api/download/${encodeURI(previewFile.path)}`" :alt="previewFile.name" />
+        <img :src="imageSrc" :alt="previewFile.name" />
       </div>
       <div v-else-if="previewFile.is_binary" class="preview-binary">
         <p>无法预览二进制文件</p>
@@ -108,6 +119,23 @@ const videoSrc = computed(() => {
   return `/api/preview/${encodeURI(props.previewFile.path)}`
 })
 
+const imageSrc = computed(() => {
+  if (!props.previewFile) return ''
+  return `/api/download/${encodeURI(props.previewFile.path)}`
+})
+
+const openInBrowserHref = computed(() => {
+  if (!props.previewFile) return ''
+  // 对视频优先走 /api/preview（Range），其它默认走 /api/preview（通常会直接在浏览器打开或下载）
+  // 图片走 /api/download 也可以打开，但为保持与二进制一致，这里统一走 preview
+  return `/api/preview/${encodeURI(props.previewFile.path)}`
+})
+
+const shouldShowOpenInBrowser = computed(() => {
+  // 只要预览失败（有 previewError）且存在文件信息，就显示“在浏览器打开”
+  return !!props.previewFile && !!props.previewError
+})
+
 function guessLangByName(name: string) {
   const lower = name.toLowerCase()
   if (lower.endsWith('.js') || lower.endsWith('.mjs') || lower.endsWith('.cjs')) return 'javascript'
@@ -164,3 +192,9 @@ const highlightedHtml = computed(() => {
   }
 })
 </script>
+
+<style scoped>
+.preview-error-msg {
+  margin-bottom: 1rem;
+}
+</style>
