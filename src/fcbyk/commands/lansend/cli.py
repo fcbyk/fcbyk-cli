@@ -78,7 +78,18 @@ def _lansend_impl(port: int, directory: str, password: bool = False, no_browser:
     click.echo()
     app = create_lansend_app(service)
     from waitress import serve
-    serve(app, host="0.0.0.0", port=port, max_request_body_size= 50 * 1024 * 1024 * 1024)
+
+    # waitress 线程数：按机器性能自适应，避免老机器被过多线程拖慢
+    cpu = os.cpu_count() or 2
+    threads = min(16, max(4, cpu * 2))
+
+    serve(
+        app,
+        host="0.0.0.0",
+        port=port,
+        max_request_body_size=50 * 1024 * 1024 * 1024,
+        threads=threads,
+    )
 
 
 @click.command(help="Start a local web server for sharing files over LAN")

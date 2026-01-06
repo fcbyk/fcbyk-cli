@@ -15,7 +15,20 @@
         </a>
       </div>
       <div v-else-if="isVideo" class="preview-video">
-        <video :src="videoSrc" controls preload="metadata" playsinline />
+        <div v-if="videoLoading" class="video-loading">
+          <div class="loading-spinner"></div>
+          <div class="loading-text">视频加载中，请稍候...</div>
+        </div>
+        <video 
+          v-show="!videoLoading"
+          ref="videoPlayer"
+          :src="videoSrc" 
+          controls 
+          preload="metadata" 
+          playsinline 
+          @loadeddata="onVideoLoaded"
+          @error="onVideoError"
+        />
       </div>
       <div v-else-if="previewFile.is_image" class="preview-image">
         <img :src="imageSrc" :alt="previewFile.name" />
@@ -45,7 +58,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch, onBeforeUnmount } from 'vue'
 import type { PreviewFile } from '../types'
 import hljs from 'highlight.js/lib/core'
 import python from 'highlight.js/lib/languages/python'
@@ -106,11 +119,70 @@ const props = defineProps<{
   previewFile: PreviewFile | null
   previewLoading: boolean
   previewError: string
+  videoLoading: boolean
 }>()
 
+const emit = defineEmits<{
+  (e: 'close'): void
+  (e: 'videoLoaded'): void
+  (e: 'videoError'): void
+}>()
+
+const videoPlayer = ref<HTMLVideoElement | null>(null)
+
+function abortVideoDownload() {
+  const el = videoPlayer.value
+  if (!el) return
+
+  try {
+    // 强制中止当前媒体下载：pause + 清空 src + load
+    el.pause()
+    el.removeAttribute('src')
+    // 某些浏览器会保留 currentSrc，调用 load() 可让其进入空资源状态
+    el.load()
+  } catch (err) {
+    console.warn('abortVideoDownload failed:', err)
+  }
+}
+
+const onVideoLoaded = () => {
+  emit('videoLoaded')
+}
+
+const onVideoError = (e: Event) => {
+  console.error('视频加载失败:', e)
+  emit('videoError')
+}
+
+// 只要预览文件切换，若上一个是视频，主动中止旧视频下载，避免后端连接堆积
+watch(
+  () => props.previewFile,
+  (_newFile, oldFile) => {
+    if (oldFile) {
+      // 判断旧文件是否为视频
+      const wasVideo = typeof oldFile.is_video === 'boolean' ? oldFile.is_video : isVideoFileName(oldFile.name)
+      if (wasVideo) {
+        abortVideoDownload()
+      }
+    }
+  }
+)
+
+onBeforeUnmount(() => {
+  abortVideoDownload()
+})
+
+function isVideoFileName(name: string) {
+  const lower = (name || '').toLowerCase()
+  return lower.endsWith('.mp4') || lower.endsWith('.webm') || lower.endsWith('.ogg')
+}
+
 const isVideo = computed(() => {
-  const name = (props.previewFile?.name || '').toLowerCase()
-  return name.endsWith('.mp4') || name.endsWith('.webm') || name.endsWith('.ogg')
+  const file = props.previewFile
+  if (!file) return false
+  // 以服务端标记为准；缺失时用后缀兜底
+  if (typeof file.is_video === 'boolean') return file.is_video
+  return isVideoFileName(file.name)
 })
 
 const videoSrc = computed(() => {
@@ -196,5 +268,42 @@ const highlightedHtml = computed(() => {
 <style scoped>
 .preview-error-msg {
   margin-bottom: 1rem;
+}
+
+.preview-video {
+  position: relative;
+}
+
+.video-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 240px;
+  padding: 2rem;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e5e7eb;
+  border-top: 4px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+.loading-text {
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 </style>

@@ -115,6 +115,9 @@
           :preview-file="previewFile"
           :preview-loading="previewLoading"
           :preview-error="previewError"
+          :video-loading="previewVideoLoading"
+          @videoLoaded="onPreviewVideoLoaded"
+          @videoError="onPreviewVideoError"
           @close="closePreview"
         />
       </div>
@@ -197,7 +200,17 @@ const {
 } = useLansendUpload()
 
 // 预览 + tab（单实例预览）
-const { previewFile, previewLoading, previewError, activeTab, previewFileContent, closePreview: originalClosePreview } = useLansendPreview()
+const { 
+  previewFile, 
+  previewLoading, 
+  previewError, 
+  activeTab, 
+  previewVideoLoading,
+  previewFileContent, 
+  closePreview: originalClosePreview,
+  onPreviewVideoLoaded,
+  onPreviewVideoError 
+} = useLansendPreview()
 
 // 根据后端 requirePassword 决定是否可上传
 const canUpload = computed(() => {

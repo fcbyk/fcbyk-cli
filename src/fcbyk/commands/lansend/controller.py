@@ -516,9 +516,14 @@ def register_routes(app, service: LansendService):
             "Accept-Ranges": "bytes",
         }
 
+        # 对视频/音频：即使客户端未带 Range，也强制走 206（更利于浏览器尽快开始后续分段请求）
+        is_media = (mimetype or '').startswith('video/') or (mimetype or '').startswith('audio/')
+
         # 处理 Range 请求（用于视频/音频的断点续传和流式播放）
-        if range_header:
-            range_match = re.search(r"bytes=(\d+)-(\d*)", range_header)
+        if range_header or is_media:
+            # 没有 Range 但属于媒体文件：默认从 0 开始
+            effective_range = range_header or 'bytes=0-'
+            range_match = re.search(r"bytes=(\d+)-(\d*)", effective_range)
             if range_match:
                 start = int(range_match.group(1))
                 if range_match.group(2):
@@ -533,26 +538,32 @@ def register_routes(app, service: LansendService):
                         headers={"Content-Range": f"bytes */{file_size}"},
                     )
 
+                # 媒体文件优化：限制单次 Range 响应的最大大小，避免浏览器发 bytes=0- 时返回超大区间
+                if is_media:
+                    max_media_chunk = 512 * 1024  # 512KB
+                    end = min(end, start + max_media_chunk - 1)
+
                 length = end - start + 1
                 headers["Content-Length"] = str(length)
                 headers["Content-Range"] = f"bytes {start}-{end}/{file_size}"
                 status_code = 206
 
-        # 流式生成器：按 1MB 块读取
-        def generate_chunks(f, start_pos, size):
-            with f:
+        headers.setdefault('Cache-Control', 'no-cache')
+
+        # 流式生成器：按 1MB 块读取（在生成器内部打开文件，避免文件句柄生命周期问题）
+        def generate_chunks(path, start_pos, size):
+            with open(path, "rb") as f:
                 f.seek(start_pos)
                 bytes_to_read = size
                 while bytes_to_read > 0:
-                    chunk_size = 1024 * 1024  # 1MB chunks
+                    chunk_size = 256 * 1024  # 256KB chunks
                     data = f.read(min(chunk_size, bytes_to_read))
                     if not data:
                         break
                     bytes_to_read -= len(data)
                     yield data
 
-        file_handle = open(file_path, "rb")
-        response_body = generate_chunks(file_handle, start, end - start + 1)
+        response_body = generate_chunks(file_path, start, end - start + 1)
 
         return Response(stream_with_context(response_body), status=status_code, headers=headers)
 

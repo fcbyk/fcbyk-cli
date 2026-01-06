@@ -58,7 +58,16 @@ def _run_lansend_server_process(
 
     from waitress import serve
 
-    serve(app, host="0.0.0.0", port=port, max_request_body_size= 50 * 1024 * 1024 * 1024)
+    cpu = os.cpu_count() or 2
+    threads = min(16, max(4, cpu * 2))
+
+    serve(
+        app,
+        host="0.0.0.0",
+        port=port,
+        max_request_body_size=50 * 1024 * 1024 * 1024,
+        threads=threads,
+    )
 
 
 class LansendPage(QWidget):
