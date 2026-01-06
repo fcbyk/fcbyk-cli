@@ -29,6 +29,7 @@ export interface VerifyUploadPasswordResponse {
 export interface PreviewFile {
   content?: string
   is_image?: boolean
+  is_video?: boolean
   is_binary?: boolean
   path: string
   name: string

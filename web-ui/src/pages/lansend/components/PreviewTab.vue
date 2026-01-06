@@ -22,7 +22,7 @@
       </div>
       <div v-else-if="previewFile.is_binary" class="preview-binary">
         <p>无法预览二进制文件</p>
-        <a :href="`/api/preview/${encodeURI(previewFile.path)}`" class="download-btn" target="_blank">在浏览器打开</a>
+        <a :href="`/api/preview/${encodeURIComponent(previewFile.path)}`" class="download-btn" target="_blank">在浏览器打开</a>
       </div>
       <div v-else class="preview-text-wrap">
         <button
@@ -116,19 +116,19 @@ const isVideo = computed(() => {
 const videoSrc = computed(() => {
   if (!props.previewFile) return ''
   // 走后端新增的 Range 预览接口，支持拖动进度条/快进
-  return `/api/preview/${encodeURI(props.previewFile.path)}`
+  return `/api/preview/${encodeURIComponent(props.previewFile.path)}`
 })
 
 const imageSrc = computed(() => {
   if (!props.previewFile) return ''
-  return `/api/download/${encodeURI(props.previewFile.path)}`
+  return `/api/download/${encodeURIComponent(props.previewFile.path)}`
 })
 
 const openInBrowserHref = computed(() => {
   if (!props.previewFile) return ''
   // 对视频优先走 /api/preview（Range），其它默认走 /api/preview（通常会直接在浏览器打开或下载）
   // 图片走 /api/download 也可以打开，但为保持与二进制一致，这里统一走 preview
-  return `/api/preview/${encodeURI(props.previewFile.path)}`
+  return `/api/preview/${encodeURIComponent(props.previewFile.path)}`
 })
 
 const shouldShowOpenInBrowser = computed(() => {

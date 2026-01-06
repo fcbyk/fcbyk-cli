@@ -569,15 +569,23 @@ def register_routes(app, service: LansendService):
 
         file_size = os.path.getsize(file_path)
         raw_name = os.path.basename(file_path)
-        safe_name = urllib.parse.quote(raw_name)
+
+        # 关键修复：构建一个完全符合 RFC 规范且为纯 ASCII 的 Content-Disposition 头
+        # 1. 将原始文件名进行 URL 编码，用于 filename* 参数，这部分是纯 ASCII
+        safe_name_utf8 = urllib.parse.quote(raw_name)
+
+        # 2. 创建一个只包含 ASCII 字符的回退文件名，给不支持 RFC 6266 的老客户端用
+        fallback_name = raw_name.encode('ascii', 'ignore').decode('ascii').strip()
+
+        # 如果过滤后只剩扩展名（例如中文名导致变成 ".png"），则生成更友好的回退名：download.png
+        ext = os.path.splitext(raw_name)[1]
+        if not fallback_name or fallback_name == ext:
+            fallback_name = f"download{ext}" if ext else 'download'
 
         headers = {
             "Content-Type": "application/octet-stream",
             "Content-Length": str(file_size),
-            "Content-Disposition": (
-                f"attachment; filename=\"{raw_name}\"; "
-                f"filename*=UTF-8''{safe_name}"
-            ),
+            "Content-Disposition": f"attachment; filename=\"{fallback_name}\"; filename*=UTF-8''{safe_name_utf8}",
             "Accept-Ranges": "bytes",
             "Cache-Control": "no-cache",
         }
@@ -595,5 +603,4 @@ def register_routes(app, service: LansendService):
             headers=headers,
             status=200
         )
-
 

@@ -182,33 +182,74 @@ class LansendService:
         return file_path
 
     def read_file_content(self, relative_path: str) -> Dict[str, Any]:
+        """读取文件内容（文本/图片/视频/二进制）。
+
+        规则：
+        - 图片：直接返回 is_image，不读取内容
+        - 视频：直接返回 is_video，不读取内容（前端用 /api/preview 做 Range 播放）
+        - 文本：最多预览 2MB，超过则按二进制处理（避免前端/后端卡死）
+        - 其它：按二进制处理
+        """
         file_path = self.resolve_file_path(relative_path)
 
         if not os.path.exists(file_path) or os.path.isdir(file_path):
             raise FileNotFoundError("File not found")
 
-        if self.is_image_file(file_path):
+        raw_name = os.path.basename(relative_path)
+        lower_name = raw_name.lower()
+
+        # 1) 图片：不读取内容
+        if self.is_image_file(lower_name):
             return {
                 "is_image": True,
                 "path": relative_path,
-                "name": os.path.basename(relative_path),
+                "name": raw_name,
             }
 
+        # 2) 视频：不读取内容（由 /api/preview 支持 Range 播放）
+        video_exts = {".mp4", ".webm", ".ogg", ".mov", ".mkv", ".avi", ".m4v"}
+        if any(lower_name.endswith(ext) for ext in video_exts):
+            return {
+                "is_video": True,
+                "path": relative_path,
+                "name": raw_name,
+            }
+
+        # 3) 文本：最多 2MB
+        max_preview_bytes = 2 * 1024 * 1024
         try:
+            file_size = os.path.getsize(file_path)
+            if file_size > max_preview_bytes:
+                return {
+                    "is_binary": True,
+                    "path": relative_path,
+                    "name": raw_name,
+                    "error": "文件过大，超过 2MB，建议在浏览器打开",
+                }
+
             with open(file_path, "r", encoding="utf-8") as f:
-                content = f.read()
+                content = f.read(max_preview_bytes + 1)
+
+            if len(content) > max_preview_bytes:
+                return {
+                    "is_binary": True,
+                    "path": relative_path,
+                    "name": raw_name,
+                    "error": "文件过大，超过 2MB，建议在浏览器打开",
+                }
+
             return {
                 "content": content,
                 "path": relative_path,
-                "name": os.path.basename(relative_path),
-                "is_image": False,
+                "name": raw_name,
             }
+
         except UnicodeDecodeError:
             return {
                 "is_binary": True,
                 "path": relative_path,
-                "name": os.path.basename(relative_path),
-                "error": "Binary file cannot be displayed",
+                "name": raw_name,
+                "error": "二进制文件无法预览，建议在浏览器打开",
             }
 
     def pick_upload_password(self, flag_password: bool, un_upload: bool, click_module) -> Optional[str]:
