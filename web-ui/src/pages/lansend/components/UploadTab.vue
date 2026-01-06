@@ -61,7 +61,19 @@
       <div class="progress-bar">
         <div class="progress" :style="{ width: `${overallProgress}%` }"></div>
       </div>
-      <div class="upload-status">{{ uploadStatus }}</div>
+
+      <div class="upload-status">
+        <div v-for="(line, idx) in statusLines" :key="idx" class="upload-line">
+          <span>{{ line }}</span>
+        </div>
+      </div>
+
+      <div v-if="uploadStatsText" class="upload-stats">
+        <div v-for="(line, idx) in statsLines" :key="idx" class="upload-line">
+          <span>{{ line }}</span>
+        </div>
+      </div>
+
       <div v-if="queueLength > 0" class="queue-info">队列中还有 {{ queueLength }} 个文件等待上传</div>
     </div>
     <div v-if="showCompleteInfoFlag" class="complete-info">{{ completeInfo }}</div>
@@ -69,7 +81,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick } from 'vue'
+import { computed, ref, watch, nextTick } from 'vue'
 
 const shouldShake = ref(false)
 let shakeTimer: number | undefined
@@ -87,6 +99,7 @@ const props = defineProps<{
   queueLength: number
   overallProgress: number
   uploadStatus: string
+  uploadStatsText: string
   completeInfo: string
   showCompleteInfoFlag: boolean
 }>()
@@ -103,6 +116,45 @@ const emit = defineEmits<{
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const passwordInputRef = ref<HTMLInputElement | null>(null)
 const showPasswordInput = ref(false)
+
+// 移动端：把长信息拆成多行，减少频繁换行导致的“闪动”
+const isMobile = computed(() => window.matchMedia && window.matchMedia('(max-width: 768px)').matches)
+
+const statusLines = computed<string[]>(() => {
+  const text = (props.uploadStatus || '').trim()
+  if (!text) return []
+
+  if (!isMobile.value) return [text]
+
+  // e.g. "正在上传: Windows.iso (4.42 GB / 4.42 GB) - 100%"
+  // 拆成两行：
+  // 正在上传: Windows.iso
+  // (4.42 GB / 4.42 GB) - 100%
+  const idx = text.indexOf(' (')
+  if (idx > 0) {
+    const line1 = text.slice(0, idx).trim()
+    const line2 = text.slice(idx).trim()
+    return [line1, line2].filter(Boolean)
+  }
+
+  return [text]
+})
+
+const statsLines = computed<string[]>(() => {
+  const text = (props.uploadStatsText || '').trim()
+  if (!text) return []
+
+  if (!isMobile.value) return [text]
+
+  // 把 " · " 拆成两行展示，避免一行过长在移动端抖动
+  const parts = text.split(' · ').map((s) => s.trim()).filter(Boolean)
+  if (parts.length <= 2) return [text]
+
+  const half = Math.ceil(parts.length / 2)
+  const line1 = parts.slice(0, half).join(' · ')
+  const line2 = parts.slice(half).join(' · ')
+  return [line1, line2].filter(Boolean)
+})
 
 watch(
   () => props.canUpload,
@@ -177,10 +229,37 @@ function onFileSelect(e: Event) {
   if (target.files) {
     emit('files-selected', Array.from(target.files))
   }
+  // 清空 input，确保可以重复选择同一文件
+  target.value = ''
 }
 </script>
 
 <style scoped>
+.upload-status {
+  margin-top: 10px;
+  font-size: 14px;
+  color: #666;
+  word-break: break-word;
+}
+
+.upload-stats {
+  margin-top: 6px;
+  font-size: 12px;
+  opacity: 0.85;
+  word-break: break-word;
+}
+
+@media (max-width: 768px) {
+  .upload-status {
+    font-size: 12px;
+    line-height: 1.35;
+  }
+  .upload-stats {
+    font-size: 11px;
+    line-height: 1.35;
+  }
+}
+
 /* 仅做轻量抖动反馈，避免整块 login-card 重新渲染导致的“闪”感 */
 .login-password-input.shake {
   animation: shake-x 320ms ease-in-out;
@@ -221,6 +300,31 @@ function onFileSelect(e: Event) {
   }
   100% {
     transform: translateX(0);
+  }
+}
+
+.complete-info {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background-color: #e8f5e9; /* 浅绿色背景 */
+  color: #2e7d32; /* 深绿色文字 */
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border-left: 3px solid #4caf50; /* 左侧边框高亮 */
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 </style>

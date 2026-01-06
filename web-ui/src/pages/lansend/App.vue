@@ -93,6 +93,7 @@
             :queue-length="queueLength"
             :overall-progress="overallProgress"
             :upload-status="uploadStatus"
+            :upload-stats-text="uploadStatsText"
             :complete-info="completeInfo"
             :show-complete-info-flag="showCompleteInfoFlag"
             @verify-password="handleVerifyPassword"
@@ -191,6 +192,7 @@ const {
   overallProgress,
   uploadHint,
   uploadStatus,
+  uploadStatsText,
   completeInfo,
   showCompleteInfoFlag,
   verifyPassword,

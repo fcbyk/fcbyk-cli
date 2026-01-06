@@ -66,9 +66,11 @@ export function uploadFile(
   file: File,
   path: string,
   password: string | null,
-  onProgress: (progress: number) => void
+  onProgress: (progress: number, meta?: { loaded: number; total: number }) => void
 ): Promise<UploadFileResponse> {
   return new Promise((resolve, reject) => {
+    // 开始上传时初始化进度
+    onProgress(0, { loaded: 0, total: file.size })
     const formData = new FormData()
     formData.append('file', file)
     formData.append('path', path)
@@ -79,14 +81,18 @@ export function uploadFile(
 
     const xhr = new XMLHttpRequest()
 
+    // progress 事件处理
     xhr.upload.addEventListener('progress', (e) => {
-      if (e.lengthComputable) {
-        const progress = (e.loaded / e.total) * 100
-        onProgress(progress)
-      }
+      // progress 事件处理
+      const total = file.size || (e.lengthComputable && e.total > 0 ? e.total : 0)
+      const loaded = Math.min(e.loaded, total || e.loaded)
+      const progress = total === 0 ? 100 : (loaded / total) * 100
+      onProgress(Math.min(99.9, Math.max(0, progress)), { loaded, total })
     })
 
+    // 只有真正完成时才发 100%
     xhr.addEventListener('load', () => {
+      onProgress(100, { loaded: file.size, total: file.size })
       if (xhr.status === 200) {
         try {
           const data = JSON.parse(xhr.responseText)
