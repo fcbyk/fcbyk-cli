@@ -113,6 +113,154 @@ export function uploadFile(
 }
 
 /**
+ * 备用接口
+ * 分片上传文件（避免 4GB 单请求体触发服务端/WSGI 限制）
+ */
+export async function uploadFileByChunks(
+  file: File,
+  path: string,
+  password: string | null,
+  onProgress: (progress: number) => void,
+  options?: {
+    chunkSize?: number
+    concurrency?: number
+    retry?: number
+    retryDelayMs?: number
+  }
+): Promise<UploadFileResponse> {
+  const chunkSize = options?.chunkSize ?? 8 * 1024 * 1024
+  const concurrency = Math.max(1, options?.concurrency ?? 3)
+  const retry = Math.max(0, options?.retry ?? 2)
+  const retryDelayMs = Math.max(0, options?.retryDelayMs ?? 300)
+
+  const totalChunks = Math.max(1, Math.ceil(file.size / chunkSize))
+
+  // init
+  const initForm = new FormData()
+  initForm.append('filename', file.name)
+  initForm.append('size', file.size.toString())
+  initForm.append('path', path)
+  initForm.append('chunk_size', chunkSize.toString())
+  initForm.append('total_chunks', totalChunks.toString())
+  if (password) initForm.append('password', password)
+
+  const initResp = await fetch('/api/upload/init', {
+    method: 'POST',
+    body: initForm,
+    headers: password ? { 'X-Upload-Password': password } : undefined
+  })
+  const initData = await initResp.json().catch(() => ({}))
+  if (!initResp.ok) {
+    return { success: false, error: initData?.error || 'upload init failed', data: initData }
+  }
+
+  const uploadId: string = initData.upload_id
+  if (!uploadId) {
+    return { success: false, error: 'missing upload_id', data: initData }
+  }
+
+  let uploadedBytes = 0
+  const chunkUploaded = new Array(totalChunks).fill(false)
+
+  const report = () => {
+    const progress = file.size === 0 ? 100 : (uploadedBytes / file.size) * 100
+    onProgress(Math.min(100, Math.max(0, progress)))
+  }
+
+  async function sleep(ms: number) {
+    return new Promise((r) => setTimeout(r, ms))
+  }
+
+  async function putChunk(index: number) {
+    const start = index * chunkSize
+    const end = Math.min(file.size, start + chunkSize)
+    const blob = file.slice(start, end)
+
+    let attempt = 0
+    while (true) {
+      try {
+        const resp = await fetch(`/api/upload/chunk?upload_id=${encodeURIComponent(uploadId)}&index=${index}`, {
+          method: 'POST',
+          body: blob,
+          headers: {
+            'Content-Type': 'application/octet-stream',
+            ...(password ? { 'X-Upload-Password': password } : {})
+          }
+        })
+        const data = await resp.json().catch(() => ({}))
+        if (!resp.ok) {
+          throw new Error(data?.error || `chunk ${index} failed`)
+        }
+
+        if (!chunkUploaded[index]) {
+          chunkUploaded[index] = true
+          uploadedBytes += (end - start)
+          report()
+        }
+        return
+      } catch (e) {
+        if (attempt >= retry) throw e
+        attempt++
+        await sleep(retryDelayMs)
+      }
+    }
+  }
+
+  // 简单并发 worker
+  let nextIndex = 0
+  const workers: Promise<void>[] = []
+  for (let w = 0; w < concurrency; w++) {
+    workers.push(
+      (async () => {
+        while (true) {
+          const i = nextIndex
+          nextIndex++
+          if (i >= totalChunks) return
+          await putChunk(i)
+        }
+      })()
+    )
+  }
+
+  try {
+    report()
+    await Promise.all(workers)
+  } catch (e: any) {
+    // abort
+    try {
+      await fetch('/api/upload/abort', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(password ? { 'X-Upload-Password': password } : {})
+        },
+        body: JSON.stringify({ upload_id: uploadId })
+      })
+    } catch {
+      // ignore
+    }
+    return { success: false, error: e?.message || 'upload failed' }
+  }
+
+  // complete
+  const completeResp = await fetch('/api/upload/complete', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(password ? { 'X-Upload-Password': password } : {})
+    },
+    body: JSON.stringify({ upload_id: uploadId })
+  })
+
+  const completeData = await completeResp.json().catch(() => ({}))
+  if (!completeResp.ok) {
+    return { success: false, error: completeData?.error || 'upload complete failed', data: completeData }
+  }
+
+  return { success: true, data: completeData }
+}
+
+/**
  * 获取聊天消息列表
  */
 export async function getChatMessages(): Promise<ChatMessagesResponse> {

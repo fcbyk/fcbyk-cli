@@ -28,7 +28,7 @@ import mimetypes
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 
-from flask import abort, jsonify, request, send_file, Response, stream_with_context
+from flask import abort, jsonify, request, Response, stream_with_context
 
 from fcbyk.web.app import create_spa
 from .service import LansendService
@@ -103,6 +103,266 @@ def register_chat_routes(app, service: LansendService):
 
 def register_upload_routes(app, service: LansendService):
     """注册文件上传相关路由"""
+
+    # -------------------- 分片上传（备用接口） --------------------
+    # 协议：
+    # 1) POST /api/upload/init  (form)
+    #    fields: filename, size, path, chunk_size, total_chunks, password?
+    #    -> {upload_id, chunk_size, total_chunks, filename, renamed}
+    # 2) POST /api/upload/chunk (binary)
+    #    query: upload_id, index
+    #    header: X-Upload-Password 可选
+    #    body: chunk bytes (application/octet-stream)
+    #    -> {ok:true}
+    # 3) POST /api/upload/complete (json)
+    #    body: {upload_id}
+    #    -> {message:'file uploaded', filename, renamed}
+    # 4) POST /api/upload/abort (json)
+    #    body: {upload_id}
+    #    -> {ok:true}
+
+    def _verify_password_from_request() -> Optional[Response]:
+        if not service.config.upload_password:
+            return None
+        pw = request.headers.get("X-Upload-Password") or request.form.get("password")
+        if not pw:
+            return jsonify({"error": "upload password required"}), 401
+        if pw != service.config.upload_password:
+            return jsonify({"error": "wrong password"}), 401
+        return None
+
+    def _get_upload_tmp_dir() -> str:
+        # 临时目录放在共享目录下，避免跨盘/权限问题
+        base = service.ensure_shared_directory()
+        tmp_dir = os.path.join(base, ".lansend_upload_tmp")
+        os.makedirs(tmp_dir, exist_ok=True)
+        return tmp_dir
+
+    def _safe_upload_id(upload_id: str) -> str:
+        # 只允许简单字符，防止路径穿越
+        return re.sub(r"[^a-zA-Z0-9_-]", "", upload_id or "")
+
+    @app.route("/api/upload/init", methods=["POST"])
+    def upload_init():
+        ip = _get_client_ip()
+        err = _verify_password_from_request()
+        if err:
+            return err
+
+        filename_raw = (request.form.get("filename") or "").strip()
+        size = _try_int(request.form.get("size"))
+        rel_path = (request.form.get("path") or "").strip("/")
+        chunk_size = _try_int(request.form.get("chunk_size")) or (8 * 1024 * 1024)
+        total_chunks = _try_int(request.form.get("total_chunks"))
+
+        if not filename_raw:
+            return jsonify({"error": "filename is required"}), 400
+        if size is None or size < 0:
+            return jsonify({"error": "size is required"}), 400
+        if total_chunks is None or total_chunks <= 0:
+            return jsonify({"error": "total_chunks is required"}), 400
+        if chunk_size <= 0:
+            return jsonify({"error": "invalid chunk_size"}), 400
+
+        try:
+            target_dir = service.abs_target_dir(rel_path)
+        except ValueError:
+            service.log_upload(ip, 0, "failed (shared directory not set)", rel_path)
+            return jsonify({"error": "shared directory not set"}), 400
+        except PermissionError:
+            service.log_upload(ip, 0, "failed (invalid path)", rel_path)
+            return jsonify({"error": "invalid path"}), 400
+
+        if not os.path.exists(target_dir) or not os.path.isdir(target_dir):
+            service.log_upload(ip, 0, f"failed (target directory missing: {rel_path or 'root'})", rel_path, size)
+            return jsonify({"error": "target directory not found"}), 400
+
+        filename = service.safe_filename(filename_raw) or "untitled"
+
+        # 冲突处理：先预生成最终文件名
+        final_path = os.path.join(target_dir, filename)
+        renamed = False
+        if os.path.exists(final_path):
+            name, ext = os.path.splitext(filename)
+            counter = 1
+            while os.path.exists(final_path):
+                filename = f"{name}_{counter}{ext}"
+                final_path = os.path.join(target_dir, filename)
+                counter += 1
+            renamed = True
+
+        # upload_id：时间戳+pid+随机
+        upload_id = f"{int(datetime.now().timestamp()*1000)}_{os.getpid()}_{os.urandom(6).hex()}"
+
+        tmp_root = _get_upload_tmp_dir()
+        upload_dir = os.path.join(tmp_root, upload_id)
+        os.makedirs(upload_dir, exist_ok=True)
+
+        meta = {
+            "upload_id": upload_id,
+            "filename": filename,
+            "size": size,
+            "rel_path": rel_path,
+            "target_dir": target_dir,
+            "final_path": final_path,
+            "chunk_size": chunk_size,
+            "total_chunks": total_chunks,
+            "renamed": renamed,
+            "created_at": datetime.now().isoformat(),
+        }
+        with open(os.path.join(upload_dir, "meta.json"), "w", encoding="utf-8") as f:
+            import json
+            json.dump(meta, f, ensure_ascii=False)
+
+        return jsonify({
+            "upload_id": upload_id,
+            "chunk_size": chunk_size,
+            "total_chunks": total_chunks,
+            "filename": filename,
+            "renamed": renamed,
+        })
+
+    @app.route("/api/upload/chunk", methods=["POST"])
+    def upload_chunk():
+        ip = _get_client_ip()
+        err = _verify_password_from_request()
+        if err:
+            return err
+
+        upload_id = _safe_upload_id(request.args.get("upload_id") or "")
+        index = _try_int(request.args.get("index"))
+        if not upload_id:
+            return jsonify({"error": "upload_id is required"}), 400
+        if index is None or index < 0:
+            return jsonify({"error": "index is required"}), 400
+
+        tmp_root = _get_upload_tmp_dir()
+        upload_dir = os.path.join(tmp_root, upload_id)
+        meta_path = os.path.join(upload_dir, "meta.json")
+        if not os.path.exists(meta_path):
+            return jsonify({"error": "upload not found"}), 404
+
+        # 直接读取 raw body（每块 8~16MB），避免 multipart 解析
+        chunk_path = os.path.join(upload_dir, f"chunk_{index:08d}.part")
+        try:
+            with open(chunk_path, "wb") as f:
+                # request.stream 是类文件对象
+                while True:
+                    buf = request.stream.read(1024 * 1024)
+                    if not buf:
+                        break
+                    f.write(buf)
+        except Exception as e:
+            service.log_upload(ip, 1, f"failed (chunk save failed: {e})")
+            return jsonify({"error": "failed to save chunk"}), 500
+
+        return jsonify({"ok": True})
+
+    @app.route("/api/upload/complete", methods=["POST"])
+    def upload_complete():
+        import json
+        ip = _get_client_ip()
+        err = _verify_password_from_request()
+        if err:
+            return err
+
+        data = request.get_json(silent=True) or {}
+        upload_id = _safe_upload_id(data.get("upload_id") or "")
+        if not upload_id:
+            return jsonify({"error": "upload_id is required"}), 400
+
+        tmp_root = _get_upload_tmp_dir()
+        upload_dir = os.path.join(tmp_root, upload_id)
+        meta_path = os.path.join(upload_dir, "meta.json")
+        if not os.path.exists(meta_path):
+            return jsonify({"error": "upload not found"}), 404
+
+        with open(meta_path, "r", encoding="utf-8") as f:
+            meta = json.load(f)
+
+        total_chunks = int(meta["total_chunks"])
+        final_path = meta["final_path"]
+        filename = meta["filename"]
+        rel_path = meta.get("rel_path", "")
+        size = int(meta.get("size") or 0)
+        renamed = bool(meta.get("renamed"))
+
+        # 校验分片是否齐全
+        missing = []
+        for i in range(total_chunks):
+            p = os.path.join(upload_dir, f"chunk_{i:08d}.part")
+            if not os.path.exists(p):
+                missing.append(i)
+                if len(missing) > 20:
+                    break
+        if missing:
+            return jsonify({"error": f"missing chunks: {missing[:20]}"}), 400
+
+        # 合并写入最终文件（流式，不占内存）
+        try:
+            os.makedirs(os.path.dirname(final_path), exist_ok=True)
+            with open(final_path, "wb") as out:
+                for i in range(total_chunks):
+                    p = os.path.join(upload_dir, f"chunk_{i:08d}.part")
+                    with open(p, "rb") as inp:
+                        while True:
+                            buf = inp.read(1024 * 1024)
+                            if not buf:
+                                break
+                            out.write(buf)
+        except Exception as e:
+            service.log_upload(ip, 1, f"failed (merge failed: {e})", rel_path, size)
+            return jsonify({"error": "failed to merge file"}), 500
+
+        # 清理临时目录
+        try:
+            for name in os.listdir(upload_dir):
+                try:
+                    os.remove(os.path.join(upload_dir, name))
+                except Exception:
+                    pass
+            try:
+                os.rmdir(upload_dir)
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+        service.log_upload(ip, 1, f"success ({filename})", rel_path, size)
+        return jsonify({"message": "file uploaded", "filename": filename, "renamed": renamed})
+
+    @app.route("/api/upload/abort", methods=["POST"])
+    def upload_abort():
+        err = _verify_password_from_request()
+        if err:
+            return err
+        data = request.get_json(silent=True) or {}
+        upload_id = _safe_upload_id(data.get("upload_id") or "")
+        if not upload_id:
+            return jsonify({"error": "upload_id is required"}), 400
+        tmp_root = _get_upload_tmp_dir()
+        upload_dir = os.path.join(tmp_root, upload_id)
+        if os.path.exists(upload_dir):
+            # 尽力删除
+            for root, dirs, files in os.walk(upload_dir, topdown=False):
+                for fn in files:
+                    try:
+                        os.remove(os.path.join(root, fn))
+                    except Exception:
+                        pass
+                for dn in dirs:
+                    try:
+                        os.rmdir(os.path.join(root, dn))
+                    except Exception:
+                        pass
+            try:
+                os.rmdir(upload_dir)
+            except Exception:
+                pass
+        return jsonify({"ok": True})
+
+
+    # -------------------- 普通上传接口 --------------------
     @app.route("/upload", methods=["POST"])
     def upload_file():
         ip = _get_client_ip()
