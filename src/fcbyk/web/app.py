@@ -66,8 +66,8 @@ def create_app(
 
     Args:
         default_page(str): 默认入口页面路径，如 "pick/index.html"
-        page_map(dict | None): 语义 URL 与 HTML 文件路径映射
-        cli_data(any | None): 附加到 app 的命令行数据，供蓝图使用
+        page_map(Optional[dict]): 语义 URL 与 HTML 文件路径映射
+        cli_data(Optional[Any]): 附加到 app 的命令行数据，供蓝图使用
 
     Returns:
         Flask: 已配置的 Flask 应用实例

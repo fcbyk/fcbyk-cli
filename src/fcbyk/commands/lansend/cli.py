@@ -1,12 +1,10 @@
 """
 lansend 命令行接口模块
 
-对外提供 lansend / ls 命令，用于在局域网内共享文件。
+对外提供 lansend 命令，用于在局域网内共享文件。
 
 函数:
-- _lansend_impl(port, directory, password, no_browser, un_download, un_upload, chat): 启动文件共享服务的核心实现
 - lansend(): Click 命令入口，提供完整参数选项
-- ls(): Click 命令入口，lansend 的别名
 """
 
 import os
@@ -23,7 +21,21 @@ from .controller import create_lansend_app
 from .service import LansendConfig, LansendService
 
 
-def _lansend_impl(port: int, directory: str, password: bool = False, no_browser: bool = False, un_download: bool = False, un_upload: bool = False, chat: bool = False):
+@click.command(help="Start a local web server for sharing files over LAN")
+@click.option("-p", "--port", default=80, help="Web server port (default: 80)")
+@click.option("-d", "--directory", default=".", help="Directory to share (default: current directory)")
+@click.option(
+    "-pw",
+    "--password",
+    is_flag=True,
+    default=False,
+    help="Prompt to set upload password (default: no password, or 123456 if skipped)",
+)
+@click.option("-nb", "--no-browser", is_flag=True, help="Disable automatic browser opening")
+@click.option("-un-d","--un-download", is_flag=True, default=False, help="Hide download buttons in directory tab")
+@click.option("-un-up","--un-upload", is_flag=True, default=False, help="Disable upload functionality")
+@click.option("--chat", is_flag=True, default=False, help="Enable chat functionality")
+def lansend(port: int, directory: str, password: bool = False, no_browser: bool = False, un_download: bool = False, un_upload: bool = False, chat: bool = False):
     if not os.path.exists(directory):
         click.echo(f"Error: Directory {directory} does not exist")
         return
@@ -90,40 +102,3 @@ def _lansend_impl(port: int, directory: str, password: bool = False, no_browser:
         max_request_body_size=50 * 1024 * 1024 * 1024,
         threads=threads,
     )
-
-
-@click.command(help="Start a local web server for sharing files over LAN")
-@click.option("-p", "--port", default=80, help="Web server port (default: 80)")
-@click.option("-d", "--directory", default=".", help="Directory to share (default: current directory)")
-@click.option(
-    "-pw",
-    "--password",
-    is_flag=True,
-    default=False,
-    help="Prompt to set upload password (default: no password, or 123456 if skipped)",
-)
-@click.option("-nb", "--no-browser", is_flag=True, help="Disable automatic browser opening")
-@click.option("-un-d","--un-download", is_flag=True, default=False, help="Hide download buttons in directory tab")
-@click.option("-un-up","--un-upload", is_flag=True, default=False, help="Disable upload functionality")
-@click.option("--chat", is_flag=True, default=False, help="Enable chat functionality")
-def lansend(port, directory, password, no_browser, un_download: bool = False, un_upload: bool = False, chat: bool = False):
-    _lansend_impl(port, directory, password, no_browser, un_download, un_upload, chat)
-
-
-@click.command(name="ls", help="alias for lansend")
-@click.option("-p", "--port", default=80, help="Web server port (default: 80)")
-@click.option("-d", "--directory", default=".", help="Directory to share (default: current directory)")
-@click.option(
-    "-pw",
-    "--password",
-    is_flag=True,
-    default=False,
-    help="Prompt to set upload password (default: no password, or 123456 if skipped)",
-)
-@click.option("-nb", "--no-browser", is_flag=True, help="Disable automatic browser opening")
-@click.option("-un-d","--un-download", is_flag=True, default=False, help="Hide download buttons in directory tab")
-@click.option("-un-up","--un-upload", is_flag=True, default=False, help="Disable upload functionality")
-@click.option("--chat", is_flag=True, default=False, help="Enable chat functionality")
-def ls(port, directory, password, no_browser, un_download: bool = False, un_upload: bool = False, chat: bool = False):
-    _lansend_impl(port, directory, password, no_browser, un_download, un_upload, chat)
-

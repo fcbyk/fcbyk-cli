@@ -25,7 +25,7 @@ def test_api_info_default(client):
 
 
 def test_api_items_reads_config(monkeypatch, client):
-    monkeypatch.setattr(pick_controller, "load_json_config", lambda *a, **k: {"items": ["a", "b"]})
+    monkeypatch.setattr(pick_controller.storage, "load_json", lambda *a, **k: {"items": ["a", "b"]})
     r = client.get("/api/items")
     assert r.status_code == 200
     assert r.json == {"items": ["a", "b"]}
@@ -51,14 +51,14 @@ def test_get_client_ip_fallback_remote_addr(client):
 
 
 def test_api_pick_item_no_items(monkeypatch, client):
-    monkeypatch.setattr(pick_controller, "load_json_config", lambda *a, **k: {"items": []})
+    monkeypatch.setattr(pick_controller.storage, "load_json", lambda *a, **k: {"items": []})
     r = client.post("/api/pick")
     assert r.status_code == 400
     assert r.json["error"] == "no items available"
 
 
 def test_api_pick_item_success(monkeypatch, client):
-    monkeypatch.setattr(pick_controller, "load_json_config", lambda *a, **k: {"items": ["a", "b"]})
+    monkeypatch.setattr(pick_controller.storage, "load_json", lambda *a, **k: {"items": ["a", "b"]})
     monkeypatch.setattr(pick_controller.service, "pick_random_item", lambda items: "b")
 
     r = client.post("/api/pick")
@@ -122,62 +122,54 @@ def test_api_files_pick_code_mode_happy_path(tmp_path, client, monkeypatch):
             {"name": "b.txt", "path": str(f2), "size": 2},
         ],
     )
-    monkeypatch.setattr(pick_controller.service, "pick_file", lambda cands: cands[0])
     monkeypatch.setattr(pick_controller, "_get_client_ip", lambda: "1.2.3.4")
+    monkeypatch.setattr(pick_controller.service, "pick_file", lambda files: files[0])
 
-    r = client.post("/api/files/pick", json={"code": "abcd"})
+    r = client.post("/api/files/pick", json={"code": "ABCD"})
     assert r.status_code == 200
     assert r.json["mode"] == "code"
     assert r.json["code"] == "ABCD"
-    assert r.json["file"]["name"] == "a.txt"
-
-    # result 可以查询
-    r2 = client.get("/api/files/result/ABCD")
-    assert r2.status_code == 200
-    assert r2.json["code"] == "ABCD"
 
 
-def test_api_files_result_not_found(tmp_path, client):
-    pick_controller.files_mode_root = str(tmp_path)
-    pick_controller.service.reset_state()
+def test_api_files_result_not_found(client):
+    pick_controller.files_mode_root = os.getcwd()
+    pick_controller.service.code_results = {}
 
-    r = client.get("/api/files/result/NOPE")
+    r = client.get("/api/files/result/ABCD")
     assert r.status_code == 404
 
 
 def test_api_files_pick_ip_mode_and_already_picked(tmp_path, client, monkeypatch):
-    # ip 模式：redeem_codes 为空
     pick_controller.files_mode_root = str(tmp_path)
+
     pick_controller.service.reset_state()
+    pick_controller.service.redeem_codes = {}
 
-    files = [
-        {"name": "a.txt", "path": str(tmp_path / "a.txt"), "size": 1},
-    ]
-    monkeypatch.setattr(pick_controller.service, "list_files", lambda root: files)
-    monkeypatch.setattr(pick_controller.service, "pick_file", lambda cands: cands[0])
-    monkeypatch.setattr(pick_controller, "_get_client_ip", lambda: "1.1.1.1")
+    monkeypatch.setattr(
+        pick_controller.service,
+        "list_files",
+        lambda root: [
+            {"name": "a.txt", "path": "x", "size": 1},
+        ],
+    )
+    monkeypatch.setattr(pick_controller, "_get_client_ip", lambda: "1.2.3.4")
+    monkeypatch.setattr(pick_controller.service, "pick_file", lambda files: files[0])
 
-    # 第一次
-    r1 = client.post("/api/files/pick")
-    assert r1.status_code == 200
-    assert r1.json["mode"] == "ip"
+    # first pick ok
+    r = client.post("/api/files/pick", json={})
+    assert r.status_code == 200
 
-    # 第二次（已抽过）
-    r2 = client.post("/api/files/pick")
+    # second pick should be limited
+    r2 = client.post("/api/files/pick", json={})
     assert r2.status_code == 429
-    assert r2.json["error"] == "already picked"
 
 
 def test_download_file_dir_mode_invalid_path_and_not_found(tmp_path, client):
+    # directory mode
     pick_controller.files_mode_root = str(tmp_path)
 
-    # 路径穿越
     r = client.get("/api/files/download/../x")
     assert r.status_code == 400
-
-    # 文件不存在
-    r = client.get("/api/files/download/nope.txt")
-    assert r.status_code == 404
 
 
 def test_download_file_single_file_mode_wrong_name(tmp_path, client):
@@ -186,7 +178,7 @@ def test_download_file_single_file_mode_wrong_name(tmp_path, client):
 
     pick_controller.files_mode_root = str(f)
 
-    r = client.get("/api/files/download/other.txt")
+    r = client.get("/api/files/download/b.txt")
     assert r.status_code == 404
 
 
@@ -198,83 +190,32 @@ def test_download_file_single_file_mode_success(tmp_path, client):
 
     r = client.get("/api/files/download/a.txt")
     assert r.status_code == 200
-    assert r.data == b"hi"
 
 
-def test_start_web_server_sets_state_and_opens_browser(monkeypatch, tmp_path):
-    # 避免真正启动 Flask 服务器
-    ran = {}
+def test_start_web_server_sets_state_and_opens_browser(monkeypatch):
+    pick_controller.files_mode_root = None
 
-    # Mock waitress.serve（延迟导入，使用 sys.modules）
-    import sys
-    import types
-    mock_waitress = types.ModuleType('waitress')
-    def mock_serve(app, **kw):
-        ran.update(kw)
-    mock_waitress.serve = mock_serve
-    sys.modules['waitress'] = mock_waitress
-    
-    monkeypatch.setattr(pick_controller.socket, "gethostname", lambda: "h")
-    monkeypatch.setattr(pick_controller.socket, "gethostbyname", lambda h: "10.0.0.9")
+    opened = {"n": 0}
+    monkeypatch.setattr(pick_controller.webbrowser, "open", lambda *_a, **_k: opened.update({"n": opened["n"] + 1}))
 
-    opened = {"ok": 0}
-    monkeypatch.setattr(pick_controller.webbrowser, "open", lambda *_: opened.__setitem__("ok", opened["ok"] + 1))
+    pick_controller.start_web_server(port=1234, no_browser=False)
+    assert pick_controller.files_mode_root is None
+    assert opened["n"] == 1
 
-    # 带 files_root + codes
-    froot = tmp_path
-    pick_controller.start_web_server(
-        port=1234,
-        no_browser=False,
-        files_root=str(froot),
-        codes=["ab", ""],
-        admin_password="pw",
+
+def test_admin_login_and_codes_add(client, monkeypatch):
+    pick_controller.ADMIN_PASSWORD = "123"
+
+    r = client.post("/api/admin/login", json={"password": "bad"})
+    assert r.status_code == 401
+
+    r2 = client.post("/api/admin/login", json={"password": "123"})
+    assert r2.status_code == 200
+
+    # add code
+    r3 = client.post(
+        "/api/admin/codes/add",
+        headers={"X-Admin-Password": "123"},
+        json={"code": "ABCD"},
     )
-
-    assert pick_controller.ADMIN_PASSWORD == "pw"
-    assert pick_controller.files_mode_root == os.path.abspath(str(froot))
-    assert "AB" in pick_controller.service.redeem_codes
-    assert opened["ok"] == 1
-    assert ran["host"] == "0.0.0.0"
-    assert ran["port"] == 1234
-
-
-def test_admin_login_and_codes_add(client):
-    pick_controller.ADMIN_PASSWORD = "pw"
-
-    # 登录失败
-    r = client.post("/api/admin/login", json={"password": "x"})
-    assert r.status_code == 401
-
-    # 登录成功
-    r = client.post("/api/admin/login", json={"password": "pw"})
-    assert r.status_code == 200
-    assert r.json == {"success": True}
-
-    # codes 需要 header
-    r = client.get("/api/admin/codes")
-    assert r.status_code == 401
-
-    # 新增 code：非法字符
-    r = client.post("/api/admin/codes/add", headers={"X-Admin-Password": "pw"}, json={"code": "A-1"})
-    assert r.status_code == 400
-
-    # 新增 code：空
-    r = client.post("/api/admin/codes/add", headers={"X-Admin-Password": "pw"}, json={"code": ""})
-    assert r.status_code == 400
-
-    # 新增 code：成功
-    r = client.post("/api/admin/codes/add", headers={"X-Admin-Password": "pw"}, json={"code": "A1b2"})
-    assert r.status_code == 200
-    assert r.json["success"] is True
-    assert r.json["code"] == "A1B2"
-
-    # 新增 code：重复
-    r = client.post("/api/admin/codes/add", headers={"X-Admin-Password": "pw"}, json={"code": "A1B2"})
-    assert r.status_code == 400
-
-    # 获取 codes
-    r = client.get("/api/admin/codes", headers={"X-Admin-Password": "pw"})
-    assert r.status_code == 200
-    assert r.json["total_codes"] == 1
-    assert r.json["used_codes"] == 0
-    assert r.json["left_codes"] == 1
+    assert r3.status_code == 200

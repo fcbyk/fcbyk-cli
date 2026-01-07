@@ -13,7 +13,11 @@ def test_pick_help():
 def test_pick_show_list_empty(monkeypatch):
     pick_cli = importlib.import_module("fcbyk.commands.pick.cli")
 
-    monkeypatch.setattr(pick_cli, "load_json_config", lambda *a, **k: {"items": []})
+    monkeypatch.setattr(
+        pick_cli,
+        "load_json_object_or_exit",
+        lambda *a, **k: {"items": []},
+    )
 
     from click.testing import CliRunner
 
@@ -25,7 +29,11 @@ def test_pick_show_list_empty(monkeypatch):
 def test_pick_show_list_non_empty(monkeypatch):
     pick_cli = importlib.import_module("fcbyk.commands.pick.cli")
 
-    monkeypatch.setattr(pick_cli, "load_json_config", lambda *a, **k: {"items": ["a", "b"]})
+    monkeypatch.setattr(
+        pick_cli,
+        "load_json_object_or_exit",
+        lambda *a, **k: {"items": ["a", "b"]},
+    )
 
     from click.testing import CliRunner
 
@@ -41,13 +49,17 @@ def test_pick_clear(monkeypatch):
 
     store = {"items": ["a"]}
 
-    monkeypatch.setattr(pick_cli, "load_json_config", lambda *a, **k: dict(store))
+    monkeypatch.setattr(
+        pick_cli,
+        "load_json_object_or_exit",
+        lambda *a, **k: dict(store),
+    )
 
-    def _save(cfg, path):
+    def _save_json(path, data, **kwargs):
         store.clear()
-        store.update(cfg)
+        store.update(data)
 
-    monkeypatch.setattr(pick_cli, "save_config", _save)
+    monkeypatch.setattr(pick_cli.storage, "save_json", _save_json)
 
     from click.testing import CliRunner
 
@@ -60,16 +72,19 @@ def test_pick_clear(monkeypatch):
 def test_pick_add_and_remove(monkeypatch):
     pick_cli = importlib.import_module("fcbyk.commands.pick.cli")
 
-    # 用内存对象模拟 config
     store = {"items": []}
 
-    monkeypatch.setattr(pick_cli, "load_json_config", lambda *a, **k: dict(store))
+    monkeypatch.setattr(
+        pick_cli,
+        "load_json_object_or_exit",
+        lambda *a, **k: dict(store),
+    )
 
-    def _save(cfg, path):
+    def _save_json(path, data, **kwargs):
         store.clear()
-        store.update(cfg)
+        store.update(data)
 
-    monkeypatch.setattr(pick_cli, "save_config", _save)
+    monkeypatch.setattr(pick_cli.storage, "save_json", _save_json)
 
     from click.testing import CliRunner
 
@@ -89,13 +104,16 @@ def test_pick_web_calls_start_web_server(monkeypatch):
 
     called = {}
 
-    monkeypatch.setattr(pick_cli, "load_json_config", lambda *a, **k: {"items": []})
+    monkeypatch.setattr(pick_cli, "load_json_object_or_exit", lambda *a, **k: {"items": []})
     monkeypatch.setattr(pick_cli, "PickService", lambda *a, **k: object())
 
     def _start(port, no_browser, **kwargs):
         called.update({"port": port, "no_browser": no_browser, **kwargs})
 
     monkeypatch.setattr(pick_cli, "start_web_server", _start)
+
+    # 避免真实端口占用检测影响测试
+    monkeypatch.setattr(pick_cli, "ensure_port_available", lambda *a, **k: None)
 
     from click.testing import CliRunner
 
@@ -111,7 +129,7 @@ def test_pick_files_mode_generates_codes_and_calls_server(monkeypatch, tmp_path)
     f = tmp_path / "a.txt"
     f.write_text("hi", encoding="utf-8")
 
-    monkeypatch.setattr(pick_cli, "load_json_config", lambda *a, **k: {"items": []})
+    monkeypatch.setattr(pick_cli, "load_json_object_or_exit", lambda *a, **k: {"items": []})
 
     class _Svc:
         def __init__(self, *a, **k):
@@ -151,7 +169,7 @@ def test_pick_files_mode_prompts_password(monkeypatch, tmp_path):
     f = tmp_path / "a.txt"
     f.write_text("hi", encoding="utf-8")
 
-    monkeypatch.setattr(pick_cli, "load_json_config", lambda *a, **k: {"items": []})
+    monkeypatch.setattr(pick_cli, "load_json_object_or_exit", lambda *a, **k: {"items": []})
 
     class _Svc:
         def __init__(self, *a, **k):
@@ -164,7 +182,6 @@ def test_pick_files_mode_prompts_password(monkeypatch, tmp_path):
             raise AssertionError("should not be called")
 
     monkeypatch.setattr(pick_cli, "PickService", _Svc)
-
 
     # 用户输入空 => 使用默认 123456
     monkeypatch.setattr("click.prompt", lambda *a, **k: "")
@@ -187,7 +204,7 @@ def test_pick_files_mode_prompts_password(monkeypatch, tmp_path):
 def test_pick_items_passed_to_service(monkeypatch):
     pick_cli = importlib.import_module("fcbyk.commands.pick.cli")
 
-    monkeypatch.setattr(pick_cli, "load_json_config", lambda *a, **k: {"items": ["x"]})
+    monkeypatch.setattr(pick_cli, "load_json_object_or_exit", lambda *a, **k: {"items": ["x"]})
 
     picked = {}
 
@@ -213,7 +230,7 @@ def test_pick_items_passed_to_service(monkeypatch):
 def test_pick_no_items_available_prints_usage(monkeypatch):
     pick_cli = importlib.import_module("fcbyk.commands.pick.cli")
 
-    monkeypatch.setattr(pick_cli, "load_json_config", lambda *a, **k: {"items": []})
+    monkeypatch.setattr(pick_cli, "load_json_object_or_exit", lambda *a, **k: {"items": []})
 
     class _Svc:
         def __init__(self, *a, **k):

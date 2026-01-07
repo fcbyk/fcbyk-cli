@@ -51,6 +51,41 @@ def show_config(
 
     ctx.exit()
 
+
+def show_dict(
+    ctx: click.Context,
+    param: Any,
+    value: bool,
+    title: str,
+    data: Dict[str, Any]
+) -> None:
+    """直接显示一个 dict，并退出 CLI（彩色高亮）。
+
+    用途：
+        当配置不再是“单独一个 json 文件”时（例如统一配置文件的某个 section），
+        调用方可以先自行拿到 dict，再交给该函数统一打印。
+
+    输出格式：
+        <title>: <...>   （key 青色，value 黄色）
+        key: value
+
+    Args:
+        ctx: click 上下文对象
+        param: click 参数对象（占位，保持与 click callback 签名一致）
+        value: 是否触发显示
+        title: 标题（例如 "config file"、"section"、"ai config"）
+        data: 要显示的字典
+    """
+    if not value:
+        return
+
+    click.echo(colored_key_value(title, ""))
+    for k, v in data.items():
+        click.echo(colored_key_value(k, v))
+
+    ctx.exit()
+
+
 def echo_network_urls(networks: list, port: int, include_virtual: bool = False):
     """
     打印可访问的本地和局域网 URL，支持彩色高亮。

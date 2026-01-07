@@ -76,6 +76,7 @@ def _run_pick_server_process(
     )
 
 from fcbyk.utils.config import get_config_path, load_json_config
+from fcbyk.utils import storage
 from fcbyk.utils.port import ensure_port_available
 from .pick_items_dialog import PickItemsManagerDialog
 from .pick_codes_dialog import PickCodesDialog
@@ -91,9 +92,12 @@ class PickPage(QWidget):
         self._server_error = None
         # 日志/导出文件放到 ~/.fcbyk/ 目录下（与 CLI 配置目录统一）
         try:
-            self._server_log_file = get_config_path("fcbyk", "fcbyk_pick.log")
-            self._codes_dump_file = get_config_path("fcbyk", "fcbyk_pick_codes.txt")
+            # 日志文件：~/.fcbyk/log/fcbyk_pick.log
+            self._server_log_file = storage.get_path("fcbyk_pick.log", subdir="log")
+            # 抽奖码导出文件：~/.fcbyk/temp/fcbyk_pick_codes.txt
+            self._codes_dump_file = storage.get_path("fcbyk_pick_codes.txt", subdir="temp")
             os.makedirs(os.path.dirname(self._server_log_file), exist_ok=True)
+            os.makedirs(os.path.dirname(self._codes_dump_file), exist_ok=True)
         except Exception:
             # 回退到系统临时目录
             self._server_log_file = os.path.join(tempfile.gettempdir(), "fcbyk_pick.log")
@@ -285,8 +289,13 @@ class PickPage(QWidget):
     def _update_items_count(self):
         """更新抽奖元素数量显示"""
         try:
-            cfg = load_json_config(get_config_path("fcbyk", "pick.json"), {"items": []})
-            count = len(cfg.get("items", []))
+            # 从持久化数据文件读取（与 CLI 一致）
+            data_file = storage.get_path("pick_data.json", subdir="data")
+            data = storage.load_json(data_file, default={"items": []}, create_if_missing=True, strict=False)
+            items = []
+            if isinstance(data, dict):
+                items = data.get("items", []) or []
+            count = len(items) if isinstance(items, list) else 0
             self._items_count.setText(str(count))
         except Exception:
             self._items_count.setText("-")
@@ -332,8 +341,22 @@ class PickPage(QWidget):
         
         if is_normal_mode:
             # 检查是否有抽奖元素
-            cfg = load_json_config(get_config_path("fcbyk", "pick.json"), {"items": []})
-            if not cfg.get("items"):
+            data_file = storage.get_path("pick_data.json", subdir="data")
+            try:
+                data = storage.load_json(data_file, default={"items": []}, create_if_missing=True, strict=True)
+            except Exception as e:
+                ret = QMessageBox.question(
+                    self,
+                    "数据文件损坏",
+                    f"抽奖数据文件格式错误，是否重置为默认值？\n\n文件：{data_file}\n\n错误：{e}",
+                )
+                if ret == QMessageBox.StandardButton.Yes:
+                    storage.save_json(data_file, {"items": []})
+                return
+            items = []
+            if isinstance(data, dict):
+                items = data.get("items", []) or []
+            if not isinstance(items, list) or not items:
                 QMessageBox.warning(self, "无法启动", "请先添加抽奖元素！")
                 return
             

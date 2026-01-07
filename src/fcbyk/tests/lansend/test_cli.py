@@ -10,7 +10,7 @@ def test_lansend_help():
 
 
 def test_lansend_cli_impl_runs_app(monkeypatch, tmp_path):
-    """提高 lansend/cli 覆盖率：测试 _lansend_impl 主流程，不启动真实 server/browser/clipboard"""
+    """提高 lansend/cli 覆盖率：测试 lansend 主流程，不启动真实 server/browser/clipboard"""
 
     lansend_cli = importlib.import_module("fcbyk.commands.lansend.cli")
 
@@ -30,12 +30,19 @@ def test_lansend_cli_impl_runs_app(monkeypatch, tmp_path):
     monkeypatch.setattr(lansend_cli, "LansendService", lambda cfg: _Svc(cfg))
 
     # network/urls
-    monkeypatch.setattr(lansend_cli, "get_private_networks", lambda: [{"iface": "Ethernet", "ips": ["192.168.0.2"], "virtual": False, "type": "ethernet", "priority": 10}])
+    monkeypatch.setattr(
+        lansend_cli,
+        "get_private_networks",
+        lambda: [{"iface": "Ethernet", "ips": ["192.168.0.2"], "virtual": False, "type": "ethernet", "priority": 10}],
+    )
     monkeypatch.setattr(lansend_cli, "echo_network_urls", lambda *a, **k: None)
 
     # clipboard/browser
     monkeypatch.setattr(lansend_cli.pyperclip, "copy", lambda *_: None)
     monkeypatch.setattr(lansend_cli.webbrowser, "open", lambda *_: None)
+
+    # 端口占用检测在测试环境可能误判，直接 mock 掉
+    monkeypatch.setattr(lansend_cli, "ensure_port_available", lambda *a, **k: None)
 
     # serve (waitress) - mock waitress 模块的 serve 函数
     ran = {}
@@ -46,13 +53,14 @@ def test_lansend_cli_impl_runs_app(monkeypatch, tmp_path):
     # Mock waitress 模块（在延迟导入之前，使用 sys.modules）
     import sys
     import types
-    mock_waitress = types.ModuleType('waitress')
+
+    mock_waitress = types.ModuleType("waitress")
     mock_waitress.serve = mock_serve
-    sys.modules['waitress'] = mock_waitress
-    
+    sys.modules["waitress"] = mock_waitress
+
     monkeypatch.setattr(lansend_cli, "create_lansend_app", lambda service: object())
 
-    lansend_cli._lansend_impl(port=1234, directory=".", password=False, no_browser=True)
+    lansend_cli.lansend.callback(port=1234, directory=".", password=False, no_browser=True, un_download=False, un_upload=False, chat=False)
 
     assert ran["host"] == "0.0.0.0"
     assert ran["port"] == 1234

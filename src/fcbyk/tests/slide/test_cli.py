@@ -24,6 +24,9 @@ def test_slide_cli_uses_localhost_when_no_network(monkeypatch):
     # 避免真实剪贴板
     monkeypatch.setattr(slide_cli.pyperclip, "copy", lambda *_: None)
 
+    # 端口占用检测在测试环境可能误判，直接 mock 掉
+    monkeypatch.setattr(slide_cli, "ensure_port_available", lambda *a, **k: None)
+
     # mock create_slide_app 返回 (app, socketio)，且 socketio.run 不做事
     run_kwargs = {}
 
@@ -46,4 +49,3 @@ def test_slide_cli_uses_localhost_when_no_network(monkeypatch):
     assert "No private network interface found" in r.output
     assert run_kwargs["host"] == "0.0.0.0"
     assert run_kwargs["port"] == 1234
-

@@ -1,7 +1,7 @@
 """Pick 抽奖元素管理子窗口。
 
 功能：
-- 从 pick.json 读取/保存 items
+- 从 pick_data.json 读取/保存 items
 - 列表展示、添加、删除、清空
 
 说明：
@@ -20,7 +20,7 @@ from ..core.compatibility import (
     QVBoxLayout,
 )
 
-from fcbyk.utils.config import get_config_path, load_json_config, save_config
+from fcbyk.utils import storage
 
 
 class PickItemsManagerDialog(QDialog):
@@ -30,8 +30,9 @@ class PickItemsManagerDialog(QDialog):
         self.setWindowTitle("管理抽奖元素")
         self.resize(520, 420)
 
-        self._config_file = get_config_path("fcbyk", "pick.json")
-        self._default_config = {"items": []}
+        # 与 CLI 保持一致：~/.fcbyk/data/pick_data.json
+        self._data_file = storage.get_path("pick_data.json", subdir="data")
+        self._default_data = {"items": []}
 
         root = QVBoxLayout()
         self.setLayout(root)
@@ -81,18 +82,29 @@ class PickItemsManagerDialog(QDialog):
     # data
     # -----------------
 
-    def _load_config(self) -> dict:
-        return load_json_config(self._config_file, self._default_config)
+    def _load_data(self) -> dict:
+        """读取数据文件。
+
+        GUI 这里不依赖 click 的 guard：
+        - 文件不存在会自动用默认值初始化
+        - JSON 格式错误/内容异常则回退默认值（避免 GUI 直接崩溃）
+        """
+        data = storage.load_json(self._data_file, default=self._default_data, create_if_missing=True, strict=False)
+        if not isinstance(data, dict):
+            return {"items": []}
+        if "items" not in data or not isinstance(data.get("items"), list):
+            data["items"] = []
+        return data
 
     def _save_items(self, items: list) -> None:
-        cfg = self._load_config()
-        cfg["items"] = items
-        save_config(cfg, self._config_file)
+        data = self._load_data()
+        data["items"] = items
+        storage.save_json(self._data_file, data)
 
     def _load_items_to_ui(self) -> None:
         self._list.clear()
-        cfg = self._load_config()
-        items = cfg.get("items", []) or []
+        data = self._load_data()
+        items = data.get("items", []) or []
         for it in items:
             self._list.addItem(str(it))
 
@@ -142,4 +154,3 @@ class PickItemsManagerDialog(QDialog):
 
         self._list.clear()
         self._save_items([])
-

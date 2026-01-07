@@ -6,11 +6,11 @@ import signal
 import subprocess
 import sys
 
-from ...utils.config import get_config_path
+from fcbyk.utils import storage
 import time
 
 # PID 文件放在配置目录：~/.fcbyk/fcbyk_gui.pid（Windows 下同样会展开到用户目录）
-PID_FILE = get_config_path("fcbyk", "fcbyk_gui.pid")
+PID_FILE = storage.get_path("fcbyk_gui.pid", subdir="temp")
 
 
 def write_pid_file() -> None:

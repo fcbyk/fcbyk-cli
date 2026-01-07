@@ -38,12 +38,14 @@ import webbrowser
 import uuid
 from typing import Optional, Iterable
 from flask import Flask, jsonify, render_template, request, send_file, url_for
-from fcbyk.utils.config import get_config_path, load_json_config
+from fcbyk.utils.config import load_json_config
+from fcbyk.utils import storage
 from datetime import datetime
 from .service import PickService
 from ...web.app import create_spa 
 
-config_file = get_config_path('fcbyk', 'pick.json')
+# 持久化数据文件：~/.fcbyk/data/pick_data.json
+config_file = storage.get_path('pick_data.json', subdir='data')
 SERVER_SESSION_ID = str(uuid.uuid4())
 
 default_config = {
@@ -72,8 +74,14 @@ def api_info():
 @app.route('/api/items')
 def api_items():
     """返回当前配置中的抽奖项"""
-    config = load_json_config(config_file, default_config)
-    return jsonify({'items': config.get('items', [])})
+    # 配置文件格式错误时，不直接让服务崩溃，回退到空列表
+    data = storage.load_json(config_file, default=default_config, create_if_missing=True, strict=False)
+    if not isinstance(data, dict):
+        data = default_config
+    items = data.get('items', [])
+    if not isinstance(items, list):
+        items = []
+    return jsonify({'items': items})
 
 
 def _get_client_ip():
@@ -239,9 +247,11 @@ def download_file(filename):
 @app.route('/api/pick', methods=['POST'])
 def api_pick_item():
     """从配置列表中随机抽取一项"""
-    config = load_json_config(config_file, default_config)
-    items = config.get('items', [])
-    if not items:
+    data = storage.load_json(config_file, default=default_config, create_if_missing=True, strict=False)
+    if not isinstance(data, dict):
+        data = default_config
+    items = data.get('items', [])
+    if not isinstance(items, list) or not items:
         return jsonify({'error': 'no items available'}), 400
     selected = service.pick_random_item(items)
     return jsonify({'item': selected, 'items': items})

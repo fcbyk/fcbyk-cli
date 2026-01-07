@@ -7,7 +7,8 @@ import sys
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
-from .commands import lansend, ls, ai, pick, jiahao, popup, slide
+from .commands import lansend, ai, pick, jiahao, popup, slide, alias
+from .commands.alias import AliasedGroup
 
 # 动态导入 GUI 模块（可选依赖）
 try:
@@ -98,6 +99,7 @@ def _add_gui_options(func):
     return func
 
 @click.group(
+    cls=AliasedGroup,
     context_settings=dict(help_option_names=['-h', '--help']),
     invoke_without_command=True
 )
@@ -116,14 +118,27 @@ def cli(ctx):
     ''')
         click.echo(ctx.get_help())
 
+        try:
+            from .commands.alias import read_aliases
+
+            aliases = read_aliases()
+            if aliases:
+                click.echo("\nAliases:")
+                for a, c in aliases.items():
+                    click.echo(f"   {a} => {c}")
+                click.echo()
+        except Exception:
+            pass
+
+
 # 添加子命令
 cli.add_command(lansend)
-cli.add_command(ls)
 cli.add_command(ai)
 cli.add_command(pick)
 cli.add_command(jiahao)
 cli.add_command(popup)
 cli.add_command(slide)
+cli.add_command(alias)
 
 if __name__ == "__main__":
     cli()

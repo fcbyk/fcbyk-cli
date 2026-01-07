@@ -4,8 +4,8 @@ pick 命令行接口模块
 提供随机抽奖功能，支持列表抽奖和文件抽奖两种模式。
 
 常量:
-- config_file: 配置文件路径
-- default_config: 默认配置（items 列表）
+- data_file: 数据文件路径（持久化 items）
+- default_data: 默认数据结构（items 列表）
 
 函数:
 - delayed_newline_simple(): 延迟打印空行（用于改善控制台输出体验）
@@ -13,15 +13,19 @@ pick 命令行接口模块
 """
 
 import click
-from fcbyk.utils.config import get_config_path, load_json_config, save_config
-from fcbyk.cli_support.output import show_config
+
+from fcbyk.cli_support.output import show_dict
+from fcbyk.cli_support.guard import load_json_object_or_exit, ensure_list_field
+from fcbyk.utils import storage
+
 from .service import PickService
 from .controller import start_web_server
 from fcbyk.utils.port import ensure_port_available
 
-config_file = get_config_path('fcbyk', 'pick.json')
+# items 持久化数据文件：~/.fcbyk/data/pick_data.json
+data_file = storage.get_path('pick_data.json', subdir='data')
 
-default_config = {
+default_data = {
     'items': []
 }
 
@@ -30,12 +34,25 @@ default_config = {
 @click.option(
     "--config", "-c",
     is_flag=True,
-    callback=lambda ctx, param, value: show_config(
-        ctx, param, value, config_file, default_config
+    callback=lambda ctx, param, value: show_dict(
+        ctx,
+        param,
+        value,
+        f"data file: {data_file}",
+        ensure_list_field(
+            load_json_object_or_exit(
+                ctx,
+                data_file,
+                default=default_data,
+                create_if_missing=True,
+                label="pick data file",
+            ),
+            "items",
+        ),
     ),
     expose_value=False,
     is_eager=True,
-    help="show configuration and exit"
+    help="show data and exit"
 )
 @click.option('--add', '-a', multiple=True, help='Add item to list (can be used multiple times)')
 @click.option('--remove', '-r', multiple=True, help='Remove item from list (can be used multiple times)')
@@ -51,9 +68,19 @@ default_config = {
 @click.argument('items', nargs=-1)
 @click.pass_context
 def pick(ctx, add, remove, clear, show_list, web, port, no_browser, files, gen_codes, show_codes, password, items):
-    config = load_json_config(config_file, default_config)
-    service = PickService(config_file, default_config)
-    
+    data = ensure_list_field(
+        load_json_object_or_exit(
+            ctx,
+            data_file,
+            default=default_data,
+            create_if_missing=True,
+            label="pick data file",
+        ),
+        "items",
+    )
+
+    service = PickService(data_file, default_data)
+
     # 端口占用检测
     if files or web:
         try:
@@ -62,9 +89,9 @@ def pick(ctx, add, remove, clear, show_list, web, port, no_browser, files, gen_c
             click.echo(f" Error: Port {port} is already in use (or you don't have permission). Please choose another port (e.g. --port {int(port) + 1}).")
             click.echo(f" Details: {e}")
             return
-    
+
     if show_list:
-        items_list = config.get('items', [])
+        items_list = data.get('items', [])
         if items_list:
             click.echo("Current items list:")
             for i, item in enumerate(items_list, 1):
@@ -72,37 +99,37 @@ def pick(ctx, add, remove, clear, show_list, web, port, no_browser, files, gen_c
         else:
             click.echo("List is empty. Please use --add to add items")
         return
-    
+
     if clear:
-        config['items'] = []
-        save_config(config, config_file)
+        data['items'] = []
+        storage.save_json(data_file, data)
         click.echo("List cleared")
         return
-    
+
     if add:
-        items_list = config.get('items', [])
+        items_list = data.get('items', [])
         for item in add:
             if item not in items_list:
                 items_list.append(item)
                 click.echo(f"Added: {item}")
             else:
                 click.echo(f"Item already exists: {item}")
-        config['items'] = items_list
-        save_config(config, config_file)
+        data['items'] = items_list
+        storage.save_json(data_file, data)
         return
-    
+
     if remove:
-        items_list = config.get('items', [])
+        items_list = data.get('items', [])
         for item in remove:
             if item in items_list:
                 items_list.remove(item)
                 click.echo(f"Removed: {item}")
             else:
                 click.echo(f"Item does not exist: {item}")
-        config['items'] = items_list
-        save_config(config, config_file)
+        data['items'] = items_list
+        storage.save_json(data_file, data)
         return
-    
+
     if files:
         codes = None
         if gen_codes and gen_codes > 0:
@@ -137,12 +164,12 @@ def pick(ctx, add, remove, clear, show_list, web, port, no_browser, files, gen_c
     if web:
         start_web_server(port, no_browser)
         return
-    
-    # 优先使用命令行参数，否则使用配置文件中的列表
+
+    # 优先使用命令行参数，否则使用持久化数据文件中的列表
     if items:
         service.pick_item(list(items))
     else:
-        items_list = config.get('items', [])
+        items_list = data.get('items', [])
         if not items_list:
             click.echo("Error: No items available")
             click.echo("Usage:")

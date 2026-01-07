@@ -49,10 +49,10 @@ def test_ai_cli_no_api_key_exits_1(monkeypatch):
 
     ai_cli = importlib.import_module("fcbyk.commands.ai.cli")
 
-    # 强制 effective_config 没有 api_key
+    # 强制读取到的 ai section 没有 api_key
     monkeypatch.setattr(
-        ai_cli,
-        "get_effective_config",
+        ai_cli.storage,
+        "load_section",
         lambda *a, **k: {
             "model": "m",
             "api_url": "u",
@@ -63,7 +63,7 @@ def test_ai_cli_no_api_key_exits_1(monkeypatch):
 
     result = CliRunner().invoke(ai, [])
     assert result.exit_code == 1
-    assert "未配置 api_key" in result.output
+    assert "api_key" in result.output
 
 
 def test_ai_cli_with_options_saves_config_and_exits(monkeypatch):
@@ -76,26 +76,27 @@ def test_ai_cli_with_options_saves_config_and_exits(monkeypatch):
 
     saved = {}
 
+    # 让 load_section 返回可写的配置 dict
     monkeypatch.setattr(
-        ai_cli,
-        "get_effective_config",
-        lambda cli_options, *a, **k: {
-            "model": cli_options.get("model") or "m",
-            "api_url": cli_options.get("api_url") or "u",
-            "api_key": cli_options.get("api_key") or "k",
-            "stream": cli_options.get("stream") or False,
+        ai_cli.storage,
+        "load_section",
+        lambda *a, **k: {
+            "model": "m",
+            "api_url": "u",
+            "api_key": "k",
+            "stream": False,
         },
     )
 
     monkeypatch.setattr(
-        ai_cli,
-        "save_config",
-        lambda cfg, path: saved.update({"cfg": cfg, "path": path}),
+        ai_cli.storage,
+        "save_section",
+        lambda cfg_file, section, cfg: saved.update({"cfg": cfg, "cfg_file": cfg_file, "section": section}),
     )
 
     result = CliRunner().invoke(ai, ["--model", "x"])
     assert result.exit_code == 0
-    assert "配置已保存" in result.output
+    assert "Config saved" in result.output
     assert saved["cfg"]["model"] == "x"
 
 
@@ -123,7 +124,7 @@ def test_ai_cli_chat_loop_non_stream_happy_path(monkeypatch):
     ai_cli._chat_loop({"model": "m", "api_url": "u", "api_key": "k", "stream": False})
 
     joined = "\n".join(lines)
-    assert "聊天已开始" in joined
+    assert "Chat started" in joined
     assert "ok" in joined
 
 
@@ -178,7 +179,7 @@ def test_ai_cli_chat_loop_ai_service_error(monkeypatch):
     monkeypatch.setattr("click.echo", lambda s="", **k: lines.append(str(s)))
 
     ai_cli._chat_loop({"model": "m", "api_url": "u", "api_key": "k", "stream": False})
-    assert any("错误：" in x for x in lines)
+    assert any("Error:" in x for x in lines)
 
 
 def test_ai_cli_chat_loop_keyboard_interrupt_exits(monkeypatch):
@@ -195,4 +196,4 @@ def test_ai_cli_chat_loop_keyboard_interrupt_exits(monkeypatch):
     monkeypatch.setattr("click.secho", lambda s="", **k: lines.append(str(s)))
 
     ai_cli._chat_loop({"model": "m", "api_url": "u", "api_key": "k", "stream": False})
-    assert any("已退出对话" in x for x in lines)
+    assert any("Chat ended" in x for x in lines)

@@ -86,11 +86,12 @@ class LansendPage(QWidget):
         self._server_running = False
         self._server_error = None  # type: Optional[str]
 
-        # 日志文件放到 ~/.fcbyk/ 目录下（与 CLI 配置目录统一）
+        # 日志文件放到 ~/.fcbyk/log/ 目录下
         try:
-            from fcbyk.utils.config import get_config_path
+            from fcbyk.utils import storage
 
-            self._server_log_file = get_config_path("fcbyk", "fcbyk_lansend.log")
+            self._server_log_file = storage.get_path("fcbyk_lansend.log", subdir="log")
+            # 确保目录存在，以便后续写入
             os.makedirs(os.path.dirname(self._server_log_file), exist_ok=True)
         except Exception:
             # 回退到系统临时目录

@@ -2,7 +2,8 @@
 ai 命令行接口模块
 
 常量:
-- CONFIG_FILE_URL: 配置文件路径
+- CONFIG_FILE: 统一配置文件名
+- SECTION: 本命令在统一配置文件中的 section 名
 - DEFAULT_CONFIG: 默认配置（model, api_url, api_key, stream）
 - SYSTEM_PROMPT: AI 系统提示词（控制输出格式）
 
@@ -13,9 +14,8 @@ ai 命令行接口模块
 """
 
 import click
-
-from fcbyk.cli_support.output import show_config
-from fcbyk.utils.config import get_config_path, save_config, get_effective_config
+from fcbyk.utils import storage
+from fcbyk.cli_support.output import show_dict
 
 from .service import (
     AIService,
@@ -24,8 +24,8 @@ from .service import (
     extract_assistant_reply,
 )
 
-
-CONFIG_FILE_URL = get_config_path('fcbyk', 'openai.json')
+CONFIG_FILE = "fcbyk_config.json"
+SECTION = "ai"
 
 DEFAULT_CONFIG = {
     'model': 'deepseek-chat',
@@ -43,7 +43,7 @@ SYSTEM_PROMPT = (
 
 def _print_streaming_chunks(chunks) -> str:
     reply = ''
-    click.secho('AI：', fg='blue', nl=False)
+    click.secho('AI: ', fg='blue', nl=False)
     for chunk in chunks:
         delta = chunk['choices'][0]['delta'].get('content', '')
         if delta:
@@ -57,13 +57,13 @@ def _chat_loop(config: dict):
     service = AIService()
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
 
-    click.secho('聊天已开始，输入 exit 退出', fg='cyan')
+    click.secho('Chat started. Type "exit" to quit.', fg='cyan')
 
     while True:
         try:
             user_input = input('You: ').strip()
         except (EOFError, KeyboardInterrupt):
-            click.secho('\n已退出对话', fg='cyan')
+            click.secho('\nChat ended.', fg='cyan')
             break
 
         if user_input.lower() == 'exit':
@@ -88,16 +88,16 @@ def _chat_loop(config: dict):
                 reply = _print_streaming_chunks(resp_or_chunks)
             else:
                 reply = extract_assistant_reply(resp_or_chunks)
-                click.secho('AI：', fg='blue', nl=False)
+                click.secho('AI: ', fg='blue', nl=False)
                 click.echo(f' {reply}')
 
             messages.append({"role": "assistant", "content": reply})
 
         except AIServiceError as e:
-            click.secho(f'错误：{e}', fg='red')
+            click.secho(f'Error: {e}', fg='red')
             messages.pop()  # 移除失败的用户消息
         except Exception as e:
-            click.secho(f'未知错误：{e}', fg='red')
+            click.secho(f'Unknown error: {e}', fg='red')
             messages.pop()
 
 
@@ -105,8 +105,12 @@ def _chat_loop(config: dict):
 @click.option(
     "--config", "-c",
     is_flag=True,
-    callback=lambda ctx, param, value: show_config(
-        ctx, param, value, CONFIG_FILE_URL, DEFAULT_CONFIG
+    callback=lambda ctx, param, value: show_dict(
+        ctx,
+        param,
+        value,
+        f"config: {storage.get_path(CONFIG_FILE)} / section: {SECTION}",
+        storage.load_section(CONFIG_FILE, SECTION, default=DEFAULT_CONFIG),
     ),
     expose_value=False,
     is_eager=True,
@@ -118,19 +122,33 @@ def _chat_loop(config: dict):
 @click.option('--stream', '-s', help='set stream, 0 for false, 1 for true')
 @click.pass_context
 def ai(ctx, model, api_key, api_url, stream):
-    cli_options = ctx.params.copy()
-    cli_options.pop('config', None)
+    # 读取 section 配置，并用 default 补齐
+    config = storage.load_section(CONFIG_FILE, SECTION, default=DEFAULT_CONFIG)
 
-    effective_config = get_effective_config(cli_options, CONFIG_FILE_URL, DEFAULT_CONFIG)
+    cli_options = {k: v for k, v in ctx.params.items() if v is not None}
+
+    # CLI 参数覆盖配置
+    config_updated = False
+    for key, value in cli_options.items():
+        if key in DEFAULT_CONFIG:
+            # 特殊处理布尔型 stream
+            if key == 'stream':
+                new_val = str(value).lower() in ['1', 'true']
+            else:
+                new_val = value
+            
+            if config.get(key) != new_val:
+                config[key] = new_val
+                config_updated = True
 
     # 无参数则进入聊天模式，有参数则保存配置
     if not any([model, api_key, api_url, stream]):
-        if not effective_config['api_key']:
-            click.secho('错误：未配置 api_key，请先通过 --api-key 或配置文件设置', fg='red', err=True)
+        if not config.get('api_key'):
+            click.secho('Error: api_key is not configured. Please set it via --api-key or the config file.', fg='red', err=True)
             ctx.exit(1)
 
-        _chat_loop(effective_config)
+        _chat_loop(config)
     else:
-        save_config(effective_config, CONFIG_FILE_URL)
-        click.secho('配置已保存', fg='green')
+        storage.save_section(CONFIG_FILE, SECTION, config)
+        click.secho(f"Config saved to {CONFIG_FILE} section '{SECTION}'.", fg='green')
         ctx.exit()

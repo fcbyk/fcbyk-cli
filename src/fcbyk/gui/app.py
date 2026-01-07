@@ -13,6 +13,7 @@ import sys
 import tempfile
 
 from ..utils.config import get_config_path
+from fcbyk.utils import storage
 from typing import Optional
 
 from .core.compatibility import HAS_GUI
@@ -166,8 +167,9 @@ def show_gui() -> str:
     cmd = [python_exe, "-m", "fcbyk.gui"]
 
     # 将子进程 stdout/stderr 写入日志，避免“启动没反应”时无法排查
-    # 日志放在配置目录：~/.fcbyk/fcbyk_gui.log（Windows 下同样会展开到用户目录）
-    log_file = get_config_path("fcbyk", "fcbyk_gui.log")
+    # 日志放在配置目录：~/.fcbyk/log/fcbyk_gui.log（Windows 下同样会展开到用户目录）
+    
+    log_file = storage.get_path("fcbyk_gui.log", subdir="log")
     try:
         os.makedirs(os.path.dirname(log_file), exist_ok=True)
         log_fp = open(log_file, "a", encoding="utf-8")
