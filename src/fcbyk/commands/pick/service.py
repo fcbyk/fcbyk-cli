@@ -24,8 +24,9 @@ import random
 import string
 import time
 import os
-from typing import Iterable, Dict, Set, List
-from fcbyk.utils.config import load_json_config
+from typing import Iterable, Dict, Set, List, Optional
+
+from fcbyk.utils import storage
 
 
 class PickService:
@@ -34,6 +35,9 @@ class PickService:
     def __init__(self, config_file: str, default_config: dict):
         self.config_file = config_file
         self.default_config = default_config
+
+        # 兑换码持久化文件：~/.fcbyk/data/pick_redeem_codes.json
+        self.redeem_codes_file = storage.get_path('pick_redeem_codes.json', subdir='data')
         
         # 抽奖限制模式：
         # - 旧逻辑：按 IP 限制（ip_draw_records），每个 IP 只能抽一次
@@ -92,6 +96,82 @@ class PickService:
             code = ''.join(random.choice(charset) for _ in range(length))
             codes.add(code)
         return sorted(codes)
+
+    def _load_redeem_codes_data(self) -> Dict:
+        data = storage.load_json(
+            self.redeem_codes_file,
+            default={'codes': {}},
+            create_if_missing=True,
+            strict=False,
+        )
+        if not isinstance(data, dict):
+            return {'codes': {}}
+        if not isinstance(data.get('codes'), dict):
+            data['codes'] = {}
+        return data
+
+    def _save_redeem_codes_data(self, data: Dict) -> None:
+        storage.save_json(self.redeem_codes_file, data)
+
+    def load_redeem_codes_from_storage(self) -> Dict[str, bool]:
+        """从持久化文件加载兑换码状态到内存。"""
+        data = self._load_redeem_codes_data()
+        codes = data.get('codes', {})
+        out = {}
+        for k, v in codes.items():
+            code = str(k).strip().upper()
+            if not code:
+                continue
+            used = False
+            if isinstance(v, dict):
+                used = bool(v.get('used'))
+            elif isinstance(v, bool):
+                used = bool(v)
+            out[code] = used
+        return out
+
+    def add_redeem_code_to_storage(self, code: str) -> bool:
+        """新增兑换码到持久化文件，返回是否新增成功。"""
+        code = str(code or '').strip().upper()
+        if not code:
+            return False
+
+        data = self._load_redeem_codes_data()
+        codes = data.get('codes', {})
+        if code in codes:
+            return False
+        codes[code] = {'used': False}
+        data['codes'] = codes
+        self._save_redeem_codes_data(data)
+        return True
+
+    def mark_redeem_code_used_in_storage(self, code: str) -> bool:
+        """标记兑换码已使用（持久化），返回是否标记成功。"""
+        code = str(code or '').strip().upper()
+        if not code:
+            return False
+
+        data = self._load_redeem_codes_data()
+        codes = data.get('codes', {})
+        if code not in codes:
+            return False
+
+        v = codes.get(code)
+        if isinstance(v, dict):
+            if v.get('used'):
+                return False
+            v['used'] = True
+            codes[code] = v
+        elif isinstance(v, bool):
+            if v:
+                return False
+            codes[code] = True
+        else:
+            codes[code] = {'used': True}
+
+        data['codes'] = codes
+        self._save_redeem_codes_data(data)
+        return True
 
     def pick_item(self, items: List[str]):
         """执行抽奖动画"""

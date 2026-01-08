@@ -29,6 +29,27 @@ default_data = {
     'items': []
 }
 
+# 兑换码持久化数据文件：~/.fcbyk/data/pick_redeem_codes.json
+redeem_codes_file = storage.get_path('pick_redeem_codes.json', subdir='data')
+
+default_redeem_codes = {
+    'codes': {}
+}
+
+
+def _load_redeem_codes():
+    data = storage.load_json(redeem_codes_file, default=default_redeem_codes, create_if_missing=True, strict=False)
+    if not isinstance(data, dict):
+        return dict(default_redeem_codes)
+    codes = data.get('codes')
+    if not isinstance(codes, dict):
+        data['codes'] = {}
+    return data
+
+
+def _save_redeem_codes(data):
+    storage.save_json(redeem_codes_file, data)
+
 
 @click.command(name='pick', help='Randomly pick one item from the list')
 @click.option(
@@ -62,8 +83,8 @@ default_data = {
 @click.option('--port', '-p', default=80, show_default=True, type=int, help='Port for web mode')
 @click.option('--no-browser', is_flag=True, help='Do not auto-open browser in web mode')
 @click.option('--files','-f', type=click.Path(exists=True, dir_okay=True, file_okay=True, readable=True, resolve_path=True), help='Start web file picker with given file')
-@click.option('--gen-codes','-gc', type=int, default=5, show_default=True, help='Generate redeem codes for web file picker (only with --files)')
-@click.option('--show-codes','-sc', is_flag=True, help='Show the redeem codes in console (only with --files)')
+@click.option('--gen-codes','-gc', type=int, default=0, show_default=True, help='Generate redeem codes and save to file')
+@click.option('--show-codes','-sc', is_flag=True, help='Show saved redeem codes status and exit')
 @click.option('--password', '-pw', is_flag=True, default=False, help='Prompt to set admin password (default: 123456 if not set)')
 @click.argument('items', nargs=-1)
 @click.pass_context
@@ -80,6 +101,70 @@ def pick(ctx, add, remove, clear, show_list, web, port, no_browser, files, gen_c
     )
 
     service = PickService(data_file, default_data)
+
+    # --gen-codes/--show-codes 可单独运行
+    if gen_codes is not None and gen_codes > 0:
+        if gen_codes > 100:
+            click.echo("Error: --gen-codes max is 100")
+            return
+
+        codes_data = _load_redeem_codes()
+        codes_map = codes_data.get('codes', {})
+        existed = set(codes_map.keys())
+
+        # 生成并追加（尽量去重）
+        new_codes = []
+        tries = 0
+        max_tries = max(100, gen_codes * 20)
+        while len(new_codes) < gen_codes and tries < max_tries:
+            tries += 1
+            c = None
+            try:
+                c = list(service.generate_redeem_codes(1))[0]
+            except Exception:
+                c = None
+            if not c:
+                continue
+            if c in existed:
+                continue
+            existed.add(c)
+            new_codes.append(c)
+            codes_map[c] = {'used': False}
+
+        codes_data['codes'] = codes_map
+        _save_redeem_codes(codes_data)
+
+        click.echo("Generated %d redeem codes." % len(new_codes))
+        if show_codes and new_codes:
+            click.echo()
+            click.echo("New redeem codes:")
+            for c in new_codes:
+                click.echo("  %s" % c)
+
+        if not files:
+            return
+
+    if show_codes and not files:
+        codes_data = _load_redeem_codes()
+        codes_map = codes_data.get('codes', {})
+        total = len(codes_map)
+        used = 0
+        for _, info in codes_map.items():
+            if isinstance(info, dict) and info.get('used'):
+                used += 1
+        unused = total - used
+
+        click.echo("Redeem codes:")
+        click.echo("  Total: %d" % total)
+        click.echo("  Unused: %d" % unused)
+        click.echo("  Used: %d" % used)
+
+        if total:
+            click.echo()
+            for c, info in sorted(codes_map.items()):
+                st = "USED" if (isinstance(info, dict) and info.get('used')) else "UNUSED"
+                click.echo("  %s - %s" % (c, st))
+        return
 
     # 端口占用检测
     if files or web:
@@ -134,11 +219,6 @@ def pick(ctx, add, remove, clear, show_list, web, port, no_browser, files, gen_c
         codes = None
         if gen_codes and gen_codes > 0:
             codes = list(service.generate_redeem_codes(gen_codes))
-            if show_codes:
-                click.echo()
-                click.echo("Generated redeem codes (each can be used once):")
-                for c in codes:
-                    click.echo(f"  {c}")
 
         if password:
             admin_password = click.prompt(

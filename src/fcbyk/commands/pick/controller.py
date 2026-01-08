@@ -164,6 +164,11 @@ def api_files_pick():
 
         selected = service.pick_file(candidates)
         service.redeem_codes[code] = True
+        # 持久化标记已用
+        try:
+            service.mark_redeem_code_used_in_storage(code)
+        except Exception:
+            pass
         service.ip_file_history.setdefault(client_ip, set()).add(selected['name'])
         used = sum(1 for v in service.redeem_codes.values() if v)
         download_url = url_for('download_file', filename=selected['name'], _external=True)
@@ -314,9 +319,16 @@ def admin_codes_add():
     if code in service.redeem_codes:
         return jsonify({'error': '兑换码已存在'}), 400
 
+    # 内存态是本次 server 运行的权威来源；持久化仅用于 files 模式下的跨次启动恢复。
+    # 因此：内存中不存在时应允许新增成功；即便持久化层提示已存在，也不应让 API 失败。
     service.redeem_codes[code] = False
+    try:
+        service.add_redeem_code_to_storage(code)
+    except Exception:
+        # 持久化失败不影响管理员在当前会话内添加兑换码
+        pass
     click.echo(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Admin added new redeem code: {code}")
-    
+
     return jsonify({
         'success': True,
         'code': code,
@@ -337,7 +349,11 @@ def start_web_server(
     files_mode_root = os.path.abspath(files_root) if files_root else None
     
     service.reset_state()
-    if codes:
+
+    # files 模式下优先使用持久化兑换码
+    if files_mode_root:
+        service.redeem_codes = service.load_redeem_codes_from_storage()
+    elif codes:
         service.redeem_codes = {str(c).strip().upper(): False for c in codes if str(c).strip()}
 
     hostname = socket.gethostname()
