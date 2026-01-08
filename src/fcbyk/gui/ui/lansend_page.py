@@ -34,6 +34,7 @@ from fcbyk.commands.lansend.controller import create_lansend_app
 from fcbyk.commands.lansend.service import LansendConfig, LansendService
 from fcbyk.utils.network import get_private_networks
 from fcbyk.utils.port import ensure_port_available
+from fcbyk.utils import storage
 
 
 def _run_lansend_server_process(
@@ -101,6 +102,7 @@ class LansendPage(QWidget):
         self.setLayout(layout)
 
         self._build_ui(layout)
+        self._load_settings()
 
     # -----------------
     # UI
@@ -170,6 +172,10 @@ class LansendPage(QWidget):
         self._btn_open.setEnabled(False)
         row_btns.addWidget(self._btn_open)
 
+        self._btn_open_dir = QPushButton("打开文件夹")
+        self._btn_open_dir.clicked.connect(self._on_open_shared_directory)
+        row_btns.addWidget(self._btn_open_dir)
+
         self._btn_open_log = QPushButton("打开日志")
         self._btn_open_log.clicked.connect(self._on_open_log_file)
         row_btns.addWidget(self._btn_open_log)
@@ -188,6 +194,61 @@ class LansendPage(QWidget):
         # 初始状态渲染
         self._last_url = None  # type: Optional[str]
         self._refresh_status_ui()
+
+        # 选项变化时写入配置
+        self._chk_password.stateChanged.connect(lambda _: self._save_settings())
+        self._chk_no_browser.stateChanged.connect(lambda _: self._save_settings())
+        self._chk_un_download.stateChanged.connect(lambda _: self._save_settings())
+        self._chk_un_upload.stateChanged.connect(lambda _: self._save_settings())
+        self._chk_chat.stateChanged.connect(lambda _: self._save_settings())
+        self._port_input.editingFinished.connect(self._save_settings)
+        self._dir_input.editingFinished.connect(self._save_settings)
+
+    # -----------------
+    # settings
+    # -----------------
+
+    def _load_settings(self) -> None:
+        # 持久化 UI 配置（不保存密码）
+        default = {
+            "shared_directory": os.getcwd(),
+            "port": "80",
+            "password_flag": False,
+            "no_browser": False,
+            "un_download": False,
+            "un_upload": False,
+            "chat": False,
+        }
+
+        try:
+            data = storage.load_section("fcbyk_config.json", "lansend", default=default)
+        except Exception:
+            data = default
+
+        if isinstance(data, dict):
+            self._dir_input.setText(str(data.get("shared_directory", default["shared_directory"])))
+            self._port_input.setText(str(data.get("port", default["port"])))
+            self._chk_password.setChecked(bool(data.get("password_flag", default["password_flag"])))
+            self._chk_no_browser.setChecked(bool(data.get("no_browser", default["no_browser"])))
+            self._chk_un_download.setChecked(bool(data.get("un_download", default["un_download"])))
+            self._chk_un_upload.setChecked(bool(data.get("un_upload", default["un_upload"])))
+            self._chk_chat.setChecked(bool(data.get("chat", default["chat"])))
+
+    def _save_settings(self) -> None:
+        data = {
+            "shared_directory": (self._dir_input.text() or "").strip(),
+            "port": (self._port_input.text() or "").strip(),
+            "password_flag": bool(self._chk_password.isChecked()),
+            "no_browser": bool(self._chk_no_browser.isChecked()),
+            "un_download": bool(self._chk_un_download.isChecked()),
+            "un_upload": bool(self._chk_un_upload.isChecked()),
+            "chat": bool(self._chk_chat.isChecked()),
+        }
+
+        try:
+            storage.save_section("fcbyk_config.json", "lansend", data)
+        except Exception:
+            pass
 
     # -----------------
     # helpers
@@ -230,6 +291,7 @@ class LansendPage(QWidget):
         d = QFileDialog.getExistingDirectory(self, "选择共享目录", self._dir_input.text() or os.getcwd())
         if d:
             self._dir_input.setText(d)
+            self._save_settings()
 
     def _parse_port(self):  # type: () -> Optional[int]
         raw = (self._port_input.text() or "").strip()
@@ -264,6 +326,29 @@ class LansendPage(QWidget):
     def _on_open_in_browser(self) -> None:
         if self._last_url:
             webbrowser.open(self._last_url)
+
+    def _on_open_shared_directory(self) -> None:
+        # 打开当前选择的共享目录
+        directory = (self._dir_input.text() or "").strip()
+        if not directory:
+            QMessageBox.information(self, "打开文件夹", "请先选择共享目录。")
+            return
+
+        directory = os.path.abspath(directory)
+        if not os.path.isdir(directory):
+            QMessageBox.warning(self, "打开失败", "目录不存在或不是目录：%s" % directory)
+            return
+
+        try:
+            if sys.platform == "win32":
+                os.startfile(directory)  # type: ignore
+            else:
+                if sys.platform == "darwin":
+                    subprocess.Popen(["open", directory], close_fds=True)
+                else:
+                    subprocess.Popen(["xdg-open", directory], close_fds=True)
+        except Exception as e:
+            QMessageBox.warning(self, "打开失败", "无法打开目录：%s\n\n路径：%s" % (e, directory))
 
     def _on_open_log_file(self) -> None:
         path = getattr(self, "_server_log_file", None)
@@ -302,6 +387,7 @@ class LansendPage(QWidget):
         if self._server_running:
             self._stop_server()
         else:
+            self._save_settings()
             self._start_server()
 
     def _stop_server(self) -> None:
