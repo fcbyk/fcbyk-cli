@@ -16,7 +16,7 @@ pick controller 层
 
 函数:
 - _get_client_ip() -> str: 获取客户端 IP（优先 X-Forwarded-For）
-- start_web_server(port, no_browser, files_root, codes, admin_password): 启动抽奖 Web 服务器
+- start_web_server(port, no_browser, files_root, admin_password): 启动抽奖 Web 服务器
 
 路由:
 - /api/info: 获取启动信息（是否文件模式）
@@ -36,13 +36,12 @@ import click
 import socket
 import webbrowser
 import uuid
-from typing import Optional, Iterable
-from flask import Flask, jsonify, render_template, request, send_file, url_for
-from fcbyk.utils.config import load_json_config
+from typing import Optional
+from flask import jsonify, request, send_file, url_for, Response
 from fcbyk.utils import storage
 from datetime import datetime
 from .service import PickService
-from ...web.app import create_spa 
+from ...web.app import create_spa
 
 # 持久化数据文件：~/.fcbyk/data/pick_data.json
 config_file = storage.get_path('pick_data.json', subdir='data')
@@ -53,7 +52,7 @@ default_config = {
 }
 
 # Flask 应用（SPA 模式，支持 /admin 和 /f 路由）
-app = create_spa(entry_html = "pick.html", page = ["/admin","/f"])
+app = create_spa(entry_html="pick.html", page=["/admin", "/f"])
 
 # Web 模式状态
 files_mode_root = None  # 指定目录或单文件路径（None 表示列表抽奖模式）
@@ -61,6 +60,17 @@ ADMIN_PASSWORD = None
 
 # 服务实例
 service = PickService(config_file, default_config)
+
+
+def _require_admin_auth():
+    if not ADMIN_PASSWORD:
+        return jsonify({'error': 'admin password not set'}), 500
+
+    password = request.headers.get('X-Admin-Password', '')
+    if password != ADMIN_PASSWORD:
+        return jsonify({'error': 'unauthorized'}), 401
+
+    return None
 
 
 @app.route('/api/info')
@@ -98,7 +108,7 @@ def api_files():
     """列出文件列表并返回当前抽奖状态"""
     if not files_mode_root:
         return jsonify({'error': 'files mode not enabled'}), 400
-    
+
     files = service.list_files(files_mode_root)
     resp = {
         'files': [{'name': f['name'], 'size': f['size']} for f in files],
@@ -138,7 +148,7 @@ def api_files_pick():
     """
     if not files_mode_root:
         return jsonify({'error': 'files mode not enabled'}), 400
-    
+
     files = service.list_files(files_mode_root)
     if not files:
         return jsonify({'error': 'no files available'}), 400
@@ -179,7 +189,10 @@ def api_files_pick():
             'download_url': download_url,
             'timestamp': timestamp,
         }
-        click.echo(f"[{timestamp}] {client_ip} draw file: {selected['name']} successfully, redeem code: {code} used, remaining redeem codes: {len(service.redeem_codes)-used}")
+        click.echo(
+            "[%s] %s draw file: %s successfully, redeem code: %s used, remaining redeem codes: %s"
+            % (timestamp, client_ip, selected['name'], code, (len(service.redeem_codes) - used))
+        )
         return jsonify({
             'file': {'name': selected['name'], 'size': selected['size']},
             'download_url': download_url,
@@ -261,6 +274,7 @@ def api_pick_item():
     selected = service.pick_random_item(items)
     return jsonify({'item': selected, 'items': items})
 
+
 @app.route('/api/admin/login', methods=['POST'])
 def admin_login():
     if not ADMIN_PASSWORD:
@@ -277,12 +291,9 @@ def admin_login():
 
 @app.route('/api/admin/codes', methods=['GET'])
 def admin_codes():
-    if not ADMIN_PASSWORD:
-        return jsonify({'error': 'admin password not set'}), 500
-
-    password = request.headers.get('X-Admin-Password', '')
-    if password != ADMIN_PASSWORD:
-        return jsonify({'error': 'unauthorized'}), 401
+    auth = _require_admin_auth()
+    if auth is not None:
+        return auth
 
     codes_list = [{'code': code, 'used': used} for code, used in service.redeem_codes.items()]
     total = len(codes_list)
@@ -300,12 +311,9 @@ def admin_codes():
 @app.route('/api/admin/codes/add', methods=['POST'])
 def admin_codes_add():
     """新增兑换码"""
-    if not ADMIN_PASSWORD:
-        return jsonify({'error': 'admin password not set'}), 500
-
-    password = request.headers.get('X-Admin-Password', '')
-    if password != ADMIN_PASSWORD:
-        return jsonify({'error': 'unauthorized'}), 401
+    auth = _require_admin_auth()
+    if auth is not None:
+        return auth
 
     data = request.get_json(silent=True) or {}
     code = str(data.get('code', '')).strip().upper()
@@ -327,12 +335,201 @@ def admin_codes_add():
     except Exception:
         # 持久化失败不影响管理员在当前会话内添加兑换码
         pass
-    click.echo(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Admin added new redeem code: {code}")
+    click.echo("[%s] Admin added new redeem code: %s" % (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), code))
 
     return jsonify({
         'success': True,
         'code': code,
-        'message': f'成功新增兑换码: {code}'
+        'message': '成功新增兑换码: %s' % code
+    })
+
+
+@app.route('/api/admin/codes/gen', methods=['POST'])
+def admin_codes_gen():
+    """批量生成兑换码（单次最多 100）。"""
+    auth = _require_admin_auth()
+    if auth is not None:
+        return auth
+
+    data = request.get_json(silent=True) or {}
+    count = data.get('count', None)
+
+    try:
+        n = int(count)
+    except Exception:
+        return jsonify({'error': 'count must be int'}), 400
+
+    if n <= 0:
+        return jsonify({'error': 'count must be > 0'}), 400
+
+    if n > 100:
+        return jsonify({'error': 'count max is 100'}), 400
+
+    new_codes = []
+    try:
+        new_codes = service.generate_and_add_redeem_codes_to_storage(n)
+    except Exception as e:
+        return jsonify({'error': 'failed to generate codes: %s' % e}), 500
+
+    click.echo(
+        "[%s] Admin generated redeem codes: requested=%d generated=%d"
+        % (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), n, len(new_codes))
+    )
+
+    return jsonify({
+        'success': True,
+        'requested': n,
+        'generated_count': len(new_codes),
+        'generated': new_codes,
+    })
+
+
+@app.route('/api/admin/codes/<code>', methods=['DELETE'])
+def admin_codes_delete(code):
+    """删除单个兑换码。"""
+    auth = _require_admin_auth()
+    if auth is not None:
+        return auth
+
+    code = str(code or '').strip().upper()
+    if not code:
+        return jsonify({'error': 'invalid code'}), 400
+
+    if code not in service.redeem_codes:
+        # 内存里都没有，直接视为不存在
+        return jsonify({'error': 'code not found'}), 404
+
+    was_used = bool(service.redeem_codes.get(code))
+
+    # 先删内存
+    try:
+        del service.redeem_codes[code]
+    except Exception:
+        pass
+
+    # 再删持久化
+    try:
+        service.delete_redeem_code_from_storage(code)
+    except Exception:
+        pass
+
+    # 同时清理结果缓存（避免前端还能查到旧结果）
+    try:
+        if code in service.code_results:
+            del service.code_results[code]
+    except Exception:
+        pass
+
+    click.echo("[%s] Admin deleted redeem code: %s" % (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), code))
+
+    return jsonify({'success': True, 'code': code, 'was_used': was_used})
+
+
+@app.route('/api/admin/codes/clear', methods=['POST'])
+def admin_codes_clear():
+    """清空所有兑换码。"""
+    auth = _require_admin_auth()
+    if auth is not None:
+        return auth
+
+    data = request.get_json(silent=True) or {}
+    confirm = bool(data.get('confirm'))
+    if not confirm:
+        return jsonify({'error': 'confirm required'}), 400
+
+    before = len(service.redeem_codes)
+
+    # 清内存
+    service.redeem_codes = {}
+    service.code_results = {}
+
+    # 清持久化
+    try:
+        service.clear_redeem_codes_in_storage()
+    except Exception:
+        pass
+
+    click.echo("[%s] Admin cleared redeem codes: %d" % (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), before))
+
+    return jsonify({'success': True, 'cleared': before})
+
+
+@app.route('/api/admin/codes/<code>/reset', methods=['POST'])
+def admin_codes_reset(code):
+    """将单个兑换码重置为未使用。"""
+    auth = _require_admin_auth()
+    if auth is not None:
+        return auth
+
+    code = str(code or '').strip().upper()
+    if not code:
+        return jsonify({'error': 'invalid code'}), 400
+
+    if code not in service.redeem_codes:
+        return jsonify({'error': 'code not found'}), 404
+
+    # 内存重置
+    service.redeem_codes[code] = False
+
+    # 持久化重置
+    ok = None
+    try:
+        ok = service.reset_redeem_code_unused_in_storage(code)
+    except Exception:
+        ok = None
+
+    # 清理结果缓存：reset 后不应再能查询到上一次抽奖结果
+    try:
+        if code in service.code_results:
+            del service.code_results[code]
+    except Exception:
+        pass
+
+    click.echo("[%s] Admin reset redeem code to unused: %s" % (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), code))
+
+    return jsonify({'success': True, 'code': code, 'storage_reset': bool(ok)})
+
+
+@app.route('/api/admin/codes/export', methods=['GET'])
+def admin_codes_export():
+    """导出兑换码。
+
+    Query:
+        - only_unused=1: 仅导出未使用兑换码
+        - format=text: 返回纯文本，每行一个兑换码
+
+    默认返回 JSON（兼容旧调用方）。
+    """
+    auth = _require_admin_auth()
+    if auth is not None:
+        return auth
+
+    only_unused = str(request.args.get('only_unused', '')).strip() == '1'
+    fmt = str(request.args.get('format', '')).strip().lower()
+
+    try:
+        exported = service.export_redeem_codes_from_storage(only_unused=only_unused)
+    except Exception as e:
+        return jsonify({'error': 'export failed: %s' % e}), 500
+
+    # 纯文本导出：每行一个 code
+    if fmt == 'text':
+        lines = []
+        for item in exported:
+            c = item.get('code')
+            if c:
+                lines.append(str(c))
+        text = "\n".join(lines)
+        return Response(text, mimetype='text/plain; charset=utf-8')
+
+    total = len(exported)
+    used = sum(1 for c in exported if c.get('used'))
+
+    return jsonify({
+        'codes': exported,
+        'total_codes': total,
+        'used_codes': used,
+        'left_codes': total - used,
     })
 
 
@@ -340,21 +537,26 @@ def start_web_server(
     port: int,
     no_browser: bool,
     files_root: Optional[str] = None,
-    codes: Optional[Iterable[str]] = None,
     admin_password: Optional[str] = None,
 ) -> None:
     """启动抽奖 Web 服务器"""
     global files_mode_root, ADMIN_PASSWORD
     ADMIN_PASSWORD = admin_password
     files_mode_root = os.path.abspath(files_root) if files_root else None
-    
+
     service.reset_state()
 
-    # files 模式下优先使用持久化兑换码
+    # files 模式下使用持久化兑换码
     if files_mode_root:
         service.redeem_codes = service.load_redeem_codes_from_storage()
-    elif codes:
-        service.redeem_codes = {str(c).strip().upper(): False for c in codes if str(c).strip()}
+        # 初始化体验：如果兑换码为空，则自动生成 5 个（避免用户进入页面后无法使用兑换码模式）
+        if not service.redeem_codes:
+            try:
+                new_codes = service.generate_and_add_redeem_codes_to_storage(5)
+                if new_codes:
+                    click.echo(" Auto-generated %d redeem codes: %s" % (len(new_codes), ", ".join(new_codes)))
+            except Exception:
+                pass
 
     hostname = socket.gethostname()
     local_ip = socket.gethostbyname(hostname)

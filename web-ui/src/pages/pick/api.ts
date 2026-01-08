@@ -2,7 +2,20 @@
  * Pick API 服务
  */
 
-import type { PickApiResponse, FileListApiResponse, FilePickApiResponse, FileResultApiResponse, AdminCodesApiResponse, AdminAddCodeApiResponse, InfoApiResponse } from './types'
+import type {
+  PickApiResponse,
+  FileListApiResponse,
+  FilePickApiResponse,
+  FileResultApiResponse,
+  AdminCodesApiResponse,
+  AdminAddCodeApiResponse,
+  AdminGenCodesApiResponse,
+  AdminDeleteCodeApiResponse,
+  AdminClearCodesApiResponse,
+  AdminResetCodeApiResponse,
+  AdminExportCodesApiResponse,
+  InfoApiResponse
+} from './types'
 
 /** 获取启动信息 */
 export async function fetchInfo(): Promise<InfoApiResponse> {
@@ -66,10 +79,10 @@ export async function pickFile(code: string): Promise<FilePickApiResponse> {
 export async function getFileResult(code: string): Promise<FileResultApiResponse> {
   try {
     const response = await fetch(`/api/files/result/${encodeURIComponent(code)}`)
-    if (!response.ok) {
-      throw new Error('获取结果失败')
-    }
     const data: FileResultApiResponse = await response.json()
+    if (!response.ok) {
+      throw new Error((data as any).error || '获取结果失败')
+    }
     return data
   } catch (error) {
     console.error('Failed to get file result:', error)
@@ -100,10 +113,10 @@ export async function fetchAdminCodes(password: string): Promise<AdminCodesApiRe
     const response = await fetch('/api/admin/codes', {
       headers: { 'X-Admin-Password': password }
     })
-    if (!response.ok) {
-      throw new Error('获取列表失败')
-    }
     const data: AdminCodesApiResponse = await response.json()
+    if (!response.ok) {
+      throw new Error((data as any).error || '获取列表失败')
+    }
     return data
   } catch (error) {
     console.error('Failed to fetch admin codes:', error)
@@ -124,11 +137,114 @@ export async function addAdminCode(password: string, code: string): Promise<Admi
     })
     const data: AdminAddCodeApiResponse = await response.json()
     if (!response.ok) {
-      throw new Error(data.error || '添加失败')
+      throw new Error(data.error || (data as any).error || '添加失败')
     }
     return data
   } catch (error) {
     console.error('Failed to add admin code:', error)
     throw new Error((error as Error).message || '添加失败')
+  }
+}
+
+/** 批量生成兑换码 */
+export async function genAdminCodes(password: string, count: number): Promise<AdminGenCodesApiResponse> {
+  try {
+    const response = await fetch('/api/admin/codes/gen', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-Password': password
+      },
+      body: JSON.stringify({ count })
+    })
+    const data: AdminGenCodesApiResponse = await response.json()
+    if (!response.ok) {
+      throw new Error((data as any).error || '生成失败')
+    }
+    return data
+  } catch (error) {
+    console.error('Failed to gen admin codes:', error)
+    throw new Error((error as Error).message || '生成失败')
+  }
+}
+
+/** 删除兑换码 */
+export async function deleteAdminCode(password: string, code: string): Promise<AdminDeleteCodeApiResponse> {
+  try {
+    const response = await fetch(`/api/admin/codes/${encodeURIComponent(code)}`, {
+      method: 'DELETE',
+      headers: {
+        'X-Admin-Password': password
+      }
+    })
+    const data: AdminDeleteCodeApiResponse = await response.json()
+    if (!response.ok) {
+      throw new Error((data as any).error || '删除失败')
+    }
+    return data
+  } catch (error) {
+    console.error('Failed to delete admin code:', error)
+    throw new Error((error as Error).message || '删除失败')
+  }
+}
+
+/** 清空兑换码 */
+export async function clearAdminCodes(password: string, confirm: boolean): Promise<AdminClearCodesApiResponse> {
+  try {
+    const response = await fetch('/api/admin/codes/clear', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-Password': password
+      },
+      body: JSON.stringify({ confirm })
+    })
+    const data: AdminClearCodesApiResponse = await response.json()
+    if (!response.ok) {
+      throw new Error((data as any).error || '清空失败')
+    }
+    return data
+  } catch (error) {
+    console.error('Failed to clear admin codes:', error)
+    throw new Error((error as Error).message || '清空失败')
+  }
+}
+
+/** 重置兑换码为未使用 */
+export async function resetAdminCode(password: string, code: string): Promise<AdminResetCodeApiResponse> {
+  try {
+    const response = await fetch(`/api/admin/codes/${encodeURIComponent(code)}/reset`, {
+      method: 'POST',
+      headers: {
+        'X-Admin-Password': password
+      }
+    })
+    const data: AdminResetCodeApiResponse = await response.json()
+    if (!response.ok) {
+      throw new Error((data as any).error || '重置失败')
+    }
+    return data
+  } catch (error) {
+    console.error('Failed to reset admin code:', error)
+    throw new Error((error as Error).message || '重置失败')
+  }
+}
+
+/** 导出兑换码 */
+export async function exportAdminCodes(password: string): Promise<AdminExportCodesApiResponse> {
+  try {
+    const response = await fetch('/api/admin/codes/export', {
+      headers: {
+        'X-Admin-Password': password
+      }
+    })
+    const data: AdminExportCodesApiResponse = await response.json()
+    if (!response.ok) {
+      throw new Error((data as any).error || '导出失败')
+    }
+    return data
+  } catch (error) {
+    console.error('Failed to export admin codes:', error)
+    throw new Error((error as Error).message || '导出失败')
   }
 }

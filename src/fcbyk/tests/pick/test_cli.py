@@ -1,4 +1,3 @@
-import os
 import importlib
 
 
@@ -55,7 +54,7 @@ def test_pick_clear(monkeypatch):
         lambda *a, **k: dict(store),
     )
 
-    def _save_json(path, data, **kwargs):
+    def _save_json(_path, data, **_kwargs):
         store.clear()
         store.update(data)
 
@@ -80,7 +79,7 @@ def test_pick_add_and_remove(monkeypatch):
         lambda *a, **k: dict(store),
     )
 
-    def _save_json(path, data, **kwargs):
+    def _save_json(_path, data, **_kwargs):
         store.clear()
         store.update(data)
 
@@ -108,12 +107,13 @@ def test_pick_web_calls_start_web_server(monkeypatch):
     monkeypatch.setattr(pick_cli, "PickService", lambda *a, **k: object())
 
     def _start(port, no_browser, **kwargs):
+        _ = (kwargs,)
         called.update({"port": port, "no_browser": no_browser, **kwargs})
 
     monkeypatch.setattr(pick_cli, "start_web_server", _start)
 
     # 避免真实端口占用检测影响测试
-    monkeypatch.setattr(pick_cli, "ensure_port_available", lambda *a, **k: None)
+    monkeypatch.setattr(pick_cli, "ensure_port_available", lambda *_a, **_k: None)
 
     from click.testing import CliRunner
 
@@ -122,45 +122,6 @@ def test_pick_web_calls_start_web_server(monkeypatch):
     assert called["port"] == 1234
     assert called["no_browser"] is True
 
-
-def test_pick_files_mode_generates_codes_and_calls_server(monkeypatch, tmp_path):
-    pick_cli = importlib.import_module("fcbyk.commands.pick.cli")
-
-    f = tmp_path / "a.txt"
-    f.write_text("hi", encoding="utf-8")
-
-    monkeypatch.setattr(pick_cli, "load_json_object_or_exit", lambda *a, **k: {"items": []})
-
-    class _Svc:
-        def __init__(self, *a, **k):
-            pass
-
-        def generate_redeem_codes(self, n):
-            return ["ABCD"]
-
-        def pick_item(self, items):
-            raise AssertionError("should not be called")
-
-    monkeypatch.setattr(pick_cli, "PickService", _Svc)
-
-    called = {}
-
-    def _start(port, no_browser, **kwargs):
-        called.update({"port": port, "no_browser": no_browser, **kwargs})
-
-    monkeypatch.setattr(pick_cli, "start_web_server", _start)
-
-    from click.testing import CliRunner
-
-    r = CliRunner().invoke(
-        pick_cli.pick,
-        ["--files", str(f), "--gen-codes", "1", "--show-codes", "--port", "8888"],
-    )
-    assert r.exit_code == 0
-    assert called["files_root"] == str(f)
-    assert called["codes"] == ["ABCD"]
-    assert called["admin_password"] == "123456"
-    assert called["port"] == 8888
 
 
 def test_pick_files_mode_prompts_password(monkeypatch, tmp_path):
@@ -175,20 +136,20 @@ def test_pick_files_mode_prompts_password(monkeypatch, tmp_path):
         def __init__(self, *a, **k):
             pass
 
-        def generate_redeem_codes(self, n):
+        def generate_redeem_codes(self, _n):
             return []
 
-        def pick_item(self, items):
+        def pick_item(self, _items):
             raise AssertionError("should not be called")
 
     monkeypatch.setattr(pick_cli, "PickService", _Svc)
 
     # 用户输入空 => 使用默认 123456
-    monkeypatch.setattr("click.prompt", lambda *a, **k: "")
+    monkeypatch.setattr("click.prompt", lambda *_a, **_k: "")
 
     called = {}
 
-    def _start(port, no_browser, **kwargs):
+    def _start(**kwargs):
         called.update(kwargs)
 
     monkeypatch.setattr(pick_cli, "start_web_server", _start)
@@ -215,7 +176,7 @@ def test_pick_items_passed_to_service(monkeypatch):
         def pick_item(self, items):
             picked["items"] = items
 
-        def generate_redeem_codes(self, *a, **k):
+        def generate_redeem_codes(self, *_a, **_k):
             return []
 
     monkeypatch.setattr(pick_cli, "PickService", _Svc)
@@ -236,10 +197,10 @@ def test_pick_no_items_available_prints_usage(monkeypatch):
         def __init__(self, *a, **k):
             pass
 
-        def pick_item(self, items):
+        def pick_item(self, _items):
             raise AssertionError("should not be called")
 
-        def generate_redeem_codes(self, *a, **k):
+        def generate_redeem_codes(self, *_a, **_k):
             return []
 
     monkeypatch.setattr(pick_cli, "PickService", _Svc)

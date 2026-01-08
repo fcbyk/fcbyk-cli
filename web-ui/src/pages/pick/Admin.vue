@@ -33,7 +33,7 @@
         </div>
       </div>
 
-      <!-- 新增兑换码 -->
+      <!-- 新增兑换码 + 快捷操作 -->
       <div class="add-code-section">
         <div class="add-code-form">
           <input
@@ -44,18 +44,24 @@
             @keypress.enter="handleAddCode"
           />
           <button class="primary" @click="handleAddCode">新增</button>
+          <button class="primary" @click="handleGenCodes">批量生成(5)</button>
+          <button class="secondary" @click="handleExportCodes">导出</button>
+          <button class="danger" @click="handleClearCodes">清空</button>
         </div>
-        <div :class="['add-code-msg', addCodeMsgType]">{{ addCodeMsg }}</div>
+
+        <div class="add-code-msgs">
+          <div :class="['add-code-msg', addCodeMsgType]">{{ addCodeMsg }}</div>
+          <div :class="['msg', genMsgType]">{{ genMsg }}</div>
+          <div :class="['msg', exportMsgType]">{{ exportMsg }}</div>
+          <div :class="['msg', clearMsgType]">{{ clearMsg }}</div>
+        </div>
       </div>
 
       <!-- 列表 -->
       <div class="table">
         <div class="row" v-for="codeInfo in codes" :key="codeInfo.code">
           <div :class="['code', { used: codeInfo.used }]">
-            <span
-              v-if="codeInfo.used || isCodeRevealed(codeInfo.code)"
-              class="hidden"
-            >
+            <span v-if="codeInfo.used || isCodeRevealed(codeInfo.code)" class="hidden">
               {{ codeInfo.code }}
             </span>
             <span v-else class="hidden">
@@ -78,6 +84,14 @@
             <button class="primary small" @click="copyCode(codeInfo.code)">
               {{ isCodeCopied(codeInfo.code) ? '已复制' : '复制' }}
             </button>
+            <button
+              v-if="codeInfo.used"
+              class="secondary small"
+              @click="handleResetCode(codeInfo.code)"
+            >
+              重置
+            </button>
+            <button class="danger small" @click="handleDeleteCode(codeInfo.code)">删除</button>
           </div>
         </div>
       </div>
@@ -86,7 +100,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, onUnmounted } from 'vue'
 import { useAdmin } from './composables/useAdmin'
 
 const {
@@ -98,19 +112,36 @@ const {
   addCodeMsg,
   addCodeMsgType,
   stats,
+  genMsg,
+  genMsgType,
+  clearMsg,
+  clearMsgType,
+  exportMsg,
+  exportMsgType,
   maskCode,
   handleLogin,
   toggleReveal,
   copyCode,
   handleAddCode,
+  handleGenCodes,
+  handleDeleteCode,
+  handleResetCode,
+  handleClearCodes,
+  handleExportCodes,
   isCodeRevealed,
   isCodeCopied,
-  init
+  init,
+  _stopPolling
 } = useAdmin()
 
 // 初始化（自动恢复登录状态）
 onMounted(() => {
   init()
+})
+
+// 页面卸载时停止轮询，避免后台持续请求
+onUnmounted(() => {
+  _stopPolling()
 })
 </script>
 
@@ -249,7 +280,7 @@ button:active {
   white-space: nowrap;
 }
 
-/* ===== 新增兑换码 ===== */
+/* ===== 新增兑换码 + 快捷操作 ===== */
 .add-code-section {
   margin-bottom: 16px;
   padding: 16px;
@@ -262,10 +293,12 @@ button:active {
   display: flex;
   gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .add-code-form input {
   flex: 1;
+  min-width: 220px;
   margin: 0;
   padding: 12px;
   border-radius: 12px;
@@ -285,8 +318,28 @@ button:active {
   white-space: nowrap;
 }
 
-.add-code-msg {
+.add-code-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+button.danger {
+  background: rgba(239, 68, 68, 0.9);
+  border: 1px solid rgba(239, 68, 68, 0.6);
+  color: white;
+}
+
+.add-code-msgs {
   margin-top: 8px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.add-code-msg {
   font-size: 13px;
   min-height: 18px;
 }
@@ -296,6 +349,20 @@ button:active {
 }
 
 .add-code-msg.error {
+  color: var(--danger);
+}
+
+.msg {
+  font-size: 12px;
+  min-height: 16px;
+  color: var(--muted);
+}
+
+.msg.success {
+  color: var(--success);
+}
+
+.msg.error {
   color: var(--danger);
 }
 
@@ -321,6 +388,16 @@ button:active {
     grid-area: actions;
     justify-content: flex-end;
     margin-top: 6px;
+    flex-wrap: wrap;
+  }
+
+  .add-code-form input {
+    min-width: 100%;
+  }
+
+  .add-code-actions {
+    width: 100%;
+    justify-content: flex-end;
   }
 }
 </style>

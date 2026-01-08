@@ -27,6 +27,7 @@ from ..core.compatibility import (
 )
 
 from fcbyk.commands.pick.controller import start_web_server
+from fcbyk.utils.network import get_private_networks
 
 
 def _run_pick_server_process(
@@ -40,14 +41,12 @@ def _run_pick_server_process(
         port=port,
         no_browser=no_browser,
         files_root=files_root,
-        codes=None,  # codes 参数已弃用，controller 会从持久化文件加载
         admin_password=admin_password,
     )
 
 from fcbyk.utils import storage
 from fcbyk.utils.port import ensure_port_available
 from .pick_items_dialog import PickItemsManagerDialog
-from .pick_codes_dialog import PickCodesDialog
 
 
 class PickPage(QWidget):
@@ -161,9 +160,9 @@ class PickPage(QWidget):
         self._open_btn.setEnabled(False)
         btn_row.addWidget(self._open_btn)
 
-        self._btn_codes = QPushButton("抽奖码")
+        self._btn_codes = QPushButton("管理后台")
         self._btn_codes.setEnabled(False)  # 未启动服务器前禁用
-        self._btn_codes.clicked.connect(self._on_show_codes_clicked)
+        self._btn_codes.clicked.connect(self._on_open_admin)
         btn_row.addWidget(self._btn_codes)
         
         btn_row.addStretch(1)
@@ -206,9 +205,17 @@ class PickPage(QWidget):
         dlg.exec()
         self._update_items_count()
 
-    def _on_show_codes_clicked(self) -> None:
-        """打开抽奖码管理窗口。"""
-        PickCodesDialog(self).exec()
+    def _on_open_admin(self) -> None:
+        """打开 Web 管理后台（/admin）。"""
+        if not self._server_running:
+            return
+
+        try:
+            port = int(self._port_input.text().strip())
+            url = self._build_local_url(port).rstrip("/") + "/admin"
+            webbrowser.open(url)
+        except Exception as e:
+            QMessageBox.warning(self, "错误", "无法打开管理后台: %s" % e)
 
     def _update_items_count(self):
         """更新抽奖元素数量显示"""
@@ -340,8 +347,8 @@ class PickPage(QWidget):
             self._server_running = True
             self._update_ui_state()
 
-            local_url = f"http://127.0.0.1:{port}"
-            network_url = f"http://{self._get_local_ip()}:{port}"
+            local_url = "http://127.0.0.1:%d" % port
+            network_url = self._build_local_url(port)
 
             self._status.setText(f"状态：运行中（端口: {port}，PID: {self._server_proc.pid}）")
             self._log.setText(
@@ -390,22 +397,19 @@ class PickPage(QWidget):
             
         try:
             port = int(self._port_input.text().strip())
-            url = f"http://127.0.0.1:{port}"
+            url = self._build_local_url(port)
             webbrowser.open(url)
         except Exception as e:
-            QMessageBox.warning(self, "错误", f"无法打开浏览器: {e}")
+            QMessageBox.warning(self, "错误", "无法打开浏览器: %s" % e)
 
-    def _get_local_ip(self) -> str:
-        """获取本地IP地址"""
-        try:
-            import socket
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.connect(("8.8.8.8", 80))
-            ip = s.getsockname()[0]
-            s.close()
-            return ip
-        except:
-            return "<本地IP>"
+    def _build_local_url(self, port: int) -> str:
+        """构造本机可被局域网访问的 URL（优先私有网段 IP）。"""
+        private_networks = get_private_networks()
+        if private_networks:
+            local_ip = private_networks[0]["ips"][0]
+        else:
+            local_ip = "127.0.0.1"
+        return "http://%s:%d" % (local_ip, port)
 
     def _prompt_password(self, default_value: str = "123456") -> Optional[str]:
         """弹窗输入管理员密码。
@@ -460,9 +464,9 @@ class PickPage(QWidget):
             self._file_input.setReadOnly(is_running)
             self._file_input.setEnabled((not is_running) and (not self._mode_normal.isChecked()))
 
-        # 抽奖码按钮：文件模式下始终可用
+        # 管理后台按钮：仅在服务器启动后可用
         if hasattr(self, "_btn_codes"):
-            self._btn_codes.setEnabled(not self._mode_normal.isChecked())
+            self._btn_codes.setEnabled(is_running)
 
     def stop_if_running(self):
         """如果服务器正在运行，则停止"""
