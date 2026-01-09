@@ -18,46 +18,6 @@ def test_colored_key_value_returns_string_with_colon(monkeypatch):
     assert calls == [("k", "red"), ("v", "blue")]
 
 
-def test_show_config_when_value_false_does_nothing(monkeypatch):
-    # value=False 时应直接 return，不读配置不退出
-    called = {"load": 0, "exit": 0, "echo": 0}
-
-    monkeypatch.setattr(output, "load_json_config", lambda *a, **k: called.__setitem__("load", called["load"] + 1))
-    monkeypatch.setattr(click, "echo", lambda *a, **k: called.__setitem__("echo", called["echo"] + 1))
-
-    class _Ctx:
-        def exit(self, code=0):
-            called["exit"] += 1
-
-    output.show_config(_Ctx(), None, False, "x.json", {"a": 1})
-    assert called == {"load": 0, "exit": 0, "echo": 0}
-
-
-def test_show_config_prints_and_exits(monkeypatch):
-    # value=True 时：应输出 config file + 所有字段，并 ctx.exit()
-    cfg = {"a": 1, "b": False}
-
-    monkeypatch.setattr(output, "load_json_config", lambda path, default: cfg)
-    monkeypatch.setattr(output, "colored_key_value", lambda k, v, **kw: f"{k}={v}")
-
-    lines = []
-    monkeypatch.setattr(click, "echo", lambda s: lines.append(s))
-
-    class _Ctx:
-        def __init__(self):
-            self.exited = False
-
-        def exit(self, code=0):
-            self.exited = True
-
-    ctx = _Ctx()
-    output.show_config(ctx, None, True, "cfg.json", {"a": 0})
-
-    assert ctx.exited is True
-    assert lines[0] == "config file=cfg.json"
-    assert set(lines[1:]) == {"a=1", "b=False"}
-
-
 def test_echo_network_urls_filters_virtual(monkeypatch):
     monkeypatch.setattr(output, "colored_key_value", lambda k, v, **kw: f"{k}{v}")
 

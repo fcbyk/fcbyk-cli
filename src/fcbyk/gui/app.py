@@ -10,9 +10,7 @@ GUI 应用程序主模块
 import os
 import subprocess
 import sys
-import tempfile
 
-from ..utils.config import get_config_path
 from fcbyk.utils import storage
 from typing import Optional
 

@@ -1,6 +1,5 @@
 import click
 from typing import Any, Dict
-from ..utils.config import load_json_config
 
 def colored_key_value(key: str, value: Any, key_color: str = 'cyan', value_color: str = 'yellow') -> str:
     """
@@ -16,40 +15,6 @@ def colored_key_value(key: str, value: Any, key_color: str = 'cyan', value_color
         str: 彩色格式化字符串
     """
     return f"{click.style(str(key), fg=key_color)}: {click.style(str(value), fg=value_color)}"
-
-
-def show_config(
-    ctx: click.Context,
-    param: Any,
-    value: bool,
-    config_file_url: str,
-    default_config: Dict[str, Any]
-) -> None:
-    """
-    显示指定配置文件内容，并退出 CLI（彩色高亮）。
-
-    输出格式：
-        config file: <路径>   （key 青色，value 黄色）
-        key: value            （key 青色，value 黄色）
-
-    Args:
-        ctx (click.Context): click 上下文对象
-        param (Any): click 参数对象
-        value (bool): 是否触发显示
-        config_file_url (str): 配置文件路径
-        default_config (Dict[str, Any]): 默认配置字典
-    """
-    if not value:
-        return
-
-    config = load_json_config(config_file_url, default_config)
-    
-    click.echo(colored_key_value("config file", config_file_url))
-
-    for key, val in config.items():
-        click.echo(colored_key_value(key, val))
-
-    ctx.exit()
 
 
 def show_dict(
