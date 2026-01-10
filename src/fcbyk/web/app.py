@@ -1,6 +1,6 @@
 import os
 import logging
-from flask import Flask, redirect, send_from_directory, make_response
+from flask import Flask, send_from_directory, make_response
 
 
 # 禁用 Flask 的日志

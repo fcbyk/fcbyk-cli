@@ -11,14 +11,14 @@ import os
 import webbrowser
 
 import click
+from click.utils import R
 import pyperclip
 
 from fcbyk.cli_support.output import echo_network_urls, show_dict
+from fcbyk.cli_support.guard import check_port
 from fcbyk.utils import storage
 from fcbyk.utils.network import get_private_networks
-from fcbyk.utils.port import ensure_port_available
-
-from .controller import create_lansend_app
+from .controller import start_web_server
 from .service import LansendConfig, LansendService
 
 
@@ -123,14 +123,7 @@ def lansend(
         local_ip = "127.0.0.1"
         click.echo(" * Warning: No private network interface found, using localhost")
 
-    try:
-        ensure_port_available(port, host="0.0.0.0")
-    except OSError as e:
-        click.echo(
-            f" Error: Port {port} is already in use (or you don't have permission). "
-            f" Please choose another port (e.g. --port {int(port) + 1})."
-        )
-        click.echo(f" Details: {e}")
+    if not check_port(port):
         return
 
     click.echo(f" Directory: {shared_directory}")
@@ -165,17 +158,4 @@ def lansend(
     if not no_browser:
         webbrowser.open(f"http://{local_ip}:{port}")
     click.echo()
-    app = create_lansend_app(service)
-    from waitress import serve
-
-    # waitress 线程数：按机器性能自适应，避免老机器被过多线程拖慢
-    cpu = os.cpu_count() or 2
-    threads = min(16, max(4, cpu * 2))
-
-    serve(
-        app,
-        host="0.0.0.0",
-        port=port,
-        max_request_body_size=50 * 1024 * 1024 * 1024,
-        threads=threads,
-    )
+    start_web_server(port, service)

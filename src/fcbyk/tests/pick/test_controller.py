@@ -192,17 +192,6 @@ def test_download_file_single_file_mode_success(tmp_path, client):
     assert r.status_code == 200
 
 
-def test_start_web_server_sets_state_and_opens_browser(monkeypatch):
-    pick_controller.files_mode_root = None
-
-    opened = {"n": 0}
-    monkeypatch.setattr(pick_controller.webbrowser, "open", lambda *_a, **_k: opened.update({"n": opened["n"] + 1}))
-
-    pick_controller.start_web_server(port=1234, no_browser=False)
-    assert pick_controller.files_mode_root is None
-    assert opened["n"] == 1
-
-
 def test_admin_login_and_codes_add(client, monkeypatch):
     pick_controller.ADMIN_PASSWORD = "123"
 

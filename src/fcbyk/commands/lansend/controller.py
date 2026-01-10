@@ -45,6 +45,25 @@ def create_lansend_app(service: LansendService):
     return app
 
 
+def start_web_server(port: int, service: LansendService):
+    app = create_spa("lansend.html")
+    app.lansend_service = service
+    register_routes(app, service)
+    from waitress import serve
+
+    # waitress 线程数：按机器性能自适应，避免老机器被过多线程拖慢
+    cpu = os.cpu_count() or 2
+    threads = min(16, max(4, cpu * 2))
+
+    serve(
+        app,
+        host="0.0.0.0",
+        port=port,
+        max_request_body_size=50 * 1024 * 1024 * 1024,
+        threads=threads,
+    )
+
+    
 def _try_int(v) -> Optional[int]:
     try:
         return int(v) if v is not None else None

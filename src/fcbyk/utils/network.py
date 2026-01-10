@@ -84,3 +84,15 @@ def get_private_networks(include_loopback: bool = False):
     # 按优先级排序
     results.sort(key=lambda x: x['priority'])
     return results
+
+
+def ensure_port_available(port: int, host: str = "0.0.0.0") -> None:
+    """确保端口可用，否则抛出 OSError。
+
+    说明：
+    - 不启用 SO_REUSEADDR，避免在部分平台/场景下出现“端口已被占用但 bind 仍成功”的误判。
+    - 调用方可以捕获 OSError 并输出友好提示。
+    """
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind((host, int(port)))

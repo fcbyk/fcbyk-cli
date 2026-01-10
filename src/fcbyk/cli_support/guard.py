@@ -1,21 +1,23 @@
-"""CLI guard / 验证工具
-
-这里放置“面向 CLI 的保护性工具函数”，用于：
-- 读取用户可编辑的数据文件
-- 在文件损坏/格式不对时给出友好错误提示
-- 并以一致的方式退出（ctx.exit）
-
-注意：
-- 这里可以依赖 click（因为它属于 CLI 边界层）。
-- 不要把这类逻辑放到 utils/storage.py（storage 应保持纯 IO，不依赖 click）。
+"""
+CLI guard / 验证工具
 """
 
-import json
+import json, click
 from typing import Any, Dict, Optional
+from fcbyk.utils import storage, network
 
-import click
 
-from fcbyk.utils import storage
+def check_port(port: int, host: str = "0.0.0.0", output_prefix: str = " ") -> bool:
+    try:
+        network.ensure_port_available(port=port, host=host)
+    except OSError as e:
+        click.echo(
+            f"{output_prefix}Error: Port {port} is already in use (or you don't have permission). "
+            f"{output_prefix}Please choose another port (e.g. --port {int(port) + 1})."
+        )
+        click.echo(f"{output_prefix}Details: {e}\n")
+        return False
+    return True
 
 
 def load_json_object_or_exit(

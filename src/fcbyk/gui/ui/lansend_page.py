@@ -30,7 +30,7 @@ from ..core.compatibility import (
     QWidget,
 )
 
-from fcbyk.commands.lansend.controller import create_lansend_app
+from fcbyk.commands.lansend.controller import start_web_server
 from fcbyk.commands.lansend.service import LansendConfig, LansendService
 from fcbyk.utils.network import get_private_networks
 from fcbyk.utils.port import ensure_port_available
@@ -55,20 +55,7 @@ def _run_lansend_server_process(
         chat_enabled=chat_enabled,
     )
     service = LansendService(config)
-    app = create_lansend_app(service)
-
-    from waitress import serve
-
-    cpu = os.cpu_count() or 2
-    threads = min(16, max(4, cpu * 2))
-
-    serve(
-        app,
-        host="0.0.0.0",
-        port=port,
-        max_request_body_size=50 * 1024 * 1024 * 1024,
-        threads=threads,
-    )
+    start_web_server(port, service)
 
 
 class LansendPage(QWidget):
