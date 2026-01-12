@@ -404,10 +404,7 @@ class PickPage(QWidget):
     def _build_local_url(self, port: int) -> str:
         """构造本机可被局域网访问的 URL（优先私有网段 IP）。"""
         private_networks = get_private_networks()
-        if private_networks:
-            local_ip = private_networks[0]["ips"][0]
-        else:
-            local_ip = "127.0.0.1"
+        local_ip = private_networks[0]["ips"][0]
         return "http://%s:%d" % (local_ip, port)
 
     def _prompt_password(self, default_value: str = "123456") -> Optional[str]:

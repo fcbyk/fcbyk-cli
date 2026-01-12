@@ -5,7 +5,7 @@ import pytest
 from bs4 import BeautifulSoup
 
 from fcbyk.commands.lansend.service import LansendConfig, LansendService
-from fcbyk.commands.lansend.controller import create_lansend_app
+from fcbyk.commands.lansend.controller import start_web_server
 
 
 @pytest.fixture
@@ -20,7 +20,7 @@ def temp_dir():
 @pytest.fixture
 def client(temp_dir):
     service = LansendService(LansendConfig(shared_directory=temp_dir))
-    app = create_lansend_app(service)
+    app = start_web_server(0, service, run_server=False)
     app.config['TESTING'] = True
     with app.test_client() as client:
         yield client

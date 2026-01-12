@@ -11,10 +11,8 @@ import os
 import webbrowser
 
 import click
-from click.utils import R
-import pyperclip
 
-from fcbyk.cli_support.output import echo_network_urls, show_dict
+from fcbyk.cli_support.output import echo_network_urls, show_dict, copy_to_clipboard
 from fcbyk.cli_support.guard import check_port
 from fcbyk.utils import storage
 from fcbyk.utils.network import get_private_networks
@@ -117,11 +115,7 @@ def lansend(
     
     click.echo()
     private_networks = get_private_networks()
-    if private_networks:
-        local_ip = private_networks[0]["ips"][0]
-    else:
-        local_ip = "127.0.0.1"
-        click.echo(" * Warning: No private network interface found, using localhost")
+    local_ip = private_networks[0]["ips"][0]
 
     if not check_port(port):
         return
@@ -130,12 +124,7 @@ def lansend(
     if config.upload_password:
         click.echo(" Upload Password: Enabled")
     echo_network_urls(private_networks, port, include_virtual=True)
-
-    try:
-        pyperclip.copy(f"http://{local_ip}:{port}")
-        click.echo(" URL has been copied to clipboard")
-    except Exception:
-        click.echo(" Warning: Could not copy URL to clipboard")
+    copy_to_clipboard(f"http://{local_ip}:{port}")
 
     if save:
         try:

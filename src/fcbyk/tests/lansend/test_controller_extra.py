@@ -18,7 +18,7 @@ def app_client(tmp_path):
 
     service = lansend_service_mod.LansendService(cfg)
 
-    app = lansend_controller.create_lansend_app(service)
+    app = lansend_controller.start_web_server(0, service, run_server=False)
     app.config["TESTING"] = True
 
     with app.test_client() as c:

@@ -3,14 +3,13 @@ slide 命令行接口模块
 提供 PPT 远程控制的 CLI 命令
 """
 import click
-import pyperclip
 
 from fcbyk.utils.network import get_private_networks
 from fcbyk.cli_support.guard import check_port
 
 from .service import SlideService
 from .controller import create_slide_app
-from fcbyk.cli_support.output import echo_network_urls
+from fcbyk.cli_support.output import echo_network_urls, copy_to_clipboard
 
 
 @click.command(name='slide', help='Start PPT remote control server, control slides via mobile web page')
@@ -47,11 +46,7 @@ def slide(port):
     
     # 获取网络信息
     private_networks = get_private_networks()
-    if private_networks:
-        local_ip = private_networks[0]["ips"][0]
-    else:
-        local_ip = "127.0.0.1"
-        click.echo(" Warning: No private network interface found, using localhost")
+    local_ip = private_networks[0]["ips"][0]
         
     # 显示启动信息
     click.echo(f" PPT Remote Control Server")
@@ -59,11 +54,7 @@ def slide(port):
     click.echo(f" Open the URL above on your mobile device to control")
 
     # 复制 URL 到剪贴板
-    try:
-        pyperclip.copy(f"http://{local_ip}:{port}")
-        click.echo(" URL has been copied to clipboard")
-    except:
-        click.echo(" Warning: Could not copy URL to clipboard")
+    copy_to_clipboard(f"http://{local_ip}:{port}")
     
     click.echo()
 

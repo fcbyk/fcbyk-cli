@@ -3,7 +3,7 @@ import tempfile
 import pytest
 
 from fcbyk.commands.lansend.service import LansendConfig, LansendService
-from fcbyk.commands.lansend.controller import create_lansend_app
+from fcbyk.commands.lansend.controller import start_web_server
 
 
 @pytest.fixture
@@ -23,7 +23,7 @@ def lansend_service(temp_dir):
 
 @pytest.fixture
 def client(lansend_service):
-    app = create_lansend_app(lansend_service)
+    app = start_web_server(0, lansend_service, run_server=False)
     app.config['TESTING'] = True
     with app.test_client() as client:
         yield client

@@ -34,14 +34,12 @@ def detect_iface_type(iface: str):
     return 'unknown', False, 50
 
 
-def get_private_networks(include_loopback: bool = False):
+def get_private_networks():
     """
     获取所有私有 IPv4 地址及网卡信息，并按优先级排序。
 
     排序后第一个元素通常是最推荐的局域网 IP。
-
-    Args:
-        include_loopback (bool): 是否包含回环地址（127.0.0.1）
+    如果没有可用的私有网络，会自动包含回环地址 127.0.0.1 作为回退方案。
 
     Returns:
         list[dict]: 每个元素为字典，包含：
@@ -65,7 +63,7 @@ def get_private_networks(include_loopback: bool = False):
             ip = addr.address
 
             # 排除非私有地址
-            if ip.startswith('127.') and not include_loopback:
+            if ip.startswith('127.'):
                 continue  # 回环地址
             if ip.startswith('169.254.'):
                 continue  # APIPA 地址
@@ -83,6 +81,17 @@ def get_private_networks(include_loopback: bool = False):
 
     # 按优先级排序
     results.sort(key=lambda x: x['priority'])
+    
+    # 如果没有可用网络，添加回环地址作为回退
+    if not results:
+        results.append({
+            "iface": "localhost",
+            "ips": ["127.0.0.1"],
+            "type": "loopback",
+            "virtual": True,
+            "priority": 100
+        })
+    
     return results
 
 

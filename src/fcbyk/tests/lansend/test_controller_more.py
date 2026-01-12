@@ -11,7 +11,7 @@ def test_api_directory_when_no_shared_dir_returns_error():
     cfg = lansend_service_mod.LansendConfig(shared_directory=None)
     service = lansend_service_mod.LansendService(cfg)
 
-    app = lansend_controller.create_lansend_app(service)
+    app = lansend_controller.start_web_server(0, service, run_server=False)
     app.config["TESTING"] = True
 
     with app.test_client() as c:
@@ -27,7 +27,7 @@ def test_api_download_path_traversal_returns_not_ok(tmp_path):
     cfg = lansend_service_mod.LansendConfig(shared_directory=str(tmp_path))
     service = lansend_service_mod.LansendService(cfg)
 
-    app = lansend_controller.create_lansend_app(service)
+    app = lansend_controller.start_web_server(0, service, run_server=False)
     app.config["TESTING"] = True
 
     with app.test_client() as c:

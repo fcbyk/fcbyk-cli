@@ -4,7 +4,7 @@ lansend controller 层
 负责 Flask 路由注册、请求解析、调用 service 并返回响应。
 
 函数:
-- create_lansend_app(service) -> Flask: 创建并配置 Flask 应用
+- start_web_server(port, service, run_server=True) -> Optional[Flask]: 启动 Web 服务器或仅返回 Flask 应用
 - _try_int(v) -> Optional[int]: 安全地将值转换为整数
 - register_routes(app, service): 注册所有 API 路由
 - register_upload_routes(app, service): 注册文件上传相关路由
@@ -38,17 +38,14 @@ import urllib.parse
 _chat_messages: List[Dict[str, Any]] = []
 
 
-def create_lansend_app(service: LansendService):
+def start_web_server(port: int, service: LansendService, run_server: bool = True):
     app = create_spa("lansend.html")
     app.lansend_service = service
     register_routes(app, service)
-    return app
-
-
-def start_web_server(port: int, service: LansendService):
-    app = create_spa("lansend.html")
-    app.lansend_service = service
-    register_routes(app, service)
+    
+    if not run_server:
+        return app
+        
     from waitress import serve
 
     # waitress 线程数：按机器性能自适应，避免老机器被过多线程拖慢

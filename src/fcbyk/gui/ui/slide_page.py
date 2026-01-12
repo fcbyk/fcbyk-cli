@@ -168,7 +168,7 @@ class SlidePage(QWidget):
     def _resolve_local_ip(self) -> str:
         """获取本地 IP 地址（用于生成访问 URL）。"""
         networks = get_private_networks()
-        return networks[0]["ips"][0] if networks and networks[0].get("ips") else "127.0.0.1"
+        return networks[0]["ips"][0]
 
     def _on_start_clicked(self):
         """启动 Slide 服务。"""

@@ -30,7 +30,7 @@ def test_detect_iface_type():
 def test_get_private_networks_loopback_logic():
     """测试 get_private_networks() 对回环地址的处理逻辑。"""
     # 注意：get_private_networks 只收集私有网段（10./192.168./172.），
-    # 127.* 即使 include_loopback=True 也不会被加入最终列表。
+    # 127.* 不会被加入最终列表，除非没有其他网络
     mock_addrs = {
         "loopback": [
             _addr(socket.AF_INET, "127.0.0.1"),
@@ -38,8 +38,14 @@ def test_get_private_networks_loopback_logic():
     }
 
     with patch("psutil.net_if_addrs", return_value=mock_addrs):
-        assert get_private_networks(include_loopback=True) == []
-        assert get_private_networks(include_loopback=False) == []
+        # 当没有可用网络时，会返回包含回环地址的列表
+        result = get_private_networks()
+        
+        # 应该返回包含回环地址的列表，因为没有其他网络
+        assert len(result) == 1
+        assert result[0]["iface"] == "localhost"
+        assert result[0]["ips"] == ["127.0.0.1"]
+        assert result[0]["type"] == "loopback"
 
 
 def test_get_private_networks_filters_and_sorts():
@@ -74,9 +80,13 @@ def test_get_private_networks_filters_and_sorts():
 
 
 def test_get_private_networks_no_valid_ips():
-    """测试当 psutil 返回的网卡不含有效 IP 时，结果为空列表。"""
+    """测试当 psutil 返回的网卡不含有效 IP 时，结果为包含回环地址的列表。"""
     with patch("psutil.net_if_addrs", return_value={"Ethernet": []}):
-        assert get_private_networks() == []
+        result = get_private_networks()
+        assert len(result) == 1
+        assert result[0]["iface"] == "localhost"
+        assert result[0]["ips"] == ["127.0.0.1"]
+        assert result[0]["type"] == "loopback"
 
 
 def test_get_private_networks_skips_non_ipv4():
@@ -88,4 +98,9 @@ def test_get_private_networks_skips_non_ipv4():
     }
 
     with patch("psutil.net_if_addrs", return_value=mock_addrs):
-        assert get_private_networks() == []
+        result = get_private_networks()
+        # 当只有 IPv6 地址时，会返回包含回环地址的列表
+        assert len(result) == 1
+        assert result[0]["iface"] == "localhost"
+        assert result[0]["ips"] == ["127.0.0.1"]
+        assert result[0]["type"] == "loopback"

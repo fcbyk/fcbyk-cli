@@ -299,10 +299,7 @@ class LansendPage(QWidget):
 
     def _build_local_url(self, port: int) -> str:
         private_networks = get_private_networks()
-        if private_networks:
-            local_ip = private_networks[0]["ips"][0]
-        else:
-            local_ip = "127.0.0.1"
+        local_ip = private_networks[0]["ips"][0]
         return f"http://{local_ip}:{port}"
 
     def _on_open_in_browser(self) -> None:

@@ -12,17 +12,19 @@ def test_slide_help():
 
 
 def test_slide_cli_uses_localhost_when_no_network(monkeypatch):
-    # 只测试：当 get_private_networks 返回空时，会提示 warning，且不会真的启动服务器
+    # 测试：当只有回环地址可用时，CLI 能正常工作
     slide_cli = importlib.import_module("fcbyk.commands.slide.cli")
 
     # prompt 返回密码
     monkeypatch.setattr("click.prompt", lambda *a, **k: "p")
 
-    # 无网卡
-    monkeypatch.setattr(slide_cli, "get_private_networks", lambda: [])
+    # 模拟只有回环地址的情况
+    monkeypatch.setattr(slide_cli, "get_private_networks", lambda: [
+        {"iface": "localhost", "ips": ["127.0.0.1"], "type": "loopback", "virtual": True, "priority": 100}
+    ])
 
     # 避免真实剪贴板
-    monkeypatch.setattr(slide_cli.pyperclip, "copy", lambda *_: None)
+    monkeypatch.setattr(slide_cli, "copy_to_clipboard", lambda *_: None)
     
     # 端口占用检测在测试环境可能误判，直接 mock 掉
     monkeypatch.setattr(slide_cli, "check_port", lambda *a, **k: True)
@@ -46,6 +48,5 @@ def test_slide_cli_uses_localhost_when_no_network(monkeypatch):
     r = runner.invoke(slide_cli.slide, ["--port", "1234"])
 
     assert r.exit_code == 0
-    assert "No private network interface found" in r.output
     assert run_kwargs["host"] == "0.0.0.0"
     assert run_kwargs["port"] == 1234

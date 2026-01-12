@@ -75,6 +75,27 @@ def echo_network_urls(networks: list, port: int, include_virtual: bool = False):
             continue  # 跳过虚拟网卡
 
         for ip in net["ips"]:
+            # 排除回环地址，避免与前面的本地地址重复
+            if ip == "127.0.0.1":
+                continue
             click.echo(colored_key_value(f" [{net['iface']}] Network URL:", f"http://{ip}:{port}", key_color=None, value_color="cyan"))
 
+def copy_to_clipboard(text: str, label: str = "URL", output_prefix: str = " ", silent: bool = False):
+    """
+    将文本复制到剪贴板，并根据结果打印 Click 提示。
     
+    text: 要复制的内容
+    label: 内容的名称，用于提示语（如 "URL", "Password" 等）
+    output_prefix: 输出前缀（默认空格）
+    silent: 是否静默执行（不打印提示）
+    """
+    import pyperclip
+    import click
+    
+    try:
+        pyperclip.copy(text)
+        if not silent:
+            click.echo(f"{output_prefix}{label} has been copied to clipboard")
+    except Exception:
+        if not silent:
+            click.echo(f"{output_prefix}Warning: Could not copy {label} to clipboard")
