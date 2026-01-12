@@ -17,6 +17,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import ItemPick from './ItemPick.vue'
 import FilePick from './FilePick.vue'
 import Admin from './Admin.vue'
+import AdminLogin from './Login.vue'
 import { fetchInfo } from './api'
 
 // 动态获取 base 路径
@@ -47,6 +48,11 @@ const router = createRouter({
       path: '/admin',
       name: 'admin',
       component: Admin
+    },
+    {
+      path: '/admin/login',
+      name: 'admin-login',
+      component: AdminLogin
     }
   ]
 })
@@ -72,8 +78,11 @@ router.beforeEach(async (to, _from, next) => {
   // 获取当前路径（去除 base 路径）
   const path = to.path
   const basePath = getBasePath()
-  // 标准化路径：移除 base 路径前缀
-  const normalizedPath = basePath !== '/' ? path.replace(basePath, '') || '/' : path
+  // 标准化路径：移除 base 路径前缀，确保以 / 开头
+  let normalizedPath = basePath !== '/' ? path.replace(basePath, '') : path
+  if (!normalizedPath.startsWith('/')) {
+    normalizedPath = '/' + normalizedPath
+  }
   
   try {
     const info = await getInfo()
@@ -85,14 +94,24 @@ router.beforeEach(async (to, _from, next) => {
     }
     
     // 如果不是文件模式，访问 /f 或 /admin 时跳转到 /
-    if ((normalizedPath === '/f' || normalizedPath === '/admin') && !info.files_mode) {
+    if ((normalizedPath === '/f' || normalizedPath.startsWith('/admin')) && !info.files_mode) {
       next('/')
+      return
+    }
+
+    // 管理后台登录检查
+    if (normalizedPath === '/admin' && sessionStorage.getItem('admin_authed') !== '1') {
+      next('/admin/login')
+      return
+    }
+    if (normalizedPath === '/admin/login' && sessionStorage.getItem('admin_authed') === '1') {
+      next('/admin')
       return
     }
   } catch (error) {
     // 如果获取启动信息失败，对于 /f 和 /admin 路径，默认跳转到 /
     // 因为如果后端不支持文件模式，这些路径不应该存在
-    if (normalizedPath === '/f' || normalizedPath === '/admin') {
+    if (normalizedPath === '/f' || normalizedPath.startsWith('/admin')) {
       next('/')
       return
     }

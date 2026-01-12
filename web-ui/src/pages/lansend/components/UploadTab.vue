@@ -3,8 +3,8 @@
     <!-- 需要密码但尚未验证：隐藏上传框，展示登录卡片 -->
     <div v-if="requirePassword && !canUpload" class="login-gate">
       <div class="login-card">
-        <div class="login-title">需要登录后才能上传</div>
-        <div class="login-subtitle">本分享已开启上传密码保护</div>
+        <div class="login-title">需要验证密码</div>
+        <div class="login-subtitle">上传已开启密码保护</div>
 
         <input
           v-if="showPasswordInput"
@@ -13,7 +13,7 @@
           :class="{ shake: shouldShake }"
           :value="password"
           type="password"
-          placeholder="请输入上传密码"
+          placeholder="请输入密码"
           autocomplete="off"
           autocapitalize="off"
           autocorrect="off"
@@ -25,7 +25,7 @@
 
         <div class="login-actions">
           <button class="login-btn" type="button" @click="onLoginClick">
-            {{ showPasswordInput ? '登录' : '输入密码' }}
+            {{ showPasswordInput ? '确认密码' : '输入密码' }}
           </button>
         </div>
 
