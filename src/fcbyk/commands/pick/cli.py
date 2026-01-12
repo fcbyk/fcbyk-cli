@@ -15,12 +15,11 @@ pick 命令行接口模块
 import click
 
 from fcbyk.cli_support.output import show_dict
-from fcbyk.cli_support.guard import load_json_object_or_exit, ensure_list_field
+from fcbyk.cli_support.guard import load_json_object_or_exit, ensure_list_field, check_port
 from fcbyk.utils import storage
 
 from .service import PickService
 from .controller import start_web_server
-from fcbyk.utils.port import ensure_port_available
 
 # items 持久化数据文件：~/.fcbyk/data/pick_data.json
 data_file = storage.get_path('pick_data.json', subdir='data')
@@ -82,11 +81,7 @@ def pick(ctx, add, remove, clear, show_list, web, port, no_browser, files, passw
 
     # 端口占用检测
     if files or web:
-        try:
-            ensure_port_available(port, host="0.0.0.0")
-        except OSError as e:
-            click.echo(f" Error: Port {port} is already in use (or you don't have permission). Please choose another port (e.g. --port {int(port) + 1}).")
-            click.echo(f" Details: {e}")
+        if not check_port(port):
             return
 
     if show_list:

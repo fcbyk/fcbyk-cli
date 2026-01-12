@@ -28,6 +28,7 @@ from ..core.compatibility import (
 
 from fcbyk.commands.pick.controller import start_web_server
 from fcbyk.utils.network import get_private_networks
+from fcbyk.cli_support.guard import check_port
 
 
 def _run_pick_server_process(
@@ -45,7 +46,7 @@ def _run_pick_server_process(
     )
 
 from fcbyk.utils import storage
-from fcbyk.utils.port import ensure_port_available
+
 from .pick_items_dialog import PickItemsManagerDialog
 
 
@@ -257,10 +258,8 @@ class PickPage(QWidget):
             return
 
         # 检查端口占用
-        try:
-            ensure_port_available(port, host="0.0.0.0")
-        except OSError as e:
-            QMessageBox.critical(self, "端口被占用", f"端口 {port} 已被占用，请更换端口后重试。\n\n{str(e)}")
+        if not check_port(port, silent=True):
+            QMessageBox.critical(self, "端口被占用", f"端口 {port} 已被占用，请更换端口后重试。")
             return
 
         # 获取其他参数

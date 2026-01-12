@@ -113,7 +113,7 @@ def test_pick_web_calls_start_web_server(monkeypatch):
     monkeypatch.setattr(pick_cli, "start_web_server", _start)
 
     # 避免真实端口占用检测影响测试
-    monkeypatch.setattr(pick_cli, "ensure_port_available", lambda *_a, **_k: None)
+    monkeypatch.setattr(pick_cli, "check_port", lambda *_a, **_k: True)
 
     from click.testing import CliRunner
 
@@ -153,6 +153,7 @@ def test_pick_files_mode_prompts_password(monkeypatch, tmp_path):
         called.update(kwargs)
 
     monkeypatch.setattr(pick_cli, "start_web_server", _start)
+    monkeypatch.setattr(pick_cli, "check_port", lambda *_a, **_k: True)
 
     from click.testing import CliRunner
 

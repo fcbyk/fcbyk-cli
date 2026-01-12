@@ -5,12 +5,12 @@ slide 命令行接口模块
 import click
 import pyperclip
 
-from fcbyk.utils.port import ensure_port_available
+from fcbyk.utils.network import get_private_networks
+from fcbyk.cli_support.guard import check_port
 
 from .service import SlideService
 from .controller import create_slide_app
 from fcbyk.cli_support.output import echo_network_urls
-from fcbyk.utils.network import get_private_networks
 
 
 @click.command(name='slide', help='Start PPT remote control server, control slides via mobile web page')
@@ -23,14 +23,7 @@ def slide(port):
     """启动 PPT 远程控制服务器"""
 
     # 端口占用检测
-    try:
-        ensure_port_available(port, host="0.0.0.0")
-    except OSError as e:
-        click.echo(
-            f" Error: Port {port} is already in use (or you don't have permission). "
-            f" Please choose another port (e.g. --port {int(port) + 1})."
-        )
-        click.echo(f" * Details: {e}")
+    if not check_port(port):
         return
     
     # 提示用户设置密码

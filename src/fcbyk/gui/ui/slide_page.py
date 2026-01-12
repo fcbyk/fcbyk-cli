@@ -26,7 +26,7 @@ from ..core.compatibility import (
 )
 
 from ...utils.network import get_private_networks
-from ...utils.port import ensure_port_available
+from fcbyk.cli_support.guard import check_port
 
 
 @dataclass
@@ -190,10 +190,8 @@ class SlidePage(QWidget):
             return
 
         # 检查端口占用
-        try:
-            ensure_port_available(port, host="0.0.0.0")
-        except OSError as e:
-            QMessageBox.critical(self, "端口不可用", f"端口 {port} 已被占用或无权限使用。\n\n{e}")
+        if not check_port(port, silent=True):
+            QMessageBox.critical(self, "端口不可用", f"端口 {port} 已被占用或无权限使用。")
             return
 
         # 启动子进程

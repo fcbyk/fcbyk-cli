@@ -33,7 +33,7 @@ from ..core.compatibility import (
 from fcbyk.commands.lansend.controller import start_web_server
 from fcbyk.commands.lansend.service import LansendConfig, LansendService
 from fcbyk.utils.network import get_private_networks
-from fcbyk.utils.port import ensure_port_available
+from fcbyk.cli_support.guard import check_port
 from fcbyk.utils import storage
 
 
@@ -295,12 +295,7 @@ class LansendPage(QWidget):
     @staticmethod
     def _is_port_available(port: int, host: str = "0.0.0.0") -> bool:
         """检测端口是否可用。"""
-
-        try:
-            ensure_port_available(port=port, host=host)
-            return True
-        except OSError:
-            return False
+        return check_port(port, host=host, silent=True)
 
     def _build_local_url(self, port: int) -> str:
         private_networks = get_private_networks()

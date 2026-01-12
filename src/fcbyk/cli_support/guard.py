@@ -7,15 +7,16 @@ from typing import Any, Dict, Optional
 from fcbyk.utils import storage, network
 
 
-def check_port(port: int, host: str = "0.0.0.0", output_prefix: str = " ") -> bool:
+def check_port(port: int, host: str = "0.0.0.0", output_prefix: str = " ", silent: bool = False) -> bool:
     try:
         network.ensure_port_available(port=port, host=host)
     except OSError as e:
-        click.echo(
-            f"{output_prefix}Error: Port {port} is already in use (or you don't have permission). "
-            f"{output_prefix}Please choose another port (e.g. --port {int(port) + 1})."
-        )
-        click.echo(f"{output_prefix}Details: {e}\n")
+        if not silent:
+            click.echo(
+                f"{output_prefix}Error: Port {port} is already in use (or you don't have permission). "
+                f"{output_prefix}Please choose another port (e.g. --port {int(port) + 1})."
+            )
+            click.echo(f"{output_prefix}Details: {e}\n")
         return False
     return True
 
