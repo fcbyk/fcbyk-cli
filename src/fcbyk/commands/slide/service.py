@@ -45,6 +45,14 @@ except Exception:
         @staticmethod
         def hscroll(*args, **kwargs):
             pass
+
+        @staticmethod
+        def mouseDown(*args, **kwargs):
+            pass
+
+        @staticmethod
+        def mouseUp(*args, **kwargs):
+            pass
     
     pyautogui = MockPyAutoGUI()
 
