@@ -20,6 +20,8 @@ export function useAuth() {
 
   /** 登录 */
   async function login(password: string) {
+    errorMessage.value = ''
+    
     if (!password.trim()) {
       errorMessage.value = '请输入密码'
       return false
@@ -35,11 +37,17 @@ export function useAuth() {
         isAuthenticated.value = true
         return true
       } else {
-        errorMessage.value = result.message || '登录失败'
+        // 将可能的英文错误消息映射为中文
+        const msg = result.message || ''
+        if (msg.toLowerCase().includes('password') || msg.toLowerCase().includes('invalid')) {
+          errorMessage.value = '密码错误'
+        } else {
+          errorMessage.value = msg || '登录失败'
+        }
         return false
       }
     } catch (error) {
-      errorMessage.value = '网络错误，请重试'
+      errorMessage.value = '服务器异常，请稍后重试'
       return false
     } finally {
       isLoading.value = false

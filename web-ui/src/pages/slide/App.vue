@@ -1,11 +1,12 @@
 <template>
-  <div>
+  <div class="app-container">
     <!-- 登录界面 -->
     <LoginView
       v-if="!isAuthenticated"
       :is-loading="isLoading"
       :error-message="errorMessage"
       @login="handleLogin"
+      @clear-error="clearError"
     />
 
     <!-- 触摸板界面 -->
@@ -25,7 +26,7 @@ import { initSocket } from './socket'
 useViewport()
 
 // 认证逻辑
-const { isAuthenticated, isLoading, errorMessage, login } = useAuth()
+const { isAuthenticated, isLoading, errorMessage, login, clearError } = useAuth()
 
 // 登录处理
 async function handleLogin(password: string) {
@@ -44,3 +45,13 @@ watch(isAuthenticated, (authenticated) => {
   }
 })
 </script>
+
+<style lang="scss">
+.app-container {
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+</style>
