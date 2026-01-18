@@ -15,15 +15,28 @@
 </template>
 
 <script setup lang="ts">
-import { watch } from 'vue'
+import { watch, onMounted, onUnmounted } from 'vue'
 import LoginView from './components/LoginView.vue'
 import TouchpadView from './components/TouchpadView.vue'
 import { useAuth } from './composables/useAuth'
 import { useViewport } from './composables/useViewport'
+import { useTheme } from './composables/useTheme'
 import { initSocket } from './socket'
 
 // 修复移动端视口高度
 useViewport()
+
+// 主题管理
+const { initTheme, mediaQuery, handleThemeChange } = useTheme()
+
+onMounted(() => {
+  initTheme()
+  mediaQuery.addEventListener('change', handleThemeChange)
+})
+
+onUnmounted(() => {
+  mediaQuery.removeEventListener('change', handleThemeChange)
+})
 
 // 认证逻辑
 const { isAuthenticated, isLoading, errorMessage, login, clearError } = useAuth()

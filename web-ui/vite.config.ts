@@ -133,6 +133,13 @@ export default defineConfig({
       '@shared': resolve(__dirname, 'src/shared')
     }
   },
+  css: {
+    preprocessorOptions: {
+      scss: {
+        api: 'modern'
+      }
+    }
+  },
   build: {
     rollupOptions: {
       input: pageEntries

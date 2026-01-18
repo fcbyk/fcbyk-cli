@@ -6,6 +6,8 @@
 import { io, Socket } from 'socket.io-client'
 
 let socket: Socket | null = null
+let latency = 0
+let latencyTimer: any = null
 
 /** 初始化 WebSocket 连接 */
 export function initSocket(onConnect?: () => void, onDisconnect?: () => void): Socket {
@@ -17,20 +19,70 @@ export function initSocket(onConnect?: () => void, onDisconnect?: () => void): S
 
   socket.on('connect', () => {
     console.log('WebSocket connected')
+    startLatencyMeasurement()
     onConnect?.()
   })
 
   socket.on('disconnect', () => {
     console.log('WebSocket disconnected')
+    stopLatencyMeasurement()
     onDisconnect?.()
+  })
+
+  socket.on('connect_error', (error) => {
+    console.log('WebSocket connection error:', error)
+    // 只有在连接建立失败时检查认证状态
+    // 如果是服务器关闭导致的错误，checkAuth 也会失败或返回 false
+    // 但我们的 handleResponse 会在 401 时触发 unauthorized 事件
+    import('./api').then(({ checkAuth }) => {
+      checkAuth()
+    })
   })
 
   return socket
 }
 
+/** 开始延迟测量 */
+function startLatencyMeasurement() {
+  if (latencyTimer) return
+  
+  const measure = () => {
+    if (socket && socket.connected) {
+      const start = Date.now()
+      socket.emit('ping_server', () => {
+        latency = Date.now() - start
+      })
+    }
+  }
+
+  measure()
+  latencyTimer = setInterval(measure, 3000) // 每 3 秒测量一次
+}
+
+/** 停止延迟测量 */
+function stopLatencyMeasurement() {
+  if (latencyTimer) {
+    clearInterval(latencyTimer)
+    latencyTimer = null
+  }
+  latency = 0
+}
+
+/** 获取当前延迟 (ms) */
+export function getLatency(): number {
+  return latency
+}
+
 /** 获取 Socket 实例 */
 export function getSocket(): Socket | null {
   return socket
+}
+
+/** 手动连接 Socket */
+export function connectSocket(): void {
+  if (socket && !socket.connected) {
+    socket.connect()
+  }
 }
 
 /** 检查连接状态 */

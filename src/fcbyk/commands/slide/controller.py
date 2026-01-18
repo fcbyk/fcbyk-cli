@@ -82,6 +82,12 @@ def register_routes(app, service: SlideService):
             return jsonify({'status': 'success', 'authenticated': True})
         else:
             return jsonify({'status': 'success', 'authenticated': False})
+
+    @app.route('/api/logout', methods=['POST'])
+    def logout():
+        """退出登录"""
+        session.clear()
+        return jsonify({'status': 'success', 'message': 'Logged out'})
     
     # ============ PPT 控制 API ============
     
@@ -213,3 +219,9 @@ def register_socketio_events(socketio: SocketIO, service: SlideService):
         dx = data.get('dx', 0)
         dy = data.get('dy', 0)
         service.scroll_mouse(dx, dy)
+
+    @socketio.on('ping_server')
+    @require_socketio_auth
+    def handle_ping_server():
+        """用于延迟测试的 Ping"""
+        return 'pong'

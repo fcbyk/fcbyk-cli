@@ -70,14 +70,29 @@ body {
       width: 0.5rem;
       height: 0.5rem;
       border-radius: 50%;
-      background-color: #22C55E;
-      box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+      background-color: #EF4444;
+      box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+      transition: all 0.3s ease;
     }
 
     .status-text {
       font-size: 0.875rem;
       font-weight: 600;
       color: var(--text-secondary);
+    }
+
+    .latency-text {
+      font-size: 0.75rem;
+      color: #22C55E;
+      font-family: monospace;
+      opacity: 0.8;
+    }
+
+    &.connected {
+      .dot {
+        background-color: #22C55E;
+        box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+      }
     }
   }
 
@@ -109,6 +124,79 @@ body {
       width: 1.25rem;
       height: 1.25rem;
     }
+  }
+
+  /* Settings Menu */
+  .settings-menu-container {
+    position: relative;
+    display: inline-block;
+  }
+
+  .settings-dropdown {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    min-width: max-content;
+    max-width: 50vw;
+    z-index: 999; /* 确保在最顶层 */
+    overflow: hidden;
+    padding: 0.25rem;
+    pointer-events: auto; /* 确保可点击 */
+    -webkit-appearance: none; /* 移除 Safari 默认样式 */
+  }
+
+  .menu-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    cursor: pointer;
+    border-radius: 0.5rem;
+    transition: all 0.2s;
+    white-space: nowrap;
+
+    &:hover {
+      background-color: var(--icon-hover);
+    }
+
+    &:active {
+      background-color: var(--border);
+    }
+
+    &.logout {
+      color: #EF4444;
+      
+      &:hover {
+        background-color: rgba(239, 68, 68, 0.05);
+      }
+      
+      &:active {
+        background-color: rgba(239, 68, 68, 0.1);
+      }
+    }
+
+    .menu-icon {
+      flex-shrink: 0;
+    }
+  }
+
+  /* Animations */
+  .fade-slide-enter-active,
+  .fade-slide-leave-active {
+    transition: all 0.2s ease-out;
+  }
+
+  .fade-slide-enter-from,
+  .fade-slide-leave-to {
+    opacity: 0;
+    transform: translateY(-10px);
   }
 
   /* Main Content */

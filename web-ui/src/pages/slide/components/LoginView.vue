@@ -57,6 +57,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { Sun, Moon, Key, ChevronRight } from 'lucide-vue-next'
+import { useTheme } from '../composables/useTheme'
 import '@fontsource/syncopate/700.css'
 import '@fontsource/space-mono/400.css'
 
@@ -80,13 +81,13 @@ const emit = defineEmits<Emits>()
 const password = ref('')
 const passwordInputRef = ref<HTMLInputElement | null>(null)
 
-// 暗色模式状态
-const isDark = ref(document.documentElement.classList.contains('dark'))
+// 暗色模式管理
+const { isDark, toggleDarkMode } = useTheme()
 
-function toggleDarkMode() {
-  document.documentElement.classList.toggle('dark')
+// 初始化时同步一次状态
+onMounted(() => {
   isDark.value = document.documentElement.classList.contains('dark')
-}
+})
 
 // 监听输入变化，清除错误信息
 watch(password, () => {

@@ -62,6 +62,9 @@ export function useAuth() {
   // 组件挂载时检查认证状态
   onMounted(() => {
     checkAuthStatus()
+    window.addEventListener('unauthorized', () => {
+      isAuthenticated.value = false
+    })
   })
 
   return {
