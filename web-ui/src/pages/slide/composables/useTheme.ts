@@ -1,4 +1,4 @@
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref } from 'vue'
 
 export function useTheme() {
   const isDark = ref(document.documentElement.classList.contains('dark'))

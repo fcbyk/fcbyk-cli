@@ -157,6 +157,24 @@ def register_routes(app, service: SlideService):
         else:
             return jsonify({'status': 'error', 'message': error}), 500
     
+    @app.route('/api/mouse/down', methods=['POST'])
+    @require_auth
+    def mouse_down():
+        success, error = service.mouse_down()
+        if success:
+            return jsonify({'status': 'success', 'action': 'down'})
+        else:
+            return jsonify({'status': 'error', 'message': error}), 500
+    
+    @app.route('/api/mouse/up', methods=['POST'])
+    @require_auth
+    def mouse_up():
+        success, error = service.mouse_up()
+        if success:
+            return jsonify({'status': 'success', 'action': 'up'})
+        else:
+            return jsonify({'status': 'error', 'message': error}), 500
+    
     @app.route('/api/mouse/rightclick', methods=['POST'])
     @require_auth
     def mouse_rightclick():
@@ -205,6 +223,16 @@ def register_socketio_events(socketio: SocketIO, service: SlideService):
     def handle_mouse_click():
         """WebSocket 处理鼠标左键点击"""
         service.click_mouse()
+    
+    @socketio.on('mouse_down')
+    @require_socketio_auth
+    def handle_mouse_down():
+        service.mouse_down()
+    
+    @socketio.on('mouse_up')
+    @require_socketio_auth
+    def handle_mouse_up():
+        service.mouse_up()
     
     @socketio.on('mouse_rightclick')
     @require_socketio_auth

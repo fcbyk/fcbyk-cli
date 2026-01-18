@@ -27,6 +27,7 @@ export interface ApiResponse {
     count: number
     startTime: number
     isMoving: boolean
+    isDragging: boolean
     twoFingerMoved: boolean
     lastX: number
     lastY: number
@@ -36,6 +37,11 @@ export interface ApiResponse {
       dy: number
     }
     rafId: number | null
+    lastTapTime: number
+    lastTapWasClick: boolean
+    longPressTimer: number | null
+    pendingClickTimer: number | null
+    isSecondTapCandidate: boolean
   }
   
   /** WebSocket 连接状态 */

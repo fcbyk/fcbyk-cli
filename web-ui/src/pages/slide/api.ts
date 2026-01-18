@@ -126,3 +126,19 @@ export async function httpMouseScroll(data: MouseScrollData): Promise<void> {
     // 静默处理错误
   }
 }
+
+export async function httpMouseDown(): Promise<void> {
+  try {
+    const response = await fetch('/api/mouse/down', { method: 'POST' })
+    await handleResponse(response)
+  } catch (error) {
+  }
+}
+
+export async function httpMouseUp(): Promise<void> {
+  try {
+    const response = await fetch('/api/mouse/up', { method: 'POST' })
+    await handleResponse(response)
+  } catch (error) {
+  }
+}

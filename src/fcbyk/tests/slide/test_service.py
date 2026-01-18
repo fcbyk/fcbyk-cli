@@ -188,3 +188,39 @@ def test_scroll_mouse_error(monkeypatch):
     ok, err = s.scroll_mouse(dx=0, dy=1)
     assert ok is False
     assert "scroll failed" in err
+
+
+def test_mouse_down_up_success(monkeypatch):
+    called = {"down": 0, "up": 0}
+
+    monkeypatch.setattr(slide_service.pyautogui, "mouseDown", lambda: called.__setitem__("down", called["down"] + 1))
+    monkeypatch.setattr(slide_service.pyautogui, "mouseUp", lambda: called.__setitem__("up", called["up"] + 1))
+
+    s = SlideService(password="p")
+    assert s.mouse_down() == (True, None)
+    assert s.mouse_up() == (True, None)
+    assert called == {"down": 1, "up": 1}
+
+
+def test_mouse_down_error(monkeypatch):
+    def _boom(*a, **k):
+        raise RuntimeError("down failed")
+
+    monkeypatch.setattr(slide_service.pyautogui, "mouseDown", _boom)
+
+    s = SlideService(password="p")
+    ok, err = s.mouse_down()
+    assert ok is False
+    assert "down failed" in err
+
+
+def test_mouse_up_error(monkeypatch):
+    def _boom(*a, **k):
+        raise RuntimeError("up failed")
+
+    monkeypatch.setattr(slide_service.pyautogui, "mouseUp", _boom)
+
+    s = SlideService(password="p")
+    ok, err = s.mouse_up()
+    assert ok is False
+    assert "up failed" in err

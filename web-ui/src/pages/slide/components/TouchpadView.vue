@@ -26,6 +26,10 @@
                 <component :is="isMouseMode ? Presentation : Mouse" class="menu-icon" :size="18" />
                 <span>{{ isMouseMode ? '退出鼠标模式' : '进入鼠标模式' }}</span>
               </div>
+              <div class="menu-item" @click="toggleDragMode" @touchend.stop.prevent="toggleDragMode">
+                <Mouse class="menu-icon" :size="18" />
+                <span>{{ isDragMode ? '关闭拖拽模式' : '开启拖拽模式' }}</span>
+              </div>
               <div class="menu-item logout" @click="handleLogout" @touchend.stop.prevent="handleLogout">
                 <LogOut class="menu-icon" :size="18" />
                 <span>退出登录</span>
@@ -77,13 +81,14 @@ import { useTheme } from '../composables/useTheme'
 import { prevSlide, nextSlide, logout } from '../api'
 import { isConnected, getLatency, disconnectSocket, connectSocket } from '../socket'
 
-const { touchpadRef, bindTouchEvents, unbindTouchEvents } = useTouchpad()
+const isMouseMode = ref(false)
+const isDragMode = ref(false)
+const { touchpadRef, bindTouchEvents, unbindTouchEvents } = useTouchpad(() => isDragMode.value)
 
 // 状态追踪
 const isSocketConnected = ref(isConnected())
 const isConnecting = ref(false)
 const latency = ref(getLatency())
-const isMouseMode = ref(false)
 let statusTimer: any = null
 
 const statusText = computed(() => {
@@ -103,6 +108,11 @@ function closeSettings() {
 
 function toggleMouseMode() {
   isMouseMode.value = !isMouseMode.value
+  showSettings.value = false
+}
+
+function toggleDragMode() {
+  isDragMode.value = !isDragMode.value
   showSettings.value = false
 }
 

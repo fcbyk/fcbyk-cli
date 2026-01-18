@@ -169,6 +169,20 @@ class SlideService:
         except Exception as e:
             return False, str(e)
     
+    def mouse_down(self) -> Tuple[bool, Optional[str]]:
+        try:
+            pyautogui.mouseDown()
+            return True, None
+        except Exception as e:
+            return False, str(e)
+    
+    def mouse_up(self) -> Tuple[bool, Optional[str]]:
+        try:
+            pyautogui.mouseUp()
+            return True, None
+        except Exception as e:
+            return False, str(e)
+    
     def right_click_mouse(self) -> Tuple[bool, Optional[str]]:
         """
         鼠标右键点击

@@ -107,6 +107,18 @@ export function emitMouseClick(): void {
   }
 }
 
+export function emitMouseDown(): void {
+  if (socket && socket.connected) {
+    socket.emit('mouse_down')
+  }
+}
+
+export function emitMouseUp(): void {
+  if (socket && socket.connected) {
+    socket.emit('mouse_up')
+  }
+}
+
 /** 发送鼠标右键事件 */
 export function emitMouseRightClick(): void {
   if (socket && socket.connected) {

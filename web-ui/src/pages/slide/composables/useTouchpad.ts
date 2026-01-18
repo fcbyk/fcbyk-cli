@@ -4,18 +4,22 @@
 
 import { ref, reactive, onUnmounted } from 'vue'
 import type { TouchState } from '../types'
-import { isConnected, emitMouseMove, emitMouseClick, emitMouseRightClick, emitMouseScroll } from '../socket'
-import { httpMouseMove, httpMouseClick, httpMouseRightClick, httpMouseScroll } from '../api'
+import { isConnected, emitMouseMove, emitMouseClick, emitMouseRightClick, emitMouseScroll, emitMouseDown, emitMouseUp } from '../socket'
+import { httpMouseMove, httpMouseClick, httpMouseRightClick, httpMouseScroll, httpMouseDown, httpMouseUp } from '../api'
 
-const MOUSE_SENSITIVITY = 1.5 // 鼠标灵敏度
+const MOUSE_SENSITIVITY = 1.5
+const CLICK_MAX_DURATION = 200
+const DOUBLE_TAP_INTERVAL = 200
+const LONG_PRESS_THRESHOLD = 300
 
-export function useTouchpad() {
+export function useTouchpad(getDragMode?: () => boolean) {
   const touchpadRef = ref<HTMLElement | null>(null)
 
   const touchState = reactive<TouchState>({
     count: 0,
     startTime: 0,
     isMoving: false,
+    isDragging: false,
     twoFingerMoved: false,
     lastX: 0,
     lastY: 0,
@@ -24,7 +28,12 @@ export function useTouchpad() {
       dx: 0,
       dy: 0
     },
-    rafId: null
+    rafId: null,
+    lastTapTime: 0,
+    lastTapWasClick: false,
+    longPressTimer: null,
+    pendingClickTimer: null,
+    isSecondTapCandidate: false
   })
 
   /** 发送鼠标移动（优先 WebSocket） */
@@ -42,6 +51,22 @@ export function useTouchpad() {
       emitMouseClick()
     } else {
       httpMouseClick()
+    }
+  }
+
+  function sendMouseDown() {
+    if (isConnected()) {
+      emitMouseDown()
+    } else {
+      httpMouseDown()
+    }
+  }
+
+  function sendMouseUp() {
+    if (isConnected()) {
+      emitMouseUp()
+    } else {
+      httpMouseUp()
     }
   }
 
@@ -82,14 +107,39 @@ export function useTouchpad() {
     touchState.count = e.touches.length
     touchState.startTime = Date.now()
     touchState.isMoving = false
+    touchState.isDragging = false
     touchState.twoFingerMoved = false
     touchState.moveAccumulator.dx = 0
     touchState.moveAccumulator.dy = 0
+    touchState.isSecondTapCandidate = false
 
     if (touchState.count === 1) {
       const touch = e.touches[0]
       touchState.lastX = touch.clientX
       touchState.lastY = touch.clientY
+      const dragMode = getDragMode ? getDragMode() : false
+      if (dragMode) {
+        touchState.isDragging = true
+        sendMouseDown()
+      } else {
+        const now = Date.now()
+        const isSecondTap = touchState.lastTapWasClick && now - touchState.lastTapTime <= DOUBLE_TAP_INTERVAL
+        touchState.isSecondTapCandidate = isSecondTap
+        if (touchState.longPressTimer) {
+          clearTimeout(touchState.longPressTimer)
+          touchState.longPressTimer = null
+        }
+        if (isSecondTap) {
+          if (touchState.pendingClickTimer) {
+            clearTimeout(touchState.pendingClickTimer)
+            touchState.pendingClickTimer = null
+          }
+          touchState.longPressTimer = window.setTimeout(() => {
+            touchState.isDragging = true
+            sendMouseDown()
+          }, LONG_PRESS_THRESHOLD)
+        }
+      }
     } else if (touchState.count === 2) {
       const touch1 = e.touches[0]
       const touch2 = e.touches[1]
@@ -154,29 +204,72 @@ export function useTouchpad() {
 
     const touchDuration = Date.now() - touchState.startTime
 
-    // 确保最后的移动被发送
+    if (touchState.longPressTimer) {
+      clearTimeout(touchState.longPressTimer)
+      touchState.longPressTimer = null
+    }
+
     if (touchState.rafId) {
       cancelAnimationFrame(touchState.rafId)
       flushMouseMove()
     }
 
-    // 只有在没有移动且时间很短的情况下才认为是点击
-    if (!touchState.isMoving && touchDuration < 200) {
-      if (touchState.count === 1) {
-        // 单指点击 = 左键
-        sendMouseClick()
-      } else if (touchState.count === 2 && !touchState.twoFingerMoved) {
-        // 双指点击 = 右键
-        sendMouseRightClick()
+    if (touchState.isDragging) {
+      if (touchState.pendingClickTimer) {
+        clearTimeout(touchState.pendingClickTimer)
+        touchState.pendingClickTimer = null
+      }
+      sendMouseUp()
+      touchState.lastTapWasClick = false
+    } else {
+      if (!touchState.isMoving && touchDuration < CLICK_MAX_DURATION) {
+        if (touchState.count === 1) {
+          const now = Date.now()
+          if (touchState.isSecondTapCandidate) {
+            if (touchState.pendingClickTimer) {
+              clearTimeout(touchState.pendingClickTimer)
+              touchState.pendingClickTimer = null
+            }
+            sendMouseClick()
+            sendMouseClick()
+            touchState.lastTapTime = now
+            touchState.lastTapWasClick = false
+          } else {
+            if (touchState.pendingClickTimer) {
+              clearTimeout(touchState.pendingClickTimer)
+            }
+            touchState.pendingClickTimer = window.setTimeout(() => {
+              sendMouseClick()
+              touchState.pendingClickTimer = null
+            }, DOUBLE_TAP_INTERVAL)
+            touchState.lastTapTime = now
+            touchState.lastTapWasClick = true
+          }
+        } else if (touchState.count === 2 && !touchState.twoFingerMoved) {
+          if (touchState.pendingClickTimer) {
+            clearTimeout(touchState.pendingClickTimer)
+            touchState.pendingClickTimer = null
+          }
+          sendMouseRightClick()
+          touchState.lastTapWasClick = false
+        }
+      } else {
+        if (touchState.pendingClickTimer) {
+          clearTimeout(touchState.pendingClickTimer)
+          touchState.pendingClickTimer = null
+        }
+        touchState.lastTapWasClick = false
       }
     }
 
     touchState.count = 0
     touchState.isMoving = false
+    touchState.isDragging = false
     touchState.twoFingerMoved = false
     touchState.moveAccumulator.dx = 0
     touchState.moveAccumulator.dy = 0
     touchState.lastTwoFingerY = 0
+    touchState.isSecondTapCandidate = false
   }
 
   /** 绑定触摸事件 */
@@ -200,6 +293,14 @@ export function useTouchpad() {
     }
     if (touchState.rafId) {
       cancelAnimationFrame(touchState.rafId)
+    }
+    if (touchState.longPressTimer) {
+      clearTimeout(touchState.longPressTimer)
+      touchState.longPressTimer = null
+    }
+    if (touchState.pendingClickTimer) {
+      clearTimeout(touchState.pendingClickTimer)
+      touchState.pendingClickTimer = null
     }
   })
 

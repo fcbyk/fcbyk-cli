@@ -96,8 +96,18 @@ def test_mouse_other_endpoints(app_and_client, monkeypatch):
     client.post("/api/login", json={"password": "p"})
 
     monkeypatch.setattr(service, "click_mouse", lambda: (True, None))
+    monkeypatch.setattr(service, "mouse_down", lambda: (True, None))
+    monkeypatch.setattr(service, "mouse_up", lambda: (True, None))
     monkeypatch.setattr(service, "right_click_mouse", lambda: (True, None))
     monkeypatch.setattr(service, "scroll_mouse", lambda dx, dy: (True, None))
+
+    r = client.post("/api/mouse/down")
+    assert r.status_code == 200
+    assert r.json["action"] == "down"
+
+    r = client.post("/api/mouse/up")
+    assert r.status_code == 200
+    assert r.json["action"] == "up"
 
     r = client.post("/api/mouse/click")
     assert r.status_code == 200
