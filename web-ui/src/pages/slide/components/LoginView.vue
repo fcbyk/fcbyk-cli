@@ -4,8 +4,8 @@
       <div class="header-left">
       </div>
       <div class="header-right">
-        <button class="icon-btn">
-          <Sun class="icon-gray" :size="24" :stroke-width="1.5" />
+        <button class="icon-btn" @click="toggleDarkMode">
+          <component :is="isDark ? Moon : Sun" class="icon-gray" :size="24" :stroke-width="1.5" />
         </button>
       </div>
     </header>
@@ -56,7 +56,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { Sun, Key, ChevronRight } from 'lucide-vue-next'
+import { Sun, Moon, Key, ChevronRight } from 'lucide-vue-next'
 import '@fontsource/syncopate/700.css'
 import '@fontsource/space-mono/400.css'
 
@@ -79,6 +79,14 @@ const emit = defineEmits<Emits>()
 
 const password = ref('')
 const passwordInputRef = ref<HTMLInputElement | null>(null)
+
+// 暗色模式状态
+const isDark = ref(document.documentElement.classList.contains('dark'))
+
+function toggleDarkMode() {
+  document.documentElement.classList.toggle('dark')
+  isDark.value = document.documentElement.classList.contains('dark')
+}
 
 // 监听输入变化，清除错误信息
 watch(password, () => {
@@ -176,14 +184,15 @@ onUnmounted(() => {
 <style lang="scss" scoped>
 .login-page {
   height: 100dvh;
-  background-color: #F2F2F7;
-  color: #1c1c1e;
+  background-color: var(--background);
+  color: var(--text-primary);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   position: relative;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   user-select: none;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .header {
@@ -236,13 +245,13 @@ onUnmounted(() => {
     letter-spacing: 0.25em;
     margin: 0 0 16px 0;
     padding-left: 0.25em;
-    color: #1c1c1e;
+    color: var(--text-primary);
   }
 
   .subtitle {
     font-size: 12px;
     letter-spacing: 0.1em;
-    color: #8E8E93;
+    color: var(--text-secondary);
     font-weight: 500;
     margin: 0;
   }
@@ -261,29 +270,31 @@ onUnmounted(() => {
     .input-icon {
       position: absolute;
       left: 0;
-      color: #C7C7CC;
+      color: var(--text-secondary);
+      opacity: 0.5;
     }
 
     .command-input {
       width: 100%;
       background: transparent;
       border: none;
-      border-bottom: 2px solid #D1D1D6;
+      border-bottom: 2px solid var(--border);
       padding: 16px 0 16px 40px;
       text-align: center;
       font-size: 24px;
       letter-spacing: 0.5em;
-      color: #1c1c1e;
+      color: var(--text-primary);
       transition: border-color 0.3s ease;
       outline: none;
       font-family: "Space Mono", monospace;
 
       &:focus {
-        border-color: #007AFF;
+        border-color: var(--primary);
       }
 
       &::placeholder {
-        color: #D1D1D6;
+        color: var(--text-secondary);
+        opacity: 0.3;
       }
     }
   }
@@ -310,14 +321,14 @@ onUnmounted(() => {
     position: relative;
     height: 64px;
     width: 100%;
-    background: rgba(0, 0, 0, 0.04);
+    background: var(--surface);
     backdrop-filter: blur(10px);
     border-radius: 32px;
     display: flex;
     align-items: center;
     padding: 6px;
     overflow: hidden;
-    border: 1px solid rgba(0, 0, 0, 0.05);
+    border: 1px solid var(--border);
 
     .slider-text {
       position: absolute;
@@ -327,7 +338,7 @@ onUnmounted(() => {
       justify-content: center;
       font-size: 13px;
       letter-spacing: 0.2em;
-      color: #8E8E93;
+      color: var(--text-secondary);
       font-weight: 500;
       padding-left: 48px;
       pointer-events: none;
@@ -336,7 +347,7 @@ onUnmounted(() => {
     .slider-thumb {
       height: 52px;
       width: 52px;
-      background-color: #007AFF;
+      background-color: var(--primary);
       border-radius: 26px;
       display: flex;
       align-items: center;
@@ -344,7 +355,7 @@ onUnmounted(() => {
       color: white;
       cursor: pointer;
       box-shadow: 0 4px 15px rgba(0, 122, 255, 0.4);
-      border: 4px solid white;
+      border: 4px solid var(--surface);
       z-index: 10;
       transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1), scale 0.2s;
       user-select: none;
@@ -372,9 +383,10 @@ onUnmounted(() => {
   .semi-circle {
     width: 300px;
     height: 150px;
-    background: radial-gradient(circle at 50% 100%, rgba(0, 122, 255, 0.08) 0%, transparent 70%);
+    background: radial-gradient(circle at 50% 100%, var(--primary) 0%, transparent 70%);
     border-top-left-radius: 150px;
     border-top-right-radius: 150px;
+    opacity: 0.1;
   }
 }
 </style>
