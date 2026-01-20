@@ -257,8 +257,11 @@ button {
 
 .list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 10px;
+  max-height: 50dvh;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .item {
