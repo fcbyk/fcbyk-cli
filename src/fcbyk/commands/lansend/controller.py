@@ -28,9 +28,10 @@ import mimetypes
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 
-from flask import abort, jsonify, request, Response, stream_with_context
+from flask import abort, request, Response, stream_with_context
 
 from fcbyk.web.app import create_spa
+from fcbyk.web.R import R
 from .service import LansendService
 import urllib.parse
 
@@ -82,7 +83,7 @@ def register_chat_routes(app, service: LansendService):
     @app.route("/api/chat/messages", methods=["GET"])
     def get_chat_messages():
         """获取聊天消息列表，同时返回当前客户端的 IP"""
-        return jsonify({
+        return R.success({
             "messages": _chat_messages,
             "current_ip": _get_client_ip()
         })
@@ -92,11 +93,11 @@ def register_chat_routes(app, service: LansendService):
         """发送聊天消息"""
         data = request.get_json()
         if not data or "message" not in data:
-            return jsonify({"error": "message is required"}), 400
+            return R.error("message is required", 400)
 
         message_text = data.get("message", "").rstrip()
         if not message_text.strip():
-            return jsonify({"error": "message cannot be empty"}), 400
+            return R.error("message cannot be empty", 400)
 
         ip = _get_client_ip()
         timestamp = datetime.now().isoformat()
@@ -114,7 +115,7 @@ def register_chat_routes(app, service: LansendService):
         if len(_chat_messages) > 1000:
             _chat_messages.pop(0)
 
-        return jsonify({"success": True, "message": message})
+        return R.success(message, "message sent")
 
 
 def register_upload_routes(app, service: LansendService):
@@ -142,9 +143,9 @@ def register_upload_routes(app, service: LansendService):
             return None
         pw = request.headers.get("X-Upload-Password") or request.form.get("password")
         if not pw:
-            return jsonify({"error": "upload password required"}), 401
+            return R.error("upload password required", 401)
         if pw != service.config.upload_password:
-            return jsonify({"error": "wrong password"}), 401
+            return R.error("wrong password", 401)
         return None
 
     def _get_upload_tmp_dir() -> str:
@@ -172,26 +173,26 @@ def register_upload_routes(app, service: LansendService):
         total_chunks = _try_int(request.form.get("total_chunks"))
 
         if not filename_raw:
-            return jsonify({"error": "filename is required"}), 400
+            return R.error("filename is required", 400)
         if size is None or size < 0:
-            return jsonify({"error": "size is required"}), 400
+            return R.error("size is required", 400)
         if total_chunks is None or total_chunks <= 0:
-            return jsonify({"error": "total_chunks is required"}), 400
+            return R.error("total_chunks is required", 400)
         if chunk_size <= 0:
-            return jsonify({"error": "invalid chunk_size"}), 400
+            return R.error("invalid chunk_size", 400)
 
         try:
             target_dir = service.abs_target_dir(rel_path)
         except ValueError:
             service.log_upload(ip, 0, "failed (shared directory not set)", rel_path)
-            return jsonify({"error": "shared directory not set"}), 400
+            return R.error("shared directory not set", 400)
         except PermissionError:
             service.log_upload(ip, 0, "failed (invalid path)", rel_path)
-            return jsonify({"error": "invalid path"}), 400
+            return R.error("invalid path", 400)
 
         if not os.path.exists(target_dir) or not os.path.isdir(target_dir):
             service.log_upload(ip, 0, f"failed (target directory missing: {rel_path or 'root'})", rel_path, size)
-            return jsonify({"error": "target directory not found"}), 400
+            return R.error("target directory not found", 400)
 
         filename = service.safe_filename(filename_raw) or "untitled"
 
@@ -230,7 +231,7 @@ def register_upload_routes(app, service: LansendService):
             import json
             json.dump(meta, f, ensure_ascii=False)
 
-        return jsonify({
+        return R.success({
             "upload_id": upload_id,
             "chunk_size": chunk_size,
             "total_chunks": total_chunks,
@@ -248,15 +249,15 @@ def register_upload_routes(app, service: LansendService):
         upload_id = _safe_upload_id(request.args.get("upload_id") or "")
         index = _try_int(request.args.get("index"))
         if not upload_id:
-            return jsonify({"error": "upload_id is required"}), 400
+            return R.error("upload_id is required", 400)
         if index is None or index < 0:
-            return jsonify({"error": "index is required"}), 400
+            return R.error("index is required", 400)
 
         tmp_root = _get_upload_tmp_dir()
         upload_dir = os.path.join(tmp_root, upload_id)
         meta_path = os.path.join(upload_dir, "meta.json")
         if not os.path.exists(meta_path):
-            return jsonify({"error": "upload not found"}), 404
+            return R.error("upload not found", 404)
 
         # 直接读取 raw body（每块 8~16MB），避免 multipart 解析
         chunk_path = os.path.join(upload_dir, f"chunk_{index:08d}.part")
@@ -270,9 +271,9 @@ def register_upload_routes(app, service: LansendService):
                     f.write(buf)
         except Exception as e:
             service.log_upload(ip, 1, f"failed (chunk save failed: {e})")
-            return jsonify({"error": "failed to save chunk"}), 500
+            return R.error("failed to save chunk", 500)
 
-        return jsonify({"ok": True})
+        return R.success(message="chunk uploaded")
 
     @app.route("/api/upload/complete", methods=["POST"])
     def upload_complete():
@@ -285,13 +286,13 @@ def register_upload_routes(app, service: LansendService):
         data = request.get_json(silent=True) or {}
         upload_id = _safe_upload_id(data.get("upload_id") or "")
         if not upload_id:
-            return jsonify({"error": "upload_id is required"}), 400
+            return R.error("upload_id is required", 400)
 
         tmp_root = _get_upload_tmp_dir()
         upload_dir = os.path.join(tmp_root, upload_id)
         meta_path = os.path.join(upload_dir, "meta.json")
         if not os.path.exists(meta_path):
-            return jsonify({"error": "upload not found"}), 404
+            return R.error("upload not found", 404)
 
         with open(meta_path, "r", encoding="utf-8") as f:
             meta = json.load(f)
@@ -312,7 +313,7 @@ def register_upload_routes(app, service: LansendService):
                 if len(missing) > 20:
                     break
         if missing:
-            return jsonify({"error": f"missing chunks: {missing[:20]}"}), 400
+            return R.error(f"missing chunks: {missing[:20]}", 400)
 
         # 合并写入最终文件（流式，不占内存）
         try:
@@ -328,7 +329,7 @@ def register_upload_routes(app, service: LansendService):
                             out.write(buf)
         except Exception as e:
             service.log_upload(ip, 1, f"failed (merge failed: {e})", rel_path, size)
-            return jsonify({"error": "failed to merge file"}), 500
+            return R.error("failed to merge file", 500)
 
         # 清理临时目录
         try:
@@ -345,7 +346,7 @@ def register_upload_routes(app, service: LansendService):
             pass
 
         service.log_upload(ip, 1, f"success ({filename})", rel_path, size)
-        return jsonify({"message": "file uploaded", "filename": filename, "renamed": renamed})
+        return R.success({"filename": filename, "renamed": renamed}, "file uploaded")
 
     @app.route("/api/upload/abort", methods=["POST"])
     def upload_abort():
@@ -355,7 +356,7 @@ def register_upload_routes(app, service: LansendService):
         data = request.get_json(silent=True) or {}
         upload_id = _safe_upload_id(data.get("upload_id") or "")
         if not upload_id:
-            return jsonify({"error": "upload_id is required"}), 400
+            return R.error("upload_id is required", 400)
         tmp_root = _get_upload_tmp_dir()
         upload_dir = os.path.join(tmp_root, upload_id)
         if os.path.exists(upload_dir):
@@ -375,7 +376,7 @@ def register_upload_routes(app, service: LansendService):
                 os.rmdir(upload_dir)
             except Exception:
                 pass
-        return jsonify({"ok": True})
+        return R.success(message="upload aborted")
 
 
     # -------------------- 普通上传接口 --------------------
@@ -389,30 +390,30 @@ def register_upload_routes(app, service: LansendService):
         if "file" not in request.files and "password" in request.form:
             if service.config.upload_password:
                 if request.form["password"] != service.config.upload_password:
-                    return jsonify({"error": "wrong password"}), 401
-                return jsonify({"message": "password ok"})
-            return jsonify({"error": "upload password not set"}), 400
+                    return R.error("wrong password", 401)
+                return R.success(message="password ok")
+            return R.error("upload password not set", 400)
 
         try:
             target_dir = service.abs_target_dir(rel_path)
         except ValueError:
             service.log_upload(ip, 0, "failed (shared directory not set)", rel_path)
-            return jsonify({"error": "shared directory not set"}), 400
+            return R.error("shared directory not set", 400)
         except PermissionError:
             service.log_upload(ip, 0, "failed (invalid path)", rel_path)
-            return jsonify({"error": "invalid path"}), 400
+            return R.error("invalid path", 400)
 
         if service.config.upload_password:
             if "password" not in request.form:
                 service.log_upload(ip, 0, "failed (upload password required)", rel_path)
-                return jsonify({"error": "upload password required"}), 401
+                return R.error("upload password required", 401)
             if request.form["password"] != service.config.upload_password:
                 service.log_upload(ip, 0, "failed (wrong password)", rel_path)
-                return jsonify({"error": "wrong password"}), 401
+                return R.error("wrong password", 401)
 
         if "file" not in request.files:
             service.log_upload(ip, 0, "failed (no file field)", rel_path)
-            return jsonify({"error": "missing file"}), 400
+            return R.error("missing file", 400)
 
         file = request.files["file"]
 
@@ -428,13 +429,13 @@ def register_upload_routes(app, service: LansendService):
 
         if file.filename == "":
             service.log_upload(ip, 0, "failed (no file selected)", rel_path)
-            return jsonify({"error": "no file selected"}), 400
+            return R.error("no file selected", 400)
 
         filename = service.safe_filename(file.filename) or "untitled"
 
         if not os.path.exists(target_dir) or not os.path.isdir(target_dir):
             service.log_upload(ip, 0, f"failed (target directory missing: {rel_path or 'root'})", rel_path)
-            return jsonify({"error": "target directory not found"}), 400
+            return R.error("target directory not found", 400)
 
         # 处理文件名冲突：自动重命名为 name_1.ext, name_2.ext 等
         target_path = os.path.join(target_dir, filename)
@@ -453,16 +454,16 @@ def register_upload_routes(app, service: LansendService):
         try:
             file.save(save_path)
             service.log_upload(ip, 1, f"success ({filename})", rel_path, file_size)
-            return jsonify({"message": "file uploaded", "filename": filename, "renamed": renamed})
+            return R.success({"filename": filename, "renamed": renamed}, "file uploaded")
         except Exception as e:
             service.log_upload(ip, 1, f"failed (save failed: {e})", rel_path, file_size)
-            return jsonify({"error": "failed to save file"}), 500
+            return R.error("failed to save file", 500)
 
 
 def register_routes(app, service: LansendService):
     @app.route("/api/config")
     def api_config():
-        return jsonify({
+        return R.success({
             "un_download": bool(getattr(service.config, "un_download", False)),
             "un_upload": bool(getattr(service.config, "un_upload", False)),
             "chat_enabled": bool(getattr(service.config, "chat_enabled", False)),
@@ -478,35 +479,35 @@ def register_routes(app, service: LansendService):
     def api_file(filename):
         try:
             data = service.read_file_content(filename)
-            return jsonify(data)
+            return R.success(data)
         except ValueError:
-            return jsonify({"error": "Shared directory not specified"}), 400
+            return R.error("Shared directory not specified", 400)
         except PermissionError:
             abort(404, description="Invalid path")
         except FileNotFoundError:
             abort(404, description="File not found")
         except Exception as e:
-            return jsonify({"error": str(e)}), 500
+            return R.error(str(e), 500)
 
     @app.route("/api/tree")
     def api_tree():
         try:
             base = service.ensure_shared_directory()
         except ValueError:
-            return jsonify({"error": "Shared directory not specified"}), 400
+            return R.error("Shared directory not specified", 400)
         tree = service.get_file_tree(base)
-        return jsonify({"tree": tree})
+        return R.success({"tree": tree})
 
     @app.route("/api/directory")
     def api_directory():
         try:
             relative_path = request.args.get("path", "").strip("/")
             data = service.get_directory_listing(relative_path)
-            return jsonify(data)
+            return R.success(data)
         except ValueError:
-            return jsonify({"error": "Shared directory not specified"}), 400
+            return R.error("Shared directory not specified", 400)
         except FileNotFoundError:
-            return jsonify({"error": "Directory not found"}), 404
+            return R.error("Directory not found", 404)
 
     @app.route("/api/preview/<path:filename>")
     def api_preview(filename):

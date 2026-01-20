@@ -29,9 +29,9 @@ def test_api_config_flags(app_client):
     _app, c, service, _f = app_client
     r = c.get("/api/config")
     assert r.status_code == 200
-    assert r.json["chat_enabled"] is True
+    assert r.json["data"]["chat_enabled"] is True
     # upload_password 字段不在 /api/config，un_download/un_upload 默认 False
-    assert r.json["un_upload"] is False
+    assert r.json["data"]["un_upload"] is False
 
 
 def test_upload_password_check_only(app_client):
@@ -44,7 +44,7 @@ def test_upload_password_check_only(app_client):
     # 仅验证密码：不带 file，但带 password
     r = c.post("/upload", data={"path": "", "password": "pw"})
     assert r.status_code == 200
-    assert r.json["message"] in ("password ok",)
+    assert r.json["message"] == "password ok"
 
     r = c.post("/upload", data={"path": "", "password": "bad"})
     assert r.status_code == 401
@@ -64,7 +64,7 @@ def test_api_tree_returns_tree(app_client, monkeypatch):
 
     r = c.get("/api/tree")
     assert r.status_code == 200
-    assert r.json == {"tree": {"base": "/base"}}
+    assert r.json["data"] == {"tree": {"base": "/base"}}
 
 
 def test_api_preview_range_ok(app_client):
@@ -110,13 +110,13 @@ def test_chat_send_and_messages(app_client):
         headers={"X-Forwarded-For": "9.9.9.9"},
     )
     assert r.status_code == 200
-    assert r.json["success"] is True
-    assert r.json["message"]["ip"] == "9.9.9.9"
-    assert r.json["message"]["message"] == "hello"  # rstrip
+    assert r.json["code"] == 200
+    assert r.json["data"]["ip"] == "9.9.9.9"
+    assert r.json["data"]["message"] == "hello"  # rstrip
 
     # 拉取消息
     r = c.get("/api/chat/messages", headers={"X-Forwarded-For": "9.9.9.9"})
     assert r.status_code == 200
-    assert r.json["current_ip"] == "9.9.9.9"
-    assert len(r.json["messages"]) >= 1
+    assert r.json["data"]["current_ip"] == "9.9.9.9"
+    assert len(r.json["data"]["messages"]) >= 1
 

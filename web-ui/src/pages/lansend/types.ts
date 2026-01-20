@@ -1,6 +1,11 @@
 /**
- * Lansend 页面类型定义
+ * 基础响应接口
  */
+export interface ApiResponse<T = any> {
+  code: number
+  message: string
+  data: T
+}
 
 export interface DirectoryItem {
   name: string
@@ -52,5 +57,11 @@ export interface ChatMessage {
 export interface ChatMessagesResponse {
   messages: ChatMessage[]
   current_ip?: string
+}
+
+export interface LansendConfig {
+  un_download: boolean
+  un_upload: boolean
+  chat_enabled: boolean
 }
 

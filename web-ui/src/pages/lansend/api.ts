@@ -1,21 +1,36 @@
 import type {
+  ApiResponse,
   DirectoryData,
   VerifyUploadPasswordResponse,
   PreviewFile,
   UploadFileResponse,
   ChatMessage,
-  ChatMessagesResponse
+  ChatMessagesResponse,
+  LansendConfig
 } from './types'
+
+/**
+ * 获取配置信息
+ */
+export async function getLansendConfig(): Promise<LansendConfig> {
+  const response = await fetch('/api/config')
+  const result: ApiResponse<LansendConfig> = await response.json()
+  if (!response.ok || result.code !== 200) {
+    throw new Error(result.message || 'Failed to load config')
+  }
+  return result.data
+}
 
 /**
  * 获取目录数据
  */
 export async function getDirectory(path: string = ''): Promise<DirectoryData> {
   const response = await fetch(`/api/directory?path=${encodeURIComponent(path)}`)
-  if (!response.ok) {
-    throw new Error('Failed to load directory')
+  const result: ApiResponse<DirectoryData> = await response.json()
+  if (!response.ok || result.code !== 200) {
+    throw new Error(result.message || 'Failed to load directory')
   }
-  return await response.json()
+  return result.data
 }
 
 /**
@@ -31,14 +46,10 @@ export async function verifyUploadPassword(password: string): Promise<VerifyUplo
       body: `password=${encodeURIComponent(password)}`
     })
 
-    const data = await response.json()
+    const result: ApiResponse = await response.json()
 
-    if (!response.ok || (data && data.error === 'wrong password')) {
-      return { success: false, error: '密码错误，请重试' }
-    }
-
-    if (data && data.error) {
-      return { success: false, error: data.error }
+    if (!response.ok || result.code !== 200) {
+      return { success: false, error: result.message || '密码错误，请重试' }
     }
 
     return { success: true }
@@ -53,10 +64,11 @@ export async function verifyUploadPassword(password: string): Promise<VerifyUplo
  */
 export async function getFileContent(path: string): Promise<PreviewFile> {
   const response = await fetch(`/api/file/${encodeURIComponent(path)}`)
-  if (!response.ok) {
-    throw new Error('Failed to load file')
+  const result: ApiResponse<PreviewFile> = await response.json()
+  if (!response.ok || result.code !== 200) {
+    throw new Error(result.message || 'Failed to load file')
   }
-  return await response.json()
+  return result.data
 }
 
 /**
@@ -95,11 +107,11 @@ export function uploadFile(
       onProgress(100, { loaded: file.size, total: file.size })
       if (xhr.status === 200) {
         try {
-          const data = JSON.parse(xhr.responseText)
-          if (data.error) {
-            resolve({ success: false, error: data.error, data })
+          const result: ApiResponse = JSON.parse(xhr.responseText)
+          if (result.code !== 200) {
+            resolve({ success: false, error: result.message, data: result.data })
           } else {
-            resolve({ success: true, data })
+            resolve({ success: true, data: result.data })
           }
         } catch (error) {
           reject(new Error('解析响应错误'))
@@ -155,14 +167,14 @@ export async function uploadFileByChunks(
     body: initForm,
     headers: password ? { 'X-Upload-Password': password } : undefined
   })
-  const initData = await initResp.json().catch(() => ({}))
-  if (!initResp.ok) {
-    return { success: false, error: initData?.error || 'upload init failed', data: initData }
+  const initResult: ApiResponse = await initResp.json().catch(() => ({}))
+  if (!initResp.ok || initResult.code !== 200) {
+    return { success: false, error: initResult?.message || 'upload init failed', data: initResult?.data }
   }
 
-  const uploadId: string = initData.upload_id
+  const uploadId: string = initResult.data?.upload_id
   if (!uploadId) {
-    return { success: false, error: 'missing upload_id', data: initData }
+    return { success: false, error: 'missing upload_id', data: initResult.data }
   }
 
   let uploadedBytes = 0
@@ -193,9 +205,9 @@ export async function uploadFileByChunks(
             ...(password ? { 'X-Upload-Password': password } : {})
           }
         })
-        const data = await resp.json().catch(() => ({}))
-        if (!resp.ok) {
-          throw new Error(data?.error || `chunk ${index} failed`)
+        const result: ApiResponse = await resp.json().catch(() => ({}))
+        if (!resp.ok || result.code !== 200) {
+          throw new Error(result?.message || `chunk ${index} failed`)
         }
 
         if (!chunkUploaded[index]) {
@@ -258,12 +270,12 @@ export async function uploadFileByChunks(
     body: JSON.stringify({ upload_id: uploadId })
   })
 
-  const completeData = await completeResp.json().catch(() => ({}))
-  if (!completeResp.ok) {
-    return { success: false, error: completeData?.error || 'upload complete failed', data: completeData }
+  const completeResult: ApiResponse = await completeResp.json().catch(() => ({}))
+  if (!completeResp.ok || completeResult.code !== 200) {
+    return { success: false, error: completeResult?.message || 'upload complete failed', data: completeResult?.data }
   }
 
-  return { success: true, data: completeData }
+  return { success: true, data: completeResult.data }
 }
 
 /**
@@ -271,10 +283,11 @@ export async function uploadFileByChunks(
  */
 export async function getChatMessages(): Promise<ChatMessagesResponse> {
   const response = await fetch('/api/chat/messages')
-  if (!response.ok) {
-    throw new Error('Failed to load chat messages')
+  const result: ApiResponse<ChatMessagesResponse> = await response.json()
+  if (!response.ok || result.code !== 200) {
+    throw new Error(result.message || 'Failed to load chat messages')
   }
-  return await response.json()
+  return result.data
 }
 
 /**
@@ -288,9 +301,10 @@ export async function sendChatMessage(message: string): Promise<{ success: boole
     },
     body: JSON.stringify({ message }),
   })
-  if (!response.ok) {
-    throw new Error('Failed to send message')
+  const result: ApiResponse<ChatMessage> = await response.json()
+  if (!response.ok || result.code !== 200) {
+    throw new Error(result.message || 'Failed to send message')
   }
-  return await response.json()
+  return { success: true, message: result.data }
 }
 

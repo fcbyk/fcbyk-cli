@@ -90,14 +90,14 @@ def test_file_upload(client, temp_dir):
 def test_api_directory(client, temp_dir):
     response = client.get('/api/directory')
     assert response.status_code == 200
-    data = response.json
+    data = response.json["data"]
     assert any(item["name"] == "test.txt" for item in data["items"])
 
 
 def test_api_file(client, temp_dir):
     response = client.get('/api/file/test.txt')
     assert response.status_code == 200
-    data = response.json
+    data = response.json["data"]
     assert data["content"] == "test content"
     assert data["name"] == "test.txt"
 

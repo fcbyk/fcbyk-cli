@@ -136,6 +136,7 @@ import type { DirectoryItem } from './types'
 import { useLansendDirectory } from './composables/useLansendDirectory'
 import { useLansendUpload } from './composables/useLansendUpload'
 import { useLansendPreview } from './composables/useLansendPreview'
+import { getLansendConfig } from './api'
 import { sleep } from '@/utils/time'
 
 // 目录
@@ -159,19 +160,16 @@ const unUpload = ref(false)
 const chatEnabled = ref(false)
 onMounted(async () => {
   try {
-    const response = await fetch('/api/config')
-    if (response.ok) {
-      const data = await response.json()
-      unDownload.value = data.un_download === true
-      unUpload.value = data.un_upload === true
-      chatEnabled.value = data.chat_enabled === true
+    const config = await getLansendConfig()
+    unDownload.value = config.un_download === true
+    unUpload.value = config.un_upload === true
+    chatEnabled.value = config.chat_enabled === true
+    
+    if (unUpload.value) {
+      activeTab.value = previewFile.value ? 'preview' : 'empty'
       
-      if (unUpload.value) {
-        activeTab.value = previewFile.value ? 'preview' : 'empty'
-        
-        if (isMobileLayout.value) {
-          activeTab.value = 'directory'
-        }
+      if (isMobileLayout.value) {
+        activeTab.value = 'directory'
       }
     }
   } catch (e) {
