@@ -163,12 +163,11 @@ function handlePageShow() {
 }
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+@use './style.scss' as *;
+
 .card {
-  width: 100%;
-  max-width: 980px;
-  background: rgba(30, 41, 59, 0.9);
-  padding: 24px;
+  @include card(980px, 24px, rgba(30, 41, 59, 0.9));
 }
 
 h1 {
@@ -177,7 +176,7 @@ h1 {
 }
 
 p.desc {
-  margin: 0 0 14px;
+  @include desc-text(14px, 14px);
 }
 
 .toolbar {
@@ -188,6 +187,19 @@ p.desc {
 }
 
 button {
+  @include button-base;
+  &.primary {
+    @include button-primary;
+  }
+  &.secondary {
+    @include button-secondary;
+  }
+  &:disabled {
+    @include button-disabled;
+  }
+  &:not(:disabled):active {
+    @include button-active;
+  }
   padding: 11px 16px;
   font-size: 15px;
   font-weight: 700;
@@ -204,14 +216,13 @@ button {
   gap: 12px;
   margin-bottom: 14px;
   flex-wrap: wrap;
-}
-
-.status .left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--muted);
-  font-size: 14px;
+  .left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--muted);
+    font-size: 14px;
+  }
 }
 
 .badge-dot {
@@ -237,6 +248,16 @@ button {
   gap: 16px;
 }
 
+.speed-control {
+  @include speed-control-container;
+  input[type="range"] {
+    @include speed-control-range;
+  }
+  .speed-value {
+    @include speed-value;
+  }
+}
+
 @media (max-width: 900px) {
   .layout {
     grid-template-columns: 1fr;
@@ -244,10 +265,7 @@ button {
 }
 
 .panel {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 14px;
-  padding: 16px;
+  @include panel-surface();
 }
 
 .panel h3 {
@@ -274,60 +292,46 @@ button {
   gap: 8px;
   word-break: break-all;
   transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.item .name {
-  font-weight: 700;
-  color: var(--text);
-}
-
-.item .meta {
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.item.active {
-  border-color: rgba(34, 211, 238, 0.5);
-  box-shadow: 0 8px 18px rgba(34, 211, 238, 0.18);
-  transform: translateY(-1px);
+  .name {
+    font-weight: 700;
+    color: var(--text);
+  }
+  .meta {
+    color: var(--muted);
+    font-size: 12px;
+  }
+  &.active {
+    border-color: rgba(34, 211, 238, 0.5);
+    box-shadow: 0 8px 18px rgba(34, 211, 238, 0.18);
+    transform: translateY(-1px);
+  }
 }
 
 .result {
-  background: linear-gradient(135deg, rgba(34, 211, 238, 0.12), rgba(168, 85, 247, 0.12));
-  border: 1px solid rgba(34, 211, 238, 0.35);
-  border-radius: 14px;
-  padding: 18px;
-  min-height: 140px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 10px;
-}
-
-.result .title {
-  color: var(--muted);
-  letter-spacing: 0.4px;
-}
-
-.result .value {
-  font-size: 22px;
-  font-weight: 800;
-  color: var(--primary);
-  word-break: break-all;
-}
-
-.result a {
-  color: var(--text);
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  text-decoration: none;
-  font-weight: 700;
-  display: inline-flex;
-  gap: 6px;
-  align-items: center;
-  width: fit-content;
+  @include result-box();
+  .title {
+    color: var(--muted);
+    letter-spacing: 0.4px;
+  }
+  .value {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--primary);
+    word-break: break-all;
+  }
+  a {
+    color: var(--text);
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    text-decoration: none;
+    font-weight: 700;
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    width: fit-content;
+  }
 }
 
 .muted {
@@ -340,32 +344,28 @@ button {
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
-}
-
-.redeem input {
-  flex: 1 1 180px;
-  min-width: 0;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(148, 163, 184, 0.6);
-  background: rgba(15, 23, 42, 0.8);
-  color: var(--text);
-  font-size: 14px;
-  outline: none;
-}
-
-.redeem input::placeholder {
-  color: rgba(148, 163, 184, 0.9);
-}
-
-.redeem input:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.4);
-}
-
-.redeem input:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+  input {
+    flex: 1 1 180px;
+    min-width: 0;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(148, 163, 184, 0.6);
+    background: rgba(15, 23, 42, 0.8);
+    color: var(--text);
+    font-size: 14px;
+    outline: none;
+    &::placeholder {
+      color: rgba(148, 163, 184, 0.9);
+    }
+    &:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.4);
+    }
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
 }
 
 .history {
@@ -388,27 +388,23 @@ button {
   overflow-y: auto;
   font-size: 13px;
   color: var(--muted);
-}
-
-.history-list li {
-  padding: 4px 0;
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.history-list .name {
-  font-weight: 600;
-  color: var(--text);
-  word-break: break-all;
-  text-decoration: none;
-}
-
-.history-list .name:hover {
-  text-decoration: underline;
-}
-
-.history-list .size {
-  white-space: nowrap;
+  li {
+    padding: 4px 0;
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .name {
+    font-weight: 600;
+    color: var(--text);
+    word-break: break-all;
+    text-decoration: none;
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+  .size {
+    white-space: nowrap;
+  }
 }
 </style>

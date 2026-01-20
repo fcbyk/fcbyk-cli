@@ -159,7 +159,39 @@ onMounted(() => {
 })
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+@use './style.scss' as *;
+
+.card {
+  @include card();
+}
+
+button {
+  @include button-base;
+  &.primary {
+    @include button-primary;
+  }
+  &.secondary {
+    @include button-secondary;
+  }
+  &:disabled {
+    @include button-disabled;
+  }
+  &:not(:disabled):active {
+    @include button-active;
+  }
+}
+
+.speed-control {
+  @include speed-control-container;
+  input[type="range"] {
+    @include speed-control-range;
+  }
+  .speed-value {
+    @include speed-value;
+  }
+}
+
 .toolbar {
   display: flex;
   gap: 12px;
@@ -178,6 +210,12 @@ onMounted(() => {
   align-items: center;
   gap: 10px;
   margin-bottom: 14px;
+  &.ok {
+    color: var(--success);
+  }
+  &.err {
+    color: var(--danger);
+  }
 }
 
 .layout {
@@ -190,19 +228,16 @@ onMounted(() => {
   .layout {
     grid-template-columns: 1fr;
   }
+
 }
 
 .panel {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 14px;
-  padding: 16px;
-}
-
-.panel h3 {
-  margin: 0 0 10px;
-  font-size: 17px;
-  color: var(--text);
+  @include panel-surface();
+  h3 {
+    margin: 0 0 10px;
+    font-size: 17px;
+    color: var(--text);
+  }
 }
 
 .list {
@@ -226,51 +261,48 @@ onMounted(() => {
   gap: 10px;
   transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
   word-break: break-word;
-}
-
-.item .badge {
-  width: 30px;
-  height: 30px;
-  border-radius: 10px;
-  background: rgba(34, 211, 238, 0.2);
-  color: var(--primary);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 13px;
-}
-
-.item.active {
-  border-color: rgba(34, 211, 238, 0.5);
-  box-shadow: 0 8px 18px rgba(34, 211, 238, 0.18);
-  transform: translateY(-1px);
+  .badge {
+    width: 30px;
+    height: 30px;
+    border-radius: 10px;
+    background: rgba(34, 211, 238, 0.2);
+    color: var(--primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 13px;
+  }
+  &.active {
+    border-color: rgba(34, 211, 238, 0.5);
+    box-shadow: 0 8px 18px rgba(34, 211, 238, 0.18);
+    transform: translateY(-1px);
+  }
+  &.drawn {
+    opacity: 0.4;
+    background: rgba(255, 255, 255, 0.02);
+    border-color: rgba(255, 255, 255, 0.03);
+    pointer-events: none;
+    .badge {
+      background: rgba(128, 128, 128, 0.2);
+      color: rgba(128, 128, 128, 0.6);
+    }
+  }
 }
 
 .result {
-  background: linear-gradient(135deg, rgba(34, 211, 238, 0.12), rgba(168, 85, 247, 0.12));
-  border: 1px solid rgba(34, 211, 238, 0.35);
-  border-radius: 14px;
-  padding: 18px;
-  text-align: center;
-  min-height: 140px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 10px;
-}
-
-.result .title {
-  color: var(--muted);
-  letter-spacing: 0.4px;
-}
-
-.result .value {
-  font-size: 32px;
-  font-weight: 800;
-  color: var(--primary);
-  text-shadow: 0 6px 24px rgba(34, 211, 238, 0.3);
-  word-break: break-word;
+  @include result-box(center);
+  .title {
+    color: var(--muted);
+    letter-spacing: 0.4px;
+  }
+  .value {
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--primary);
+    text-shadow: 0 6px 24px rgba(34, 211, 238, 0.3);
+    word-break: break-word;
+  }
 }
 
 .muted {
@@ -286,14 +318,6 @@ onMounted(() => {
   box-shadow: 0 0 12px rgba(34, 211, 238, 0.7);
 }
 
-.status.ok {
-  color: var(--success);
-}
-
-.status.err {
-  color: var(--danger);
-}
-
 .toggle-switch {
   display: flex;
   align-items: center;
@@ -305,60 +329,42 @@ onMounted(() => {
   cursor: pointer;
   user-select: none;
   transition: background 0.2s ease, border-color 0.2s ease;
-}
-
-.toggle-switch:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-.toggle-switch input[type="checkbox"] {
-  width: 44px;
-  height: 24px;
-  appearance: none;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  position: relative;
-  cursor: pointer;
-  transition: background 0.3s ease;
-}
-
-.toggle-switch input[type="checkbox"]:checked {
-  background: var(--primary);
-}
-
-.toggle-switch input[type="checkbox"]::before {
-  content: '';
-  position: absolute;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: white;
-  top: 2px;
-  left: 2px;
-  transition: transform 0.3s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.toggle-switch input[type="checkbox"]:checked::before {
-  transform: translateX(20px);
-}
-
-.toggle-switch label {
-  color: var(--text);
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.item.drawn {
-  opacity: 0.4;
-  background: rgba(255, 255, 255, 0.02);
-  border-color: rgba(255, 255, 255, 0.03);
-  pointer-events: none;
-}
-
-.item.drawn .badge {
-  background: rgba(128, 128, 128, 0.2);
-  color: rgba(128, 128, 128, 0.6);
+  &:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+  input[type="checkbox"] {
+    width: 44px;
+    height: 24px;
+    appearance: none;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.3s ease;
+    &:checked {
+      background: var(--primary);
+    }
+    &::before {
+      content: '';
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: white;
+      top: 2px;
+      left: 2px;
+      transition: transform 0.3s ease;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    &:checked::before {
+      transform: translateX(20px);
+    }
+  }
+  label {
+    color: var(--text);
+    font-size: 14px;
+    cursor: pointer;
+  }
 }
 </style>

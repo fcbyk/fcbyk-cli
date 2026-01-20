@@ -205,7 +205,9 @@ onUnmounted(() => {
 })
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+@use './style.scss' as *;
+
 :global(body) {
   overflow: hidden;
   height: 100vh;
@@ -217,6 +219,25 @@ onUnmounted(() => {
   width: 100%;
   height: 100%;
   display: block;
+}
+
+button {
+  @include button-base;
+  &.primary {
+    @include button-primary;
+  }
+  &.secondary {
+    @include button-secondary;
+  }
+  &.danger {
+    @include button-danger;
+  }
+  &:disabled {
+    @include button-disabled;
+  }
+  &:not(:disabled):active {
+    @include button-active;
+  }
 }
 
 .admin-layout {
@@ -240,6 +261,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  @include card-surface(rgba(30, 41, 59, 0.9));
 }
 
 .mobile-menu-btn {
@@ -314,13 +336,12 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-}
-
-.sidebar-header h2 {
-  font-size: 18px;
-  margin: 0;
-  color: var(--primary);
-  letter-spacing: 1px;
+  h2 {
+    font-size: 18px;
+    margin: 0;
+    color: var(--primary);
+    letter-spacing: 1px;
+  }
 }
 
 .sidebar-nav {
@@ -332,10 +353,9 @@ onUnmounted(() => {
   overflow-y: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
-}
-
-.sidebar-nav::-webkit-scrollbar {
-  display: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .nav-item {
@@ -352,20 +372,17 @@ onUnmounted(() => {
   font-size: 15px;
   text-align: left;
   width: 100%;
-}
-
-.nav-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.nav-item.active {
-  background: rgba(34, 211, 238, 0.15);
-  color: var(--primary);
-  font-weight: 600;
-}
-
-.nav-item .icon {
-  font-size: 18px;
+  &:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+  &.active {
+    background: rgba(34, 211, 238, 0.15);
+    color: var(--primary);
+    font-weight: 600;
+  }
+  .icon {
+    font-size: 18px;
+  }
 }
 
 .admin-main {
@@ -383,6 +400,7 @@ onUnmounted(() => {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+  @include card-surface(rgba(30, 41, 59, 0.9));
 }
 
 .panel {
@@ -391,10 +409,9 @@ onUnmounted(() => {
   padding-right: 4px;
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE and Edge */
-}
-
-.panel::-webkit-scrollbar {
-  display: none; /* Chrome, Safari and Opera */
+  &::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+  }
 }
 
 h1 {
@@ -424,19 +441,14 @@ h1 {
   font-size: 15px;
   text-align: left;
   width: 100%;
-}
-
-.logout-btn:hover {
-  color: var(--danger);
+  &:hover {
+    color: var(--danger);
+  }
 }
 
 button.small {
   padding: 8px 14px;
   font-size: 13px;
-}
-
-button:active {
-  transform: translateY(1px);
 }
 
 .stat {
@@ -445,25 +457,21 @@ button:active {
   border-radius: 14px;
   padding: 12px 14px;
   text-align: center;
-}
-
-.stat .label {
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.stat .value {
-  font-size: 22px;
-  font-weight: 800;
-  margin-top: 4px;
-}
-
-.stat .value.used {
-  color: var(--accent);
-}
-
-.stat .value.left {
-  color: var(--primary);
+  .label {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .value {
+    font-size: 22px;
+    font-weight: 800;
+    margin-top: 4px;
+    &.used {
+      color: var(--accent);
+    }
+    &.left {
+      color: var(--primary);
+    }
+  }
 }
 
 /* ===== 列表 ===== */
@@ -481,14 +489,16 @@ button:active {
   gap: 12px;
   padding: 12px 14px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.row:last-child {
-  border-bottom: none;
+  &:last-child {
+    border-bottom: none;
+  }
 }
 
 .code {
   font-size: 15px;
+  &.used {
+    color: var(--muted);
+  }
 }
 
 .hidden {
@@ -497,23 +507,17 @@ button:active {
   padding: 6px 12px;
 }
 
-.code.used {
-  color: var(--muted);
-}
-
 .status {
   font-size: 12px;
   padding: 4px 10px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.12);
-}
-
-.status.ok {
-  color: var(--success);
-}
-
-.status.bad {
-  color: var(--danger);
+  &.ok {
+    color: var(--success);
+  }
+  &.bad {
+    color: var(--danger);
+  }
 }
 
 .actions {
@@ -536,28 +540,25 @@ button:active {
   gap: 8px;
   align-items: center;
   flex-wrap: wrap;
-}
-
-.add-code-form input {
-  flex: 1;
-  min-width: 220px;
-  margin: 0;
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.6);
-  background: rgba(15, 23, 42, 0.8);
-  color: var(--text);
-  font-size: 15px;
-  outline: none;
-}
-
-.add-code-form input:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.4);
-}
-
-.add-code-form button {
-  white-space: nowrap;
+  input {
+    flex: 1;
+    min-width: 220px;
+    margin: 0;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.6);
+    background: rgba(15, 23, 42, 0.8);
+    color: var(--text);
+    font-size: 15px;
+    outline: none;
+    &:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.4);
+    }
+  }
+  button {
+    white-space: nowrap;
+  }
 }
 
 .add-code-actions {
@@ -565,12 +566,11 @@ button:active {
   gap: 8px;
   align-items: center;
   flex-wrap: wrap;
-}
-
-button.danger {
-  background: rgba(239, 68, 68, 0.9);
-  border: 1px solid rgba(239, 68, 68, 0.6);
-  color: white;
+  button.danger {
+    background: rgba(239, 68, 68, 0.9);
+    border: 1px solid rgba(239, 68, 68, 0.6);
+    color: white;
+  }
 }
 
 .add-code-msgs {
@@ -584,28 +584,24 @@ button.danger {
 .add-code-msg {
   font-size: 13px;
   min-height: 18px;
-}
-
-.add-code-msg.success {
-  color: var(--success);
-}
-
-.add-code-msg.error {
-  color: var(--danger);
+  &.success {
+    color: var(--success);
+  }
+  &.error {
+    color: var(--danger);
+  }
 }
 
 .msg {
   font-size: 12px;
   min-height: 16px;
   color: var(--muted);
-}
-
-.msg.success {
-  color: var(--success);
-}
-
-.msg.error {
-  color: var(--danger);
+  &.success {
+    color: var(--success);
+  }
+  &.error {
+    color: var(--danger);
+  }
 }
 
 /* ===== 自由抽奖占位 ===== */
@@ -618,10 +614,9 @@ button.danger {
   align-items: center;
   scrollbar-width: none;
   -ms-overflow-style: none;
-}
-
-.placeholder-content::-webkit-scrollbar {
-  display: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .empty-state {

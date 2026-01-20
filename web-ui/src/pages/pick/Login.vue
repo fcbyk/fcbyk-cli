@@ -37,7 +37,9 @@ async function handleLoginAndRedirect() {
 }
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+@use './style.scss' as *;
+
 :global(body) {
   overflow: hidden;
   height: 100vh;
@@ -69,12 +71,8 @@ async function handleLoginAndRedirect() {
 
 .admin-card {
   width: 100%;
-  background: rgba(30, 41, 59, 0.9);
-  padding: 24px;
   box-sizing: border-box;
-  border-radius: 18px;
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  @include card(100%, 24px, rgba(30, 41, 59, 0.9));
 }
 
 h1 {
@@ -88,26 +86,36 @@ h1 {
   font-size: 14px;
 }
 
-/* ===== 登录 ===== */
+button {
+  @include button-base;
+  &.primary {
+    @include button-primary;
+  }
+  &:disabled {
+    @include button-disabled;
+  }
+  &:not(:disabled):active {
+    @include button-active;
+  }
+}
+
 .login-section {
   width: 100%;
   margin: auto;
-}
-
-.login-section input {
-  width: 100%;
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.6);
-  background: rgba(15, 23, 42, 0.8);
-  color: var(--text);
-  font-size: 15px;
-  outline: none;
-}
-
-.login-section input:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.4);
+  input {
+    width: 100%;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.6);
+    background: rgba(15, 23, 42, 0.8);
+    color: var(--text);
+    font-size: 15px;
+    outline: none;
+    &:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.4);
+    }
+  }
 }
 
 .error-msg {
