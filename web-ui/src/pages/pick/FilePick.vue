@@ -262,6 +262,13 @@ button {
   .layout {
     grid-template-columns: 1fr;
   }
+
+  .card {
+    height: 100%;
+    width: 100%;
+    overflow-y: auto;
+    border-radius: 0;
+  }
 }
 
 .panel {
