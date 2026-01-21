@@ -11,11 +11,6 @@ def test_display_env_is_set_on_import():
     assert "DISPLAY" in slide_service.os.environ
 
 
-def test_static_resources_constant():
-    assert "socket.io.min.js" in SlideService.STATIC_RESOURCES
-    assert SlideService.SOCKETIO_VERSION in SlideService.STATIC_RESOURCES["socket.io.min.js"]
-
-
 def test_init_sets_failsafe_false(monkeypatch):
     # 确保 __init__ 会设置 pyautogui.FAILSAFE=False
     monkeypatch.setattr(slide_service.pyautogui, "FAILSAFE", True)

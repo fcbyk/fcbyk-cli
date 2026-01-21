@@ -59,13 +59,7 @@ except Exception:
 
 class SlideService:
     """PPT 远程控制服务"""
-    
-    # Socket.io 静态资源配置
-    SOCKETIO_VERSION = '4.5.4'
-    STATIC_RESOURCES = {
-        'socket.io.min.js': f'https://cdn.socket.io/{SOCKETIO_VERSION}/socket.io.min.js',
-    }
-    
+        
     def __init__(self, password: str):
         """
         初始化服务

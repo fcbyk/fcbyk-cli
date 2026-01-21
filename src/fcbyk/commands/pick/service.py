@@ -21,12 +21,11 @@ pick 业务逻辑层
 
 import click
 import random
-import string
-import time
 import os
 from typing import Iterable, Dict, Set, List, Optional
 
-from fcbyk.utils import storage
+from fcbyk.utils import storage, files, common
+from fcbyk.cli_support import output
 
 
 class PickService:
@@ -57,28 +56,7 @@ class PickService:
 
     def list_files(self, files_mode_root: str) -> List[Dict]:
         """列出文件模式下可供抽取的文件（支持单文件或目录）"""
-        if not files_mode_root:
-            return []
-        root = files_mode_root
-        if os.path.isfile(root):
-            return [{
-                'name': os.path.basename(root),
-                'path': root,
-                'size': os.path.getsize(root) if os.path.exists(root) else 0
-            }]
-        files = []
-        try:
-            for name in sorted(os.listdir(root)):
-                full = os.path.join(root, name)
-                if os.path.isfile(full):
-                    files.append({
-                        'name': name,
-                        'path': full,
-                        'size': os.path.getsize(full)
-                    })
-        except FileNotFoundError:
-            return []
-        return files
+        return files.get_files_metadata(files_mode_root)
 
     def pick_file(self, candidates: List[Dict]) -> Dict:
         """从候选文件列表中随机选择一个"""
@@ -90,11 +68,9 @@ class PickService:
 
     def generate_redeem_codes(self, count: int, length: int = 4) -> Iterable[str]:
         """生成若干个随机兑换码（字母数字混合，大写）"""
-        charset = string.ascii_uppercase + string.digits
         codes = set()
         while len(codes) < count:
-            code = ''.join(random.choice(charset) for _ in range(length))
-            codes.add(code)
+            codes.add(common.generate_random_string(length))
         return sorted(codes)
 
     def _load_redeem_codes_data(self) -> Dict:
@@ -292,7 +268,6 @@ class PickService:
 
         existed = set([str(k).strip().upper() for k in codes.keys() if str(k).strip()])
 
-        charset = string.ascii_uppercase + string.digits
         new_codes = []
         tries = 0
         max_tries = max(100, n * 50)
@@ -302,8 +277,7 @@ class PickService:
         # 生成策略：先用默认长度生成；如果冲突太多，逐步加长
         while len(new_codes) < n and tries < max_tries:
             tries += 1
-            code = ''.join(random.choice(charset) for _ in range(cur_len))
-            code = str(code).strip().upper()
+            code = common.generate_random_string(cur_len)
             if not code or code in existed:
                 # 冲突较多时，适当提高长度
                 extra += 1
@@ -335,23 +309,9 @@ class PickService:
 
         max_length = max(len(f"Current pointer: {item}") for item in items) if items else 0
 
-        def show_animation_frame(iterations: int, delay: float) -> None:
-            """显示抽奖动画的一帧
-            Args:
-                iterations: 动画帧数
-                delay: 每帧之间的延迟（秒）
-            """
-            for _ in range(iterations):
-                current = random.choice(items)
-                # 使用空格填充确保清除整行
-                display_text = f"Current pointer: {current}"
-                padding = " " * max(0, max_length - len(display_text))
-                click.echo(f"\r{display_text}{padding}", nl=False)
-                time.sleep(delay)
-
         # 三个阶段：快速 -> 中速 -> 慢速
-        show_animation_frame(random.randint(100, 200), 0.05)
-        show_animation_frame(random.randint(20, 40), 0.3)
-        show_animation_frame(random.randint(3, 10), 0.7)
+        output.show_spinning_animation(items, random.randint(100, 200), 0.05, max_length=max_length)
+        output.show_spinning_animation(items, random.randint(20, 40), 0.3, max_length=max_length)
+        output.show_spinning_animation(items, random.randint(3, 10), 0.7, max_length=max_length)
 
         click.echo("\nPick finished!")

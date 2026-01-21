@@ -23,11 +23,11 @@ lansend 业务逻辑层
 """
 
 import os
-import re
 import sys
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+from fcbyk.utils import storage, files
 
 
 @dataclass
@@ -46,26 +46,15 @@ class LansendService:
     # -------------------- 基础工具 --------------------
     @staticmethod
     def safe_filename(filename: str) -> str:
-        return re.sub(r"[^\w\s\u4e00-\u9fff\-\.]", "", filename)
+        return files.safe_filename(filename)
 
     @staticmethod
     def is_image_file(filename: str) -> bool:
-        image_extensions = {
-            ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".svg", ".ico", ".tiff", ".tif"
-        }
-        ext = os.path.splitext(filename)[1].lower()
-        return ext in image_extensions
+        return files.is_image_file(filename)
 
     @staticmethod
     def format_size(num_bytes: Optional[int]) -> str:
-        if num_bytes is None:
-            return "unknown size"
-        units = ["B", "KB", "MB", "GB", "TB"]
-        size = float(num_bytes)
-        for unit in units:
-            if size < 1024 or unit == units[-1]:
-                return f"{size:.2f} {unit}" if unit != "B" else f"{int(size)} {unit}"
-            size /= 1024
+        return files.format_size(num_bytes)
 
     @staticmethod
     def get_path_parts(current_path: str) -> List[Dict[str, str]]:
@@ -207,8 +196,7 @@ class LansendService:
             }
 
         # 2) 视频：不读取内容（由 /api/preview 支持 Range 播放）
-        video_exts = {".mp4", ".webm", ".ogg", ".mov", ".mkv", ".avi", ".m4v"}
-        if any(lower_name.endswith(ext) for ext in video_exts):
+        if files.is_video_file(lower_name):
             return {
                 "is_video": True,
                 "path": relative_path,

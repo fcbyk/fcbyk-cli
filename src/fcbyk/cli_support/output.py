@@ -1,5 +1,8 @@
 import click
-from typing import Any, Dict
+import random
+import time
+from typing import Any, Dict, List
+
 
 def colored_key_value(key: str, value: Any, key_color: str = 'cyan', value_color: str = 'yellow') -> str:
     """
@@ -99,3 +102,34 @@ def copy_to_clipboard(text: str, label: str = "URL", output_prefix: str = " ", s
     except Exception:
         if not silent:
             click.echo(f"{output_prefix}Warning: Could not copy {label} to clipboard")
+
+
+def show_spinning_animation(
+    items: List[str],
+    iterations: int,
+    delay: float,
+    prefix: str = "Current pointer: ",
+    max_length: int = 0
+) -> None:
+    """显示旋转/抽奖动画的一帧。
+    
+    Args:
+        items: 候选项目列表
+        iterations: 动画帧数
+        delay: 每帧之间的延迟（秒）
+        prefix: 显示前缀
+        max_length: 最大显示长度（用于清除整行），如果为0则自动计算
+    """
+    if not items:
+        return
+
+    if max_length <= 0:
+        max_length = max(len(f"{prefix}{item}") for item in items)
+
+    for _ in range(iterations):
+        current = random.choice(items)
+        display_text = f"{prefix}{current}"
+        padding = " " * max(0, max_length - len(display_text))
+        click.echo(f"\r{display_text}{padding}", nl=False)
+        time.sleep(delay)
+
