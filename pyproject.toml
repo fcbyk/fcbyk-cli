@@ -6,3 +6,35 @@ build-backend = "setuptools.build_meta"
 testpaths = ["src/fcbyk/tests"]
 python_files = ["test_*.py"]
 addopts = "-v --cov=fcbyk --cov-report=term-missing"
+
+[tool.commitizen]
+name = "cz_customize"
+version = "0.2.1"
+tag_format = "v$version"
+changelog_file = "CHANGELOG.md"
+version_files = [
+    "setup.cfg:version =",
+    "pyproject.toml:version ="
+]
+
+[tool.commitizen.customize]
+commit_parser = '^(?P<change_type>✨ feat|🐛 fix|♻️ refactor|📝 docs|⚡️ perf|✅ test)(?:\((?P<scope>[^\)]+)\))?:\s*(?P<message>.+)$'
+changelog_pattern = '^(✨ feat|🐛 fix|♻️ refactor|📝 docs|⚡️ perf|✅ test)'
+change_type_order = [
+    "✨ Features",
+    "🐛 Bug Fixes",
+    "♻️ Refactor",
+    "📝 Documentation",
+    "⚡️ Performance",
+    "✅ Tests"
+]
+
+[tool.commitizen.customize.change_type_map]
+"✨ feat" = "✨ Features"
+"🐛 fix" = "🐛 Bug Fixes"
+"♻️ refactor" = "♻️ Refactor"
+"📝 docs" = "📝 Documentation"
+"⚡️ perf" = "⚡️ Performance"
+"✅ test" = "✅ Tests"
+
+
