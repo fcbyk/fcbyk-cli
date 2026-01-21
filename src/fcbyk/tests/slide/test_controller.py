@@ -28,22 +28,24 @@ def test_login_and_check_auth(app_and_client):
     # 初始未登录
     r = client.get("/api/check_auth")
     assert r.status_code == 200
-    assert r.json == {"status": "success", "authenticated": False}
+    assert r.json["code"] == 200
+    assert r.json["data"]["authenticated"] is False
 
     # 登录失败
     r = client.post("/api/login", json={"password": "x"})
     assert r.status_code == 401
-    assert r.json["status"] == "error"
+    assert r.json["code"] == 401
 
     # 登录成功
     r = client.post("/api/login", json={"password": "p"})
     assert r.status_code == 200
-    assert r.json["status"] == "success"
+    assert r.json["code"] == 200
 
     # 登录后 check_auth
     r = client.get("/api/check_auth")
     assert r.status_code == 200
-    assert r.json == {"status": "success", "authenticated": True}
+    assert r.json["code"] == 200
+    assert r.json["data"]["authenticated"] is True
 
 
 def test_require_auth_blocks_actions(app_and_client, monkeypatch):
@@ -59,7 +61,8 @@ def test_require_auth_blocks_actions(app_and_client, monkeypatch):
     monkeypatch.setattr(service, "next_slide", lambda: (True, None))
     r = client.post("/api/next")
     assert r.status_code == 200
-    assert r.json == {"status": "success", "action": "next"}
+    assert r.json["code"] == 200
+    assert r.json["data"]["action"] == "next"
 
 
 def test_action_error_returns_500(app_and_client, monkeypatch):
@@ -69,7 +72,7 @@ def test_action_error_returns_500(app_and_client, monkeypatch):
     monkeypatch.setattr(service, "prev_slide", lambda: (False, "boom"))
     r = client.post("/api/prev")
     assert r.status_code == 500
-    assert r.json["status"] == "error"
+    assert r.json["code"] == 500
     assert r.json["message"] == "boom"
 
 
@@ -87,7 +90,8 @@ def test_mouse_move_endpoint(app_and_client, monkeypatch):
 
     r = client.post("/api/mouse/move", json={"dx": 1, "dy": -2})
     assert r.status_code == 200
-    assert r.json == {"status": "success", "action": "move"}
+    assert r.json["code"] == 200
+    assert r.json["data"]["action"] == "move"
     assert called == {"dx": 1, "dy": -2}
 
 
@@ -103,23 +107,23 @@ def test_mouse_other_endpoints(app_and_client, monkeypatch):
 
     r = client.post("/api/mouse/down")
     assert r.status_code == 200
-    assert r.json["action"] == "down"
+    assert r.json["data"]["action"] == "down"
 
     r = client.post("/api/mouse/up")
     assert r.status_code == 200
-    assert r.json["action"] == "up"
+    assert r.json["data"]["action"] == "up"
 
     r = client.post("/api/mouse/click")
     assert r.status_code == 200
-    assert r.json["action"] == "click"
+    assert r.json["data"]["action"] == "click"
 
     r = client.post("/api/mouse/rightclick")
     assert r.status_code == 200
-    assert r.json["action"] == "rightclick"
+    assert r.json["data"]["action"] == "rightclick"
 
     r = client.post("/api/mouse/scroll", json={"dx": 1, "dy": 2})
     assert r.status_code == 200
-    assert r.json["action"] == "scroll"
+    assert r.json["data"]["action"] == "scroll"
 
 
 def test_require_socketio_auth_wrapper_returns_none_when_unauthenticated(app_and_client):
@@ -155,6 +159,7 @@ def test_require_auth_wrapper_blocks_when_unauthenticated(app_and_client):
         with app.app_context():
             resp, status = decorated()
         assert status == 401
+        assert resp.json["code"] == 401
         assert resp.json["message"] == "Unauthorized"
 
         slide_controller.session = _Sess(authenticated=True)

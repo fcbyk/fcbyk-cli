@@ -33,7 +33,7 @@ export function useAuth() {
     try {
       const result = await apiLogin(password)
 
-      if (result.status === 'success') {
+      if (result.code === 200) {
         isAuthenticated.value = true
         return true
       } else {

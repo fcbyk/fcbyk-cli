@@ -5,33 +5,35 @@
 
 import type { ApiResponse, MouseMoveData, MouseScrollData } from './types'
 
-/** 检查响应是否授权 */
-async function handleResponse<T>(response: Response): Promise<T | any> {
+/** 检查响应是否授权并解析为 R 对象 */
+async function handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
   const data = await response.json()
-  
+
   if (response.status === 401) {
-    // 如果不是登录接口返回的 401，说明是 Session 失效，触发跳转
     if (!response.url.endsWith('/api/login')) {
       window.dispatchEvent(new CustomEvent('unauthorized'))
     }
   }
-  
-  return data
+
+  return data as ApiResponse<T>
 }
 
 /** 检查认证状态 */
 export async function checkAuth(): Promise<boolean> {
   try {
     const response = await fetch('/api/check_auth')
-    const data: ApiResponse = await handleResponse(response)
-    return data.authenticated ?? false
+    const result = await handleResponse<{ authenticated: boolean }>(response)
+    if (!response.ok || result.code !== 200) {
+      return false
+    }
+    return !!result.data?.authenticated
   } catch (error) {
     return false
   }
 }
 
 /** 登录 */
-export async function login(password: string): Promise<ApiResponse> {
+export async function login(password: string): Promise<ApiResponse<{ authenticated: boolean } | null>> {
   try {
     const response = await fetch('/api/login', {
       method: 'POST',
@@ -40,11 +42,12 @@ export async function login(password: string): Promise<ApiResponse> {
       },
       body: JSON.stringify({ password })
     })
-    return await handleResponse(response)
+    return await handleResponse<{ authenticated: boolean }>(response)
   } catch (error) {
     return {
-      status: 'error',
-      message: '网络错误，请重试'
+      code: 0,
+      message: '网络错误，请重试',
+      data: null
     }
   }
 }
@@ -53,7 +56,7 @@ export async function login(password: string): Promise<ApiResponse> {
 export async function logout(): Promise<void> {
   try {
     const response = await fetch('/api/logout', { method: 'POST' })
-    await handleResponse(response)
+    await handleResponse<null>(response)
   } catch (error) {
     // 静默处理
   }
@@ -63,7 +66,7 @@ export async function logout(): Promise<void> {
 export async function nextSlide(): Promise<void> {
   try {
     const response = await fetch('/api/next', { method: 'POST' })
-    await handleResponse(response)
+    await handleResponse<{ action: string }>(response)
   } catch (error) {
     // 静默处理错误
   }
@@ -73,7 +76,7 @@ export async function nextSlide(): Promise<void> {
 export async function prevSlide(): Promise<void> {
   try {
     const response = await fetch('/api/prev', { method: 'POST' })
-    await handleResponse(response)
+    await handleResponse<{ action: string }>(response)
   } catch (error) {
     // 静默处理错误
   }
@@ -87,7 +90,7 @@ export async function httpMouseMove(data: MouseMoveData): Promise<void> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     })
-    await handleResponse(response)
+    await handleResponse<{ action: string }>(response)
   } catch (error) {
     // 静默处理错误
   }
@@ -97,7 +100,7 @@ export async function httpMouseMove(data: MouseMoveData): Promise<void> {
 export async function httpMouseClick(): Promise<void> {
   try {
     const response = await fetch('/api/mouse/click', { method: 'POST' })
-    await handleResponse(response)
+    await handleResponse<{ action: string }>(response)
   } catch (error) {
     // 静默处理错误
   }
@@ -107,7 +110,7 @@ export async function httpMouseClick(): Promise<void> {
 export async function httpMouseRightClick(): Promise<void> {
   try {
     const response = await fetch('/api/mouse/rightclick', { method: 'POST' })
-    await handleResponse(response)
+    await handleResponse<{ action: string }>(response)
   } catch (error) {
     // 静默处理错误
   }
@@ -121,7 +124,7 @@ export async function httpMouseScroll(data: MouseScrollData): Promise<void> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     })
-    await handleResponse(response)
+    await handleResponse<{ action: string }>(response)
   } catch (error) {
     // 静默处理错误
   }
@@ -130,7 +133,7 @@ export async function httpMouseScroll(data: MouseScrollData): Promise<void> {
 export async function httpMouseDown(): Promise<void> {
   try {
     const response = await fetch('/api/mouse/down', { method: 'POST' })
-    await handleResponse(response)
+    await handleResponse<{ action: string }>(response)
   } catch (error) {
   }
 }
@@ -138,7 +141,7 @@ export async function httpMouseDown(): Promise<void> {
 export async function httpMouseUp(): Promise<void> {
   try {
     const response = await fetch('/api/mouse/up', { method: 'POST' })
-    await handleResponse(response)
+    await handleResponse<{ action: string }>(response)
   } catch (error) {
   }
 }
