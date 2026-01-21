@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import click
+import click,random
 
 from fcbyk import commands
 from fcbyk.commands.alias import AliasedGroup
@@ -7,7 +7,7 @@ from fcbyk.cli_support import (
     version_callback, 
     print_aliases, 
     add_gui_options, 
-    banner1
+    banner
 )
 
 
@@ -30,7 +30,9 @@ from fcbyk.cli_support import (
 @click.pass_context
 def cli(ctx):
     if ctx.invoked_subcommand is None:
-        click.echo(banner1)             # 打印 banner
+        banner_text = random.choice(banner)
+        
+        click.secho(banner_text, fg="white", dim=True)
         click.echo(ctx.get_help())      # 帮助信息
         print_aliases()                 # 打印别名，如果有
 
