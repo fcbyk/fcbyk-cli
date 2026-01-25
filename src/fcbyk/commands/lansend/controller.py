@@ -118,6 +118,59 @@ def register_chat_routes(app, service: LansendService):
         return R.success(message, "message sent")
 
 
+def register_speedtest_routes(app, service: LansendService):
+    """注册测速相关路由"""
+    @app.route("/api/speedtest/download", methods=["GET"])
+    def speedtest_download():
+        """下载测速接口：返回指定大小的随机数据"""
+        size_mb = _try_int(request.args.get("size")) or 50
+        if size_mb > 500:  # 限制最大 500MB
+            size_mb = 500
+
+        size_bytes = size_mb * 1024 * 1024
+
+        def generate():
+            chunk_size = 1024 * 1024  # 1MB chunks
+            remaining = size_bytes
+            while remaining > 0:
+                to_read = min(chunk_size, remaining)
+                yield b'\0' * to_read
+                remaining -= to_read
+
+        return Response(
+            stream_with_context(generate()),
+            content_type='application/octet-stream',
+            headers={
+                'Content-Length': str(size_bytes),
+                'Content-Disposition': 'attachment; filename=speedtest.bin'
+            }
+        )
+
+    @app.route("/api/speedtest/upload", methods=["POST"])
+    def speedtest_upload():
+        """上传测速接口：接收数据并丢弃"""
+        # 显式读取并丢弃所有数据，确保连接正确关闭
+        try:
+            if request.content_length:
+                # 如果有 content-length，按需读取
+                remaining = request.content_length
+                while remaining > 0:
+                    chunk = request.stream.read(min(remaining, 1024 * 1024))
+                    if not chunk:
+                        break
+                    remaining -= len(chunk)
+            else:
+                # 否则循环读取直到结束
+                while True:
+                    chunk = request.stream.read(1024 * 1024)
+                    if not chunk:
+                        break
+        except Exception:
+            pass
+            
+        return R.success(message="upload test complete")
+
+
 def register_upload_routes(app, service: LansendService):
     """注册文件上传相关路由"""
 
@@ -474,6 +527,8 @@ def register_routes(app, service: LansendService):
 
     if service.config.chat_enabled:
         register_chat_routes(app, service)
+
+    register_speedtest_routes(app, service)
 
     @app.route("/api/file/<path:filename>")
     def api_file(filename):

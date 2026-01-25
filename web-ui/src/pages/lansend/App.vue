@@ -56,6 +56,14 @@
           <span class="tab-title">{{ previewFile?.name }}</span>
           <button class="tab-close" @click.stop="closePreview" aria-label="关闭">×</button>
         </div>
+
+        <!-- 测速按钮 -->
+        <div class="tab-item tab-speedtest" @click="startSpeedTest" title="局域网测速">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          <span>测速</span>
+        </div>
       </div>
 
       <!-- 标签页内容（仅保留下载/上传。预览改为独立层，覆盖整个 tabs-container 内容区） -->
@@ -123,6 +131,66 @@
         />
       </div>
     </div>
+
+    <!-- 测速卡片 -->
+    <Transition name="slide-fade">
+      <div v-if="isSpeedTestVisible" class="speedtest-card">
+        <div class="speedtest-header">
+          <h3>局域网测速</h3>
+          <button class="close-btn" @click="closeSpeedTest">×</button>
+        </div>
+        <div class="speedtest-content">
+          <div class="speed-item">
+            <span class="label">延迟 (Ping):</span>
+            <span class="value">{{ speedResult.ping }} ms</span>
+          </div>
+          <div class="speed-item" :class="{ active: speedResult.status === 'downloading' }">
+            <div class="speed-info">
+              <span class="label">下载速度:</span>
+              <span class="value">{{ formatSpeed(speedResult.download) }}</span>
+            </div>
+            <div v-if="speedResult.status === 'downloading'" class="progress-bar">
+              <div class="progress-inner" :style="{ width: currentProgress + '%' }"></div>
+            </div>
+          </div>
+          <div class="speed-item" :class="{ active: speedResult.status === 'uploading' }">
+            <div class="speed-info">
+              <span class="label">上传速度:</span>
+              <span class="value">{{ formatSpeed(speedResult.upload) }}</span>
+            </div>
+            <div v-if="speedResult.status === 'uploading'" class="progress-bar">
+              <div class="progress-inner" :style="{ width: currentProgress + '%' }"></div>
+            </div>
+          </div>
+          <div v-if="speedResult.status === 'error'" class="speed-error">
+            {{ speedResult.error }}
+          </div>
+
+          <div v-if="speedResult.status === 'completed'" class="speed-estimation">
+            <div class="estimation-title">传输 1GB 文件预计耗时：</div>
+            <div class="estimation-grid">
+              <div class="estimation-item">
+                <span class="type">下载</span>
+                <span class="time">{{ formatDuration(1024 * 1024 * 1024 / speedResult.download) }}</span>
+              </div>
+              <div class="estimation-item">
+                <span class="type">上传</span>
+                <span class="time">{{ formatDuration(1024 * 1024 * 1024 / speedResult.upload) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="speedtest-footer">
+          <button 
+            class="retry-btn" 
+            :disabled="speedResult.status !== 'completed' && speedResult.status !== 'error' && speedResult.status !== 'idle'"
+            @click="startSpeedTest"
+          >
+            {{ speedResult.status === 'completed' || speedResult.status === 'error' ? '重新测速' : '正在测速...' }}
+          </button>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -136,6 +204,7 @@ import type { DirectoryItem } from './types'
 import { useLansendDirectory } from './composables/useLansendDirectory'
 import { useLansendUpload } from './composables/useLansendUpload'
 import { useLansendPreview } from './composables/useLansendPreview'
+import { useLansendSpeed } from './composables/useLansendSpeed'
 import { getLansendConfig } from './api'
 import { sleep } from '@/utils/time'
 
@@ -200,17 +269,28 @@ const {
 } = useLansendUpload()
 
 // 预览 + tab（单实例预览）
-const { 
-  previewFile, 
-  previewLoading, 
-  previewError, 
-  activeTab, 
+const {
+  previewFile,
+  previewLoading,
+  previewError,
+  activeTab,
   previewVideoLoading,
-  previewFileContent, 
+  previewFileContent,
   closePreview: originalClosePreview,
   onPreviewVideoLoaded,
-  onPreviewVideoError 
+  onPreviewVideoError
 } = useLansendPreview()
+
+// 测速
+const {
+  isSpeedTestVisible,
+  speedResult,
+  currentProgress,
+  startSpeedTest,
+  closeSpeedTest,
+  formatSpeed,
+  formatDuration
+} = useLansendSpeed()
 
 // 根据后端 requirePassword 决定是否可上传
 const canUpload = computed(() => {

@@ -291,6 +291,131 @@ export async function getChatMessages(): Promise<ChatMessagesResponse> {
 }
 
 /**
+ * 测速 - Ping
+ */
+export async function pingTest(): Promise<number> {
+  const start = Date.now()
+  await fetch('/api/config')
+  return Date.now() - start
+}
+
+/**
+ * 测速 - 下载
+ */
+export function downloadSpeedTest(
+  sizeMb: number = 50,
+  onProgress: (loaded: number, total: number, speed: number) => void
+): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    const startTime = Date.now()
+    let lastTime = startTime
+    let lastLoaded = 0
+    const speeds: number[] = []
+
+    xhr.open('GET', `/api/speedtest/download?size=${sizeMb}&t=${startTime}`)
+
+    xhr.onprogress = (e) => {
+      if (e.lengthComputable) {
+        const now = Date.now()
+        const duration = (now - lastTime) / 1000
+        if (duration >= 0.2) { // 每 200ms 计算一次瞬时速度
+          const chunkLoaded = e.loaded - lastLoaded
+          const instantSpeed = chunkLoaded / duration
+          
+          // 剔除前 500ms 的数据（TCP 慢启动阶段）
+          if (now - startTime > 500) {
+            speeds.push(instantSpeed)
+          }
+
+          onProgress(e.loaded, e.total, instantSpeed)
+          lastTime = now
+          lastLoaded = e.loaded
+        }
+      }
+    }
+
+    xhr.onreadystatechange = () => {
+      if (xhr.readyState === 4) {
+        if (xhr.status === 200) {
+          // 如果样本太少，回退到总平均值
+          const avgSpeed = speeds.length > 0 
+            ? speeds.reduce((a, b) => a + b, 0) / speeds.length 
+            : (sizeMb * 1024 * 1024) / ((Date.now() - startTime) / 1000)
+          resolve(avgSpeed)
+        } else {
+          reject(new Error(`Download failed with status ${xhr.status}`))
+        }
+      }
+    }
+
+    xhr.onerror = () => reject(new Error('Network error during download test'))
+    xhr.ontimeout = () => reject(new Error('Download test timeout'))
+    xhr.timeout = 60000
+    xhr.send()
+  })
+}
+
+/**
+ * 测速 - 上传
+ */
+export function uploadSpeedTest(
+  sizeMb: number = 30,
+  onProgress: (loaded: number, total: number, speed: number) => void
+): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const data = new Uint8Array(sizeMb * 1024 * 1024)
+    for (let i = 0; i < 1024; i++) data[i] = Math.floor(Math.random() * 256)
+    const blob = new Blob([data], { type: 'application/octet-stream' })
+
+    const xhr = new XMLHttpRequest()
+    const startTime = Date.now()
+    let lastTime = startTime
+    let lastLoaded = 0
+    const speeds: number[] = []
+
+    xhr.open('POST', `/api/speedtest/upload?t=${startTime}`)
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) {
+        const now = Date.now()
+        const duration = (now - lastTime) / 1000
+        if (duration >= 0.2) {
+          const chunkLoaded = e.loaded - lastLoaded
+          const instantSpeed = chunkLoaded / duration
+          
+          if (now - startTime > 500) {
+            speeds.push(instantSpeed)
+          }
+
+          onProgress(e.loaded, e.total, instantSpeed)
+          lastTime = now
+          lastLoaded = e.loaded
+        }
+      }
+    }
+
+    xhr.onreadystatechange = () => {
+      if (xhr.readyState === 4) {
+        if (xhr.status === 200) {
+          const avgSpeed = speeds.length > 0 
+            ? speeds.reduce((a, b) => a + b, 0) / speeds.length 
+            : blob.size / ((Date.now() - startTime) / 1000)
+          resolve(avgSpeed)
+        } else {
+          reject(new Error(`Upload failed with status ${xhr.status}`))
+        }
+      }
+    }
+
+    xhr.onerror = () => reject(new Error('Network error during upload test'))
+    xhr.ontimeout = () => reject(new Error('Upload test timeout'))
+    xhr.timeout = 60000
+    xhr.send(blob)
+  })
+}
+
+/**
  * 发送聊天消息
  */
 export async function sendChatMessage(message: string): Promise<{ success: boolean; message: ChatMessage }> {

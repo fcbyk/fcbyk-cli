@@ -65,3 +65,11 @@ export interface LansendConfig {
   chat_enabled: boolean
 }
 
+export interface SpeedTestResult {
+  ping: number
+  download: number
+  upload: number
+  status: 'idle' | 'pinging' | 'downloading' | 'uploading' | 'completed' | 'error'
+  error?: string
+}
+
