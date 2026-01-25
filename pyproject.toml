@@ -9,7 +9,7 @@ addopts = "-v --cov=fcbyk --cov-report=term-missing"
 
 [tool.commitizen]
 name = "cz_customize"
-version = "0.2.1"
+version = "0.2.2"
 tag_format = "v$version"
 changelog_file = "CHANGELOG.md"
 version_files = [
@@ -18,13 +18,14 @@ version_files = [
 ]
 
 [tool.commitizen.customize]
-commit_parser = '^(?P<change_type>✨ feat|🐛 fix|♻️ refactor|📝 docs|⚡️ perf|✅ test)(?:\((?P<scope>[^\)]+)\))?:\s*(?P<message>.+)$'
-changelog_pattern = '^(✨ feat|🐛 fix|♻️ refactor|📝 docs|⚡️ perf|✅ test)'
+commit_parser = '^(?P<change_type>✨ feat|🐛 fix|♻️ refactor|📝 docs|⚡️ perf|✅ test|🎨 style)(?:\((?P<scope>[^\)]+)\))?:\s*(?P<message>.+)$'
+changelog_pattern = '^(✨ feat|🐛 fix|♻️ refactor|📝 docs|⚡️ perf|✅ test|🎨 style)'
 change_type_order = [
     "✨ Features",
     "🐛 Bug Fixes",
     "♻️ Refactor",
     "📝 Documentation",
+    "🎨 Styles",
     "⚡️ Performance",
     "✅ Tests"
 ]
@@ -34,6 +35,7 @@ change_type_order = [
 "🐛 fix" = "🐛 Bug Fixes"
 "♻️ refactor" = "♻️ Refactor"
 "📝 docs" = "📝 Documentation"
+"🎨 style" = "🎨 Styles"
 "⚡️ perf" = "⚡️ Performance"
 "✅ test" = "✅ Tests"
 
