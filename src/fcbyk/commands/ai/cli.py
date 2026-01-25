@@ -23,6 +23,7 @@ from .service import (
     ChatRequest,
     extract_assistant_reply,
 )
+from . import renderer as ai_renderer
 
 CONFIG_FILE = "fcbyk_config.json"
 SECTION = "ai"
@@ -32,6 +33,7 @@ DEFAULT_CONFIG = {
     'api_url': 'https://api.deepseek.com/v1/chat/completions',
     'api_key': None,
     'stream': False,
+    'rich': False,
 }
 
 SYSTEM_PROMPT = (
@@ -39,11 +41,16 @@ SYSTEM_PROMPT = (
     "Avoid using Markdown, code blocks, or any rich formatting. "
     "Use simple line breaks and spaces for alignment."
 )
+SYSTEM_PROMPT_RICH = (
+    "You are a helpful assistant. Respond using standard Markdown. "
+    "Use code blocks for code, bold for emphasis, and lists where appropriate. "
+    "Keep your responses concise and suitable for a terminal environment."
+)
 
 
 def _print_streaming_chunks(chunks) -> str:
     reply = ''
-    click.secho('AI: ', fg='blue', nl=False)
+    click.secho('AI: ', fg='blue', nl=False, bold=True)
     for chunk in chunks:
         delta = chunk['choices'][0]['delta'].get('content', '')
         if delta:
@@ -55,13 +62,14 @@ def _print_streaming_chunks(chunks) -> str:
 
 def _chat_loop(config: dict):
     service = AIService()
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    system_prompt = SYSTEM_PROMPT_RICH if config.get('rich') else SYSTEM_PROMPT
+    messages = [{"role": "system", "content": system_prompt}]
 
     click.secho('Chat started. Type "exit" to quit.', fg='cyan')
 
     while True:
         try:
-            user_input = input('You: ').strip()
+            user_input = input(click.style('You: ', fg='green', bold=True)).strip()
         except (EOFError, KeyboardInterrupt):
             click.secho('\nChat ended.', fg='cyan')
             break
@@ -82,14 +90,29 @@ def _chat_loop(config: dict):
         )
 
         try:
-            resp_or_chunks = service.chat(req)
+            if config.get('rich') and getattr(ai_renderer, 'RICH_AVAILABLE', False):
+                status_text = "[bold blue]正在生成响应...[/bold blue]" if req.stream else "[bold blue]正在思考...[/bold blue]"
+                with ai_renderer.Status(status_text, spinner="dots"):
+                    resp_or_chunks = service.chat(req)
+            else:
+                if (not req.stream) and (not config.get('rich')):
+                    click.secho('AI: ', fg='blue', nl=False)
+                    click.echo(' 正在思考...', nl=False)
+                resp_or_chunks = service.chat(req)
 
             if req.stream:
-                reply = _print_streaming_chunks(resp_or_chunks)
+                if config.get('rich'):
+                    reply = ai_renderer.print_streaming_chunks(resp_or_chunks)
+                else:
+                    reply = _print_streaming_chunks(resp_or_chunks)
             else:
                 reply = extract_assistant_reply(resp_or_chunks)
-                click.secho('AI: ', fg='blue', nl=False)
-                click.echo(f' {reply}')
+                if config.get('rich'):
+                    ai_renderer.render_non_streaming_reply(reply)
+                else:
+                    click.echo('\r', nl=False)
+                    click.secho('AI: ', fg='blue', nl=False)
+                    click.echo(f' {reply}')
 
             messages.append({"role": "assistant", "content": reply})
 
@@ -120,8 +143,9 @@ def _chat_loop(config: dict):
 @click.option('--api-key', '-k', help='set api key')
 @click.option('--api-url', '-u', help='set api url (full url)')
 @click.option('--stream', '-s', help='set stream, 0 for false, 1 for true')
+@click.option('--rich', '-r', help='enable rich rendering, 0 for false, 1 for true')
 @click.pass_context
-def ai(ctx, model, api_key, api_url, stream):
+def ai(ctx, model, api_key, api_url, stream, rich):
     # 读取 section 配置，并用 default 补齐
     config = storage.load_section(CONFIG_FILE, SECTION, default=DEFAULT_CONFIG)
 
@@ -131,8 +155,8 @@ def ai(ctx, model, api_key, api_url, stream):
     config_updated = False
     for key, value in cli_options.items():
         if key in DEFAULT_CONFIG:
-            # 特殊处理布尔型 stream
-            if key == 'stream':
+            # 特殊处理布尔型
+            if key in ('stream', 'rich'):
                 new_val = str(value).lower() in ['1', 'true']
             else:
                 new_val = value
@@ -142,7 +166,7 @@ def ai(ctx, model, api_key, api_url, stream):
                 config_updated = True
 
     # 无参数则进入聊天模式，有参数则保存配置
-    if not any([model, api_key, api_url, stream]):
+    if not any([model, api_key, api_url, stream, rich]):
         if not config.get('api_key'):
             click.secho('Error: api_key is not configured. Please set it via --api-key or the config file.', fg='red', err=True)
             ctx.exit(1)
