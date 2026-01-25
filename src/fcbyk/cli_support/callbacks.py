@@ -59,15 +59,23 @@ def version_callback(ctx, param, value):
     ctx.exit()
 
 
-def print_aliases():
+def print_aliases(show_empty=False, leading_newline=True):
     """打印别名列表"""
     try:
         from fcbyk.commands.alias import read_aliases
         aliases = read_aliases()
         if aliases:
-            click.echo("\nAliases:")
-            for alias_name, command in aliases.items():
-                click.echo(f"   {alias_name}   =>   {command}")
+            if leading_newline:
+                click.echo()
+            click.echo("Aliases:")
+            for alias_name, command_parts in aliases.items():
+                if isinstance(command_parts, list):
+                    cmd_str = " ".join(command_parts)
+                else:
+                    cmd_str = str(command_parts)
+                click.echo(f"  {alias_name} -> {cmd_str}")
             click.echo()
+        elif show_empty:
+            click.echo("No aliases configured.")
     except Exception:
         pass

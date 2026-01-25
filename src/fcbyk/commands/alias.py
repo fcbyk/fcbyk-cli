@@ -20,18 +20,32 @@ def write_aliases(aliases: dict) -> None:
 class AliasedGroup(click.Group):
     """支持从 aliases.json 动态解析别名的 Group"""
 
-    def get_command(self, ctx: click.Context, cmd_name: str):
-        # 先走正常命令解析
-        rv = super().get_command(ctx, cmd_name)
-        if rv is not None:
-            return rv
+    def resolve_command(self, ctx, args):
+        # 1. 尝试正常解析
+        try:
+            return super().resolve_command(ctx, args)
+        except click.UsageError:
+            # 如果解析失败，可能是别名
+            pass
 
-        # 再查别名
+        # 2. 查别名
+        if not args:
+            return super().resolve_command(ctx, args)
+
+        cmd_name = args[0]
         aliases = read_aliases()
-        actual_cmd = aliases.get(cmd_name)
-        if actual_cmd:
-            return super().get_command(ctx, actual_cmd)
-        return None
+        actual_cmd_parts = aliases.get(cmd_name)
+
+        if actual_cmd_parts:
+            if isinstance(actual_cmd_parts, str):
+                actual_cmd_parts = [actual_cmd_parts]
+
+            # 构造新的参数列表：[别名对应的真实命令序列] + [原始剩余参数]
+            new_args = actual_cmd_parts + list(args[1:])
+            return super().resolve_command(ctx, new_args)
+
+        # 3. 如果没别名，再次尝试（这会抛出正常的 Click 错误）
+        return super().resolve_command(ctx, args)
 
 
 @click.group(help="Manage command aliases")
@@ -42,9 +56,9 @@ def alias():
 
 @alias.command("add", help="Add a new alias")
 @click.argument("alias_name")
-@click.argument("command_name")
+@click.argument("command_parts", nargs=-1, required=True)
 @click.pass_context
-def add_alias(ctx: click.Context, alias_name: str, command_name: str):
+def add_alias(ctx: click.Context, alias_name: str, command_parts: tuple):
     """添加一个新别名"""
     root_ctx = ctx.find_root()
     root_cmd = root_ctx.command
@@ -54,31 +68,29 @@ def add_alias(ctx: click.Context, alias_name: str, command_name: str):
         click.echo(f"Error: '{alias_name}' is an existing command, cannot be used as an alias.", err=True)
         raise SystemExit(1)
 
-    # 检查 command_name 是否是有效命令
+    # 检查命令的第一部分是否是有效命令
+    command_name = command_parts[0]
     if not isinstance(root_cmd, click.Group) or root_cmd.get_command(root_ctx, command_name) is None:
         click.echo(f"Error: command '{command_name}' does not exist.", err=True)
         raise SystemExit(1)
 
     aliases = read_aliases()
     if alias_name in aliases:
-        click.echo(f"Warning: alias '{alias_name}' already exists and points to '{aliases[alias_name]}'. Overwriting.")
+        old_cmd = aliases[alias_name]
+        if isinstance(old_cmd, list):
+            old_cmd = " ".join(old_cmd)
+        click.echo(f"Warning: alias '{alias_name}' already exists and points to '{old_cmd}'. Overwriting.")
 
-    aliases[alias_name] = command_name
+    aliases[alias_name] = list(command_parts)
     write_aliases(aliases)
-    click.echo(f"Alias added: {alias_name} -> {command_name}")
+    click.echo(f"Alias added: {alias_name} -> {' '.join(command_parts)}")
 
 
 @alias.command("list", help="List all aliases")
 def list_aliases():
     """列出所有别名"""
-    aliases = read_aliases()
-    if not aliases:
-        click.echo("No aliases configured.")
-        return
-
-    click.echo("Aliases:")
-    for alias_name, command_name in aliases.items():
-        click.echo(f"  {alias_name} -> {command_name}")
+    from ..cli_support.callbacks import print_aliases
+    print_aliases(show_empty=True, leading_newline=False)
 
 
 @alias.command("remove", help="Remove an alias")
