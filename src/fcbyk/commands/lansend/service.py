@@ -152,7 +152,8 @@ class LansendService:
             )
         items.sort(key=lambda x: (not x["is_dir"], x["name"].lower()))
 
-        share_name = os.path.basename(base)
+        # 处理磁盘根目录情况 (如 Windows 的 D:\ 或 Linux 的 /)，os.path.basename 会返回空
+        share_name = os.path.basename(base) or base.rstrip(os.sep) or base
         return {
             "share_name": share_name,
             "relative_path": relative_path,
