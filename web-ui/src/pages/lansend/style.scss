@@ -542,20 +542,57 @@ body {
 
 .current-path {
   margin-bottom: 15px;
-  color: #666;
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
   font-size: 14px;
+  line-height: 1.6;
+  border: 1px solid #eee;
+
+  .path-item {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
 
   .path-separator {
-    margin: 0 5px;
+    color: #909399;
+    font-size: 12px;
+    user-select: none;
+    margin: 0 2px;
   }
 
   .path-link {
-    color: #3498db;
-    text-decoration: none;
+    color: #606266;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: all 0.2s;
     cursor: pointer;
+    white-space: nowrap;
 
     &:hover {
-      text-decoration: underline;
+      background-color: #e4e7ed;
+      color: #409eff;
+    }
+  }
+
+  // 最后一个 path-item 的 link 样式
+  .path-item:last-child {
+    .path-link {
+      color: #303133;
+      font-weight: 500;
+      cursor: default;
+      &:hover {
+        background: none;
+        color: #303133;
+      }
+    }
+    .path-separator {
+      display: none;
     }
   }
 }

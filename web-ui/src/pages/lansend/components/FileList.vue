@@ -1,12 +1,15 @@
 <template>
   <div class="file-list-wrapper">
     <div class="current-path">
-      <span class="path-separator">/</span>
-      <span @click="emitNavigate('')" class="path-link">{{ shareName }}</span>
-      <span class="path-separator">/</span>
-      <template v-for="(part, index) in pathParts" :key="index">
-        <span @click="emitNavigate(part.path)" class="path-link">{{ part.name }}</span>
+      <div class="path-item">
+        <span @click="emitNavigate('')" class="path-link">{{ shareName }}</span>
         <span class="path-separator">/</span>
+      </div>
+      <template v-for="(part, index) in pathParts" :key="index">
+        <div class="path-item">
+          <span @click="emitNavigate(part.path)" class="path-link">{{ part.name }}</span>
+          <span class="path-separator">/</span>
+        </div>
       </template>
     </div>
 
