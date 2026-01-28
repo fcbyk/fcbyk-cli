@@ -6,6 +6,7 @@ from fcbyk.commands.alias import AliasedGroup
 from fcbyk.cli_support import (
     version_callback, 
     print_aliases, 
+    print_commands,
     add_gui_options, 
     banner
 )
@@ -35,6 +36,7 @@ def cli(ctx):
         click.secho(banner_text, fg="white", dim=True)
         click.echo(ctx.get_help())      # 帮助信息
         print_aliases()                 # 打印别名，如果有
+        print_commands(leading_newline=False)  # 打印已存脚本，如果有
 
 
 # 注册子命令

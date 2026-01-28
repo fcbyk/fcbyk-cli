@@ -82,3 +82,32 @@ def print_aliases(show_empty=False, leading_newline=True):
             click.echo("No aliases configured.")
     except Exception:
         pass
+
+
+def print_commands(show_empty=False, leading_newline=True):
+    """打印已保存的命令脚本列表"""
+    try:
+        from fcbyk.commands.cmd.cli import load_commands
+        commands = load_commands()
+        if commands:
+            if leading_newline:
+                click.echo()
+            click.echo("Scripts:")
+            items = list(commands.items())
+            max_name_len = max(len(str(name)) for name, _ in items)
+            for name, cmd_data in items:
+                if isinstance(cmd_data, str):
+                    command = cmd_data
+                    cwd_str = ""
+                else:
+                    command = cmd_data.get("command", "")
+                    cwd = cmd_data.get("cwd")
+                    cwd_str = f" [CWD: {cwd}]" if cwd else ""
+                
+                padding = " " * (max_name_len - len(str(name)) + 2)
+                click.echo(f"  {name}{padding}->  {command}{cwd_str}")
+            click.echo()
+        elif show_empty:
+            click.echo("No scripts saved yet.")
+    except Exception:
+        pass
