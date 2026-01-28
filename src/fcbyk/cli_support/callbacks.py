@@ -68,12 +68,15 @@ def print_aliases(show_empty=False, leading_newline=True):
             if leading_newline:
                 click.echo()
             click.echo("Aliases:")
-            for alias_name, command_parts in aliases.items():
+            items = list(aliases.items())
+            max_name_len = max(len(str(name)) for name, _ in items)
+            for alias_name, command_parts in items:
                 if isinstance(command_parts, list):
                     cmd_str = " ".join(command_parts)
                 else:
                     cmd_str = str(command_parts)
-                click.echo(f"  {alias_name} -> {cmd_str}")
+                padding = " " * (max_name_len - len(str(alias_name)) + 2)
+                click.echo(f"  {alias_name}{padding}->  {cmd_str}")
             click.echo()
         elif show_empty:
             click.echo("No aliases configured.")

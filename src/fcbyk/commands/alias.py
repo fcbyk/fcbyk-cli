@@ -54,11 +54,14 @@ def alias():
     pass
 
 
-@alias.command("add", help="Add a new alias")
+@alias.command(
+    "add",
+    help="Add a new alias",
+    context_settings=dict(ignore_unknown_options=True, allow_extra_args=True),
+)
 @click.argument("alias_name")
-@click.argument("command_parts", nargs=-1, required=True)
 @click.pass_context
-def add_alias(ctx: click.Context, alias_name: str, command_parts: tuple):
+def add_alias(ctx: click.Context, alias_name: str):
     """添加一个新别名"""
     root_ctx = ctx.find_root()
     root_cmd = root_ctx.command
@@ -68,10 +71,25 @@ def add_alias(ctx: click.Context, alias_name: str, command_parts: tuple):
         click.echo(f"Error: '{alias_name}' is an existing command, cannot be used as an alias.", err=True)
         raise SystemExit(1)
 
-    # 检查命令的第一部分是否是有效命令
+    command_parts = tuple(ctx.args)
+
+    if not command_parts:
+        click.echo("Error: COMMAND_PARTS is required.", err=True)
+        raise SystemExit(1)
+
     command_name = command_parts[0]
     if not isinstance(root_cmd, click.Group) or root_cmd.get_command(root_ctx, command_name) is None:
         click.echo(f"Error: command '{command_name}' does not exist.", err=True)
+        raise SystemExit(1)
+
+    target_cmd = root_cmd.get_command(root_ctx, command_name)
+    try:
+        target_cmd.make_context(command_name, list(command_parts[1:]), resilient_parsing=False)
+    except click.UsageError as exc:
+        click.echo(
+            f"Error: invalid options for command '{command_name}' in alias '{alias_name}': {exc}",
+            err=True,
+        )
         raise SystemExit(1)
 
     aliases = read_aliases()
