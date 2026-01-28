@@ -1,10 +1,23 @@
 import click
 import subprocess
+import re
 from fcbyk.utils import storage
 
 # 持久化配置
 DATA_FILE = storage.get_path('cmd_data.json', subdir='data')
 DEFAULT_DATA = {}
+
+# 危险命令检测正则列表
+DANGEROUS_PATTERNS = [
+    r'rm\s+-[^ ]*[rf]',             # rm -rf, rm -f, rm -rvf
+    r'git\s+push\s+.*(-f|--force)',  # git push -f, git push --force
+    r'shutdown',                    # 关机
+    r'reboot',                      # 重启
+    r'format\s+[a-zA-Z]:',          # Windows 格式化
+    r'rd\s+/[sq]',                  # Windows 静默删除目录
+    r'del\s+/[sq]',                 # Windows 静默删除文件
+    r'>\s*/dev/sd',                 # Linux 直接写磁盘
+]
 
 def load_commands():
     """从磁盘加载命令数据"""
@@ -13,6 +26,13 @@ def load_commands():
 def save_commands(commands):
     """保存命令数据到磁盘"""
     storage.save_json(DATA_FILE, commands)
+
+def is_dangerous(command):
+    """检测命令是否包含危险操作"""
+    for pattern in DANGEROUS_PATTERNS:
+        if re.search(pattern, command, re.IGNORECASE):
+            return True
+    return False
 
 @click.group(name='cmd', help='Manage reusable command snippets')
 def cmd():
@@ -100,6 +120,14 @@ def run(name, args, cwd):
             command = command.replace(f"${i}", arg)
             command = command.replace(f"{{{i}}}", arg)
             
+        # 危险命令检测
+        if is_dangerous(command):
+            click.secho("\n[WARNING] DANGEROUS COMMAND DETECTED!", fg="red", bold=True)
+            click.secho(f"Command: {command}", fg="red")
+            if not click.confirm("This command contains potentially harmful operations. Are you sure you want to execute it?", default=False):
+                click.echo("Execution aborted.")
+                return
+
         if target_cwd:
             click.echo(f"Running in {target_cwd}: {command}")
         else:
