@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #13c8ec;
+  --color-background-dark: #0a1114;
+}
+
+@layer base {
+  body {
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: var(--color-background-dark);
+    background-image: 
+      linear-gradient(rgba(19, 200, 236, 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(19, 200, 236, 0.08) 1px, transparent 1px);
+    background-size: 80px 80px;
+    background-attachment: fixed;
+    color: white;
+  }
+}
+
+@layer components {
+  .pulse-glow {
+    animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .transfer-link {
+    stroke-dasharray: 4, 20;
+    animation: flow 0.35s linear infinite;
+    stroke-linecap: round;
+  }
+
+  .link-glow {
+    filter: blur(4px);
+    opacity: 0.4;
+    animation: glow-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes glow-pulse {
+    0%, 100% { opacity: 0.3; stroke-width: 6; }
+    50% { opacity: 0.6; stroke-width: 8; }
+  }
+
+  .link-main {
+    filter: drop-shadow(0 0 4px var(--color-primary));
+  }
+}
+
+@keyframes flow {
+  from { stroke-dashoffset: 24; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes pulse-ring {
+  0%, 100% { 
+    box-shadow: 0 0 15px rgba(19, 200, 236, 0.4); 
+    border-color: rgba(19, 200, 236, 0.6);
+  }
+  50% { 
+    box-shadow: 0 0 30px rgba(19, 200, 236, 0.8); 
+    border-color: rgba(19, 200, 236, 1);
+  }
+}
