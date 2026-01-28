@@ -4,5 +4,6 @@ from .pick.cli import pick
 from .slide.cli import slide
 from .alias import alias
 from .cmd.cli import cmd
+from .get.cli import get
 
-__all__ = ['lansend', 'ai', 'pick', 'slide', 'alias', 'cmd']
+__all__ = ['lansend', 'ai', 'pick', 'slide', 'alias', 'cmd', 'get']
