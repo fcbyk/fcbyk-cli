@@ -49,6 +49,7 @@ def _show_lansend_config(ctx: click.Context, param, value: bool) -> None:
 @click.option("-un-d","--un-download", is_flag=True, default=False, help="Hide download buttons in directory tab")
 @click.option("-un-up","--un-upload", is_flag=True, default=False, help="Disable upload functionality")
 @click.option("--chat", is_flag=True, default=False, help="Enable chat functionality")
+@click.option("--transfer", is_flag=True, default=False, help="Enable device-to-device transfer functionality")
 @click.option(
     "--show-config",
     is_flag=True,
@@ -67,6 +68,7 @@ def lansend(
     un_download: bool = False,
     un_upload: bool = False,
     chat: bool = False,
+    transfer: bool = False,
     last: bool = False,
     save: bool = False,
 ):
@@ -92,6 +94,7 @@ def lansend(
         un_download = bool(cfg.get("un_download") or False)
         un_upload = bool(cfg.get("un_upload") or False)
         chat = bool(cfg.get("chat") or False)
+        transfer = bool(cfg.get("transfer") or False)
 
     if not os.path.exists(directory):
         click.echo(f"Error: Directory {directory} does not exist")
@@ -109,6 +112,7 @@ def lansend(
         un_download=un_download,
         un_upload=un_upload,
         chat_enabled=chat,
+        transfer_enabled=transfer,
     )
     service = LansendService(config)
     config.upload_password = service.pick_upload_password(password, un_upload, click)
@@ -139,6 +143,7 @@ def lansend(
                     "un_download": bool(un_download),
                     "un_upload": bool(un_upload),
                     "chat": bool(chat),
+                    "transfer": bool(transfer),
                 },
             )
         except Exception:

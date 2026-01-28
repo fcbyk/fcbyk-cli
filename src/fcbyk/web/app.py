@@ -1,6 +1,6 @@
 import os
 import logging
-from flask import Flask, send_from_directory, make_response
+from flask import Flask, send_from_directory, make_response, request
 
 
 # 禁用 Flask 的日志
@@ -28,6 +28,18 @@ def create_spa(
         static_folder=f"{root}/assets",
         static_url_path="/assets"
     )
+
+    # 允许开发环境跨域
+    @app.after_request
+    def after_request(response):
+        origin = request.headers.get('Origin')
+        if origin:
+            # 允许所有 Origin 跨域，并支持凭据
+            response.headers.add('Access-Control-Allow-Origin', origin)
+            response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+            response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+            response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
 
     dist_root = os.path.join(app.root_path, root)
 

@@ -4,6 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
+    "dev:transfer": "npm run dev --page=transfer",
+    "dev:slide": "npm run dev --page=slide",
     "build": "vite build",
     "flatten": "node scripts/flatten-dist.mjs",
     "build:flatten": "pnpm build && pnpm flatten"

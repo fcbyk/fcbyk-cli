@@ -51,6 +51,9 @@ function getPageEntries() {
 
 const pageEntries = getPageEntries()
 
+// 获取当前指定的开发页面
+const targetPage = process.env.PAGE || process.env.npm_config_page || ''
+
 function mpaPlugin(): Plugin {
   return {
     name: 'mpa-plugin',
@@ -67,13 +70,53 @@ function mpaPlugin(): Plugin {
             : rawHost || 'localhost'
         const protocol = server.config.server.https ? 'https' : 'http'
 
-        Object.keys(pageEntries).forEach(pageName => {
-          console.log(`  ➜  ${pageName}:   ${protocol}://${host}:${port}/${pageName}/`)
-        })
+        if (targetPage && pageEntries[targetPage]) {
+          console.log(`\x1b[32m  ➜  Active Page (${targetPage}): ${protocol}://${host}:${port}/\x1b[0m`)
+        } else {
+          Object.keys(pageEntries).forEach(pageName => {
+            console.log(`  ➜  ${pageName}:   ${protocol}://${host}:${port}/${pageName}/`)
+          })
+        }
       })
 
       server.middlewares.use((req, _res, next) => {
         const url = decodeURIComponent((req as any).url || '')
+
+        // 如果指定了页面
+        if (targetPage && pageEntries[targetPage]) {
+          // 1. 访问根路径，直接重写为对应页面的 HTML 路径
+          if (url === '/' || url === '') {
+            const htmlPath = pageEntries[targetPage]
+            const projectRoot = resolve(__dirname)
+            let relativePath = htmlPath.replace(projectRoot, '').replace(/\\/g, '/')
+            if (!relativePath.startsWith('/')) relativePath = '/' + relativePath
+            ;(req as any).url = relativePath
+            return next()
+          }
+
+          // 2. 处理该页面下的资源请求 (当地址栏是 / 时，资源请求会变成 /main.ts 而不是 /transfer/main.ts)
+          // 如果请求不是以其他页面名开头，且不是 Vite 内部路径，则尝试映射到 targetPage 目录下
+          const pathParts = url.split('/').filter(Boolean)
+          const firstPart = pathParts[0]
+          const isViteInternal = url.startsWith('/@') || url.startsWith('/node_modules/') || url.startsWith('/src/') || url.startsWith('/api/')
+
+          if (firstPart && !pageEntries[firstPart] && !isViteInternal) {
+            // 检查该资源是否在 targetPage 的物理目录下
+            const pageDir = pageEntries[targetPage].replace(/index\.html$/, '')
+            const resourcePath = resolve(pageDir, pathParts.join('/'))
+            try {
+              if (statSync(resourcePath).isFile()) {
+                const projectRoot = resolve(__dirname)
+                let relativePath = resourcePath.replace(projectRoot, '').replace(/\\/g, '/')
+                if (!relativePath.startsWith('/')) relativePath = '/' + relativePath
+                ;(req as any).url = relativePath
+                return next()
+              }
+            } catch (e) {
+              // 不存在则继续
+            }
+          }
+        }
 
         // 跳过静态资源和根路径
         const staticExtensions = ['.json', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.woff', '.woff2', '.ttf', '.eot', '.map']
@@ -153,17 +196,20 @@ export default defineConfig({
     },
     proxy: {
       // 代理 API 请求到后端
-      '/api': {
-        target: 'http://127.0.0.1:80',
-        changeOrigin: true,
-        secure: false
-      },
+      /* 彻底禁用代理，前端通过 API_BASE 直连后端 80 端口 */
+      // '/api': {
+      //   target: 'http://127.0.0.1:80',
+      //   changeOrigin: true,
+      //   secure: false,
+      //   xfwd: true
+      // },
       // 代理文件请求到后端（用于加载文件内容）
       // 匹配非静态资源和 Vite 内部路径的请求
       '^/(?!node_modules|src|assets|@vite|@id|@fs|@react-refresh|ide/|api/).*': {
         target: 'http://127.0.0.1:80',
         changeOrigin: true,
         secure: false,
+        xfwd: true,
         // 跳过静态资源和 Vite 内部路径
         bypass(req) {
           const url = req.url || ''
@@ -173,7 +219,7 @@ export default defineConfig({
             url.startsWith('/src/') ||
             url.startsWith('/node_modules/') ||
             url.startsWith('/@') ||
-            url.startsWith('/api/') ||
+            url.startsWith('/api/') || // 这里也要确保 /api 不被这个正则误伤转发给后端（虽然上面已经注释了 /api）
             url.match(/\.(html|js|css|json|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|map)$/i) ||
             url === '/' ||
             url === ''

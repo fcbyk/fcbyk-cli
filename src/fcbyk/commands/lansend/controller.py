@@ -33,7 +33,21 @@ from flask import abort, request, Response, stream_with_context
 from fcbyk.web.app import create_spa
 from fcbyk.web.R import R
 from .service import LansendService
+from .transfer_service import TransferService
+import socket
 import urllib.parse
+
+def _is_local_ip(ip: str) -> bool:
+    """判断 IP 是否为本地回环或本机 LAN IP"""
+    if ip in ('127.0.0.1', 'localhost', '::1'):
+        return True
+    try:
+        # 获取本机所有 IP
+        hostname = socket.gethostname()
+        local_ips = socket.gethostbyname_ex(hostname)[2]
+        return ip in local_ips
+    except:
+        return False
 
 # 聊天消息存储（内存中，服务重启后清空）
 _chat_messages: List[Dict[str, Any]] = []
@@ -71,10 +85,14 @@ def _try_int(v) -> Optional[int]:
 
 def _get_client_ip() -> str:
     """获取客户端 IP，优先 X-Forwarded-For"""
-    xff = request.headers.get('X-Forwarded-For', '')
-    if xff:
-        # X-Forwarded-For 可能包含多个 IP，取第一个
-        return xff.split(',')[0].strip()
+    # 按照优先级检查各种可能的代理头
+    for header in ['X-Forwarded-For', 'X-Real-IP', 'Proxy-Client-IP', 'WL-Proxy-Client-IP']:
+        val = request.headers.get(header)
+        if val:
+            # X-Forwarded-For 可能包含多个 IP，取第一个
+            return val.split(',')[0].strip()
+    
+    # 如果没有任何代理头，使用 remote_addr
     return request.remote_addr or 'unknown'
 
 
@@ -513,6 +531,166 @@ def register_upload_routes(app, service: LansendService):
             return R.error("failed to save file", 500)
 
 
+def register_transfer_routes(app, service: LansendService):
+    """注册设备间传输相关路由"""
+    transfer_service = TransferService()
+
+    @app.route("/api/transfer/ping", methods=["POST"])
+    def transfer_ping():
+        """客户端心跳，上报自身信息并获取待处理请求"""
+        data = request.get_json() or {}
+        name = data.get("name", "Unknown Device")
+        icon = data.get("icon", "Smartphone")
+        is_me = data.get("isMe", False)
+        ip = _get_client_ip()
+        
+        # 更加健壮的服务器身份判断
+        is_server_self = _is_local_ip(ip)
+        
+        transfer_service.update_user(ip, name, icon, is_me, is_server=is_server_self)
+        
+        # 检查是否有发给我的请求 (如果是服务器本身发起的 ping，则同时检查发给 'SERVER' 的请求)
+        pending = transfer_service.get_pending_request(ip, include_server=is_server_self)
+        
+        return R.success({
+            "ip": ip,
+            "is_server": is_server_self,
+            "pending_request": pending
+        })
+
+    @app.route("/api/transfer/users", methods=["GET"])
+    def transfer_users():
+        """获取在线用户列表"""
+        return R.success(transfer_service.get_online_users())
+
+    @app.route("/api/transfer/request", methods=["POST"])
+    def transfer_request():
+        """发起传输请求"""
+        data = request.get_json()
+        if not data or "receiverIp" not in data or "file" not in data:
+            return R.error("receiverIp and file info are required", 400)
+        
+        sender_ip = _get_client_ip()
+        receiver_ip = data["receiverIp"]
+        file_info = data["file"]
+        
+        task_id = transfer_service.create_request(sender_ip, receiver_ip, file_info)
+        return R.success({"taskId": task_id})
+
+    @app.route("/api/transfer/respond", methods=["POST"])
+    def transfer_respond():
+        """回复传输请求"""
+        data = request.get_json()
+        if not data or "taskId" not in data or "accepted" not in data:
+            return R.error("taskId and accepted are required", 400)
+        
+        task_id = data["taskId"]
+        accepted = data["accepted"]
+        
+        if transfer_service.respond_request(task_id, accepted):
+            return R.success(message="responded")
+        return R.error("task not found", 404)
+
+    @app.route("/api/transfer/status/<task_id>", methods=["GET"])
+    def transfer_status(task_id):
+        """查询传输状态"""
+        status = transfer_service.get_request_status(task_id)
+        if status:
+            return R.success({"status": status})
+        return R.error("task not found", 404)
+
+    @app.route("/api/transfer/push/<task_id>", methods=["POST"])
+    def transfer_push(task_id):
+        """发送方：推送文件流"""
+        try:
+            # 这里的 request.stream 是原始读取流
+            while True:
+                chunk = request.stream.read(1024 * 1024) # 1MB chunks
+                if not chunk:
+                    break
+                transfer_service.push_chunk(task_id, chunk)
+            
+            transfer_service.finish_push(task_id)
+            return R.success(message="push complete")
+        except Exception as e:
+            transfer_service.cancel_transfer(task_id, str(e))
+            return R.error(str(e), 500)
+
+    @app.route("/api/transfer/pull/<task_id>", methods=["GET"])
+    def transfer_pull(task_id):
+        """接收方：拉取文件流"""
+        req = transfer_service.requests.get(task_id)
+        if not req:
+            abort(404)
+
+        # 如果是发给服务器的任务，由服务器负责消耗流并保存到共享目录
+        if req.receiver_ip == 'SERVER':
+            # 服务器作为“接收方”不需要通过这个 GET 接口拉取，
+            # 这里的逻辑主要是为了让发送方的 push_chunk 能够被消耗掉（如果服务器需要保存文件）
+            # 但目前的需求是“不落盘转发”，对于发给服务器的文件，我们暂时将其视为“上传到共享目录”
+            # 或者简单的丢弃（如果只是测试）。
+            # 为了符合逻辑，我们在这里注册一个消耗逻辑。
+            pass
+
+        def generate():
+            try:
+                while True:
+                    chunk = transfer_service.pull_chunk(task_id)
+                    if chunk is None:
+                        break
+                    yield chunk
+            except Exception as e:
+                # 发生异常（如超时）时取消传输
+                transfer_service.cancel_transfer(task_id, str(e))
+
+        safe_name = urllib.parse.quote(req.file_name)
+        return Response(
+            stream_with_context(generate()),
+            headers={
+                "Content-Type": req.file_type or "application/octet-stream",
+                "Content-Length": str(req.file_size),
+                "Content-Disposition": f"attachment; filename*=UTF-8''{safe_name}",
+                "Cache-Control": "no-cache"
+            }
+        )
+
+    @app.route("/api/transfer/server/receive/<task_id>", methods=["GET"])
+    def transfer_server_receive(task_id):
+        """服务器主动消耗发给自己的文件流（保存到共享目录）"""
+        req = transfer_service.requests.get(task_id)
+        if not req or req.receiver_ip != 'SERVER':
+            return R.error("invalid task", 400)
+        
+        # 确保目录存在
+        upload_dir = service.ensure_shared_directory()
+        # 防止重名
+        base_name = req.file_name
+        save_path = os.path.join(upload_dir, base_name)
+        counter = 1
+        while os.path.exists(save_path):
+            name, ext = os.path.splitext(base_name)
+            save_path = os.path.join(upload_dir, f"{name}_{counter}{ext}")
+            counter += 1
+
+        try:
+            with open(save_path, 'wb') as f:
+                while True:
+                    chunk = transfer_service.pull_chunk(task_id)
+                    if chunk is None:
+                        break
+                    f.write(chunk)
+            return R.success({"path": save_path}, message="file saved to server")
+        except Exception as e:
+            transfer_service.cancel_transfer(task_id, str(e))
+            return R.error(str(e), 500)
+
+    @app.route("/api/transfer/cancel/<task_id>", methods=["POST"])
+    def transfer_cancel(task_id):
+        """取消传输"""
+        transfer_service.cancel_transfer(task_id)
+        return R.success(message="cancelled")
+
+
 def register_routes(app, service: LansendService):
     @app.route("/api/config")
     def api_config():
@@ -520,6 +698,7 @@ def register_routes(app, service: LansendService):
             "un_download": bool(getattr(service.config, "un_download", False)),
             "un_upload": bool(getattr(service.config, "un_upload", False)),
             "chat_enabled": bool(getattr(service.config, "chat_enabled", False)),
+            "transfer_enabled": bool(getattr(service.config, "transfer_enabled", False)),
         })
 
     if not service.config.un_upload:
@@ -527,6 +706,9 @@ def register_routes(app, service: LansendService):
 
     if service.config.chat_enabled:
         register_chat_routes(app, service)
+
+    if getattr(service.config, "transfer_enabled", False):
+        register_transfer_routes(app, service)
 
     register_speedtest_routes(app, service)
 

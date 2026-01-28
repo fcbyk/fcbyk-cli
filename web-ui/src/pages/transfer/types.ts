@@ -1,10 +1,12 @@
 export interface User {
-  id: number
+  id: string | number
+  ip: string
   name: string
   icon: any
   x: number
   y: number
   isMe?: boolean
+  isServer?: boolean
 }
 
 export interface TransferFile {
@@ -14,7 +16,7 @@ export interface TransferFile {
   lastModified: number
 }
 
-export type TransferStatus = 'idle' | 'preparing' | 'transferring' | 'completed'
+export type TransferStatus = 'idle' | 'preparing' | 'waiting' | 'transferring' | 'completed'
 
 export interface ReceiveRequest {
   id: string

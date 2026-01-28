@@ -4,7 +4,7 @@
   >
     <div class="flex items-center justify-between mb-4">
       <h3 class="text-white font-bold text-sm">接收文件</h3>
-      <button @click="$emit('reject')" class="text-white/40 hover:text-white transition-colors">
+      <button @click="$emit('close')" class="text-white/40 hover:text-white transition-colors">
         <XIcon class="size-4" />
       </button>
     </div>
@@ -63,6 +63,7 @@ defineProps<{
 defineEmits<{
   (e: 'accept'): void
   (e: 'reject'): void
+  (e: 'close'): void
 }>()
 
 const formatSize = (bytes: number) => {

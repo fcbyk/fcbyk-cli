@@ -37,6 +37,7 @@ class LansendConfig:
     un_download: bool = False
     un_upload: bool = False
     chat_enabled: bool = False
+    transfer_enabled: bool = False
 
 
 class LansendService:
