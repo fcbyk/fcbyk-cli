@@ -599,6 +599,13 @@ def register_transfer_routes(app, service: LansendService):
             return R.success({"status": status})
         return R.error("task not found", 404)
 
+    @app.route("/api/transfer/session/<task_id>", methods=["GET"])
+    def transfer_session(task_id):
+        data = transfer_service.get_transfer_session(task_id)
+        if not data:
+            return R.error("task not found", 404)
+        return R.success(data)
+
     @app.route("/api/transfer/push/<task_id>", methods=["POST"])
     def transfer_push(task_id):
         """发送方：推送文件流"""

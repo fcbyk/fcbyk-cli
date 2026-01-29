@@ -227,8 +227,8 @@
      </div>
 
     <!-- 进度条提示 / 等待提示 -->
-    <div v-if="activeTransfer || isWaiting" class="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 bg-background-dark/80 border border-primary/40 backdrop-blur-md px-6 py-4 rounded-2xl flex flex-col gap-2 min-w-[300px] shadow-2xl">
-      <div v-if="activeTransfer" class="flex flex-col gap-2">
+    <div v-if="activeTransfer || isWaiting || isReceiving" class="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 bg-background-dark/80 border border-primary/40 backdrop-blur-md px-6 py-4 rounded-2xl flex flex-col gap-2 min-w-[300px] shadow-2xl">
+      <div v-if="activeTransfer || isReceiving" class="flex flex-col gap-2">
         <div class="flex items-center justify-between text-xs mb-1">
           <span class="text-white font-medium flex items-center gap-2">
             <FileIcon class="size-3 text-primary" />
@@ -243,7 +243,12 @@
           ></div>
         </div>
         <p class="text-[10px] text-white/40 text-center mt-1">
-          {{ progress === 100 ? '等待对方接收完成...' : `正在加密传输到 ${activeTarget?.name}...` }}
+          <template v-if="isReceiving">
+            {{ progress === 100 ? '等待保存完成...' : `正在从 ${activeTarget?.name} 接收...` }}
+          </template>
+          <template v-else>
+            {{ progress === 100 ? '等待对方接收完成...' : `正在加密传输到 ${activeTarget?.name}...` }}
+          </template>
         </p>
       </div>
       

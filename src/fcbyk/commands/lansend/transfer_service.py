@@ -26,6 +26,15 @@ class TransferRequest:
     status: str  # 'pending', 'accepted', 'rejected', 'transferring', 'completed', 'cancelled'
     created_at: float
 
+@dataclass
+class TransferSession:
+    id: str
+    total_size: int
+    sent_bytes: int
+    received_bytes: int
+    state: str  # 'init', 'streaming', 'completed', 'failed'
+    created_at: float
+
 class TransferBuffer:
     def __init__(self, max_size_mb: int = 10):
         # 使用 Queue 实现背压：如果 receiver 读得慢，sender 的 put 会阻塞
@@ -56,6 +65,7 @@ class TransferService:
         self.users: Dict[str, TransferUser] = {}  # ip -> TransferUser
         self.requests: Dict[str, TransferRequest] = {}  # task_id -> TransferRequest
         self.buffers: Dict[str, TransferBuffer] = {}  # task_id -> TransferBuffer
+        self.sessions: Dict[str, TransferSession] = {}  # task_id -> TransferSession
         self.offline_threshold = 10.0  # 10秒不活跃视为离线
 
     # ---------------- 用户管理 ----------------
@@ -90,7 +100,7 @@ class TransferService:
         for req in self.requests.values():
             # 匹配逻辑：IP 匹配 或者 (包含服务器请求 且 接收者是 SERVER)
             is_target = (req.receiver_ip == ip) or (include_server and req.receiver_ip == 'SERVER')
-            
+
             if is_target and req.status == 'pending':
                 sender = self.users.get(req.sender_ip)
                 return {
@@ -98,7 +108,8 @@ class TransferService:
                     "sender": {
                         "id": sender.id if sender else req.sender_ip,
                         "name": sender.name if sender else "Unknown",
-                        "ip": req.sender_ip
+                        "ip": req.sender_ip,
+                        "icon": sender.icon if sender else "Smartphone",
                     },
                     "file": {
                         "name": req.file_name,
@@ -125,7 +136,45 @@ class TransferService:
             status=status,
             created_at=time.time()
         )
+        total_size = file_info.get('size', 0) or 0
+        self.sessions[task_id] = TransferSession(
+            id=task_id,
+            total_size=total_size,
+            sent_bytes=0,
+            received_bytes=0,
+            state='init',
+            created_at=time.time()
+        )
         return task_id
+
+    def _ensure_session(self, task_id: str) -> Optional[TransferSession]:
+        if task_id in self.sessions:
+            return self.sessions[task_id]
+        if task_id not in self.requests:
+            return None
+        req = self.requests[task_id]
+        session = TransferSession(
+            id=task_id,
+            total_size=req.file_size or 0,
+            sent_bytes=0,
+            received_bytes=0,
+            state='init',
+            created_at=time.time()
+        )
+        self.sessions[task_id] = session
+        return session
+
+    def get_transfer_session(self, task_id: str) -> Optional[Dict[str, Any]]:
+        session = self._ensure_session(task_id)
+        if not session:
+            return None
+        return {
+            "id": session.id,
+            "total_size": session.total_size,
+            "sent_bytes": session.sent_bytes,
+            "received_bytes": session.received_bytes,
+            "state": session.state,
+        }
 
     def respond_request(self, task_id: str, accepted: bool) -> bool:
         if task_id in self.requests:
@@ -144,6 +193,11 @@ class TransferService:
 
     def push_chunk(self, task_id: str, chunk: bytes):
         if task_id in self.buffers:
+            session = self._ensure_session(task_id)
+            if session:
+                session.sent_bytes += len(chunk)
+                if session.state == 'init':
+                    session.state = 'streaming'
             self.buffers[task_id].put(chunk)
             self.requests[task_id].status = 'transferring'
 
@@ -160,14 +214,26 @@ class TransferService:
                 # 传输完成
                 if task_id in self.requests:
                     self.requests[task_id].status = 'completed'
+                session = self.sessions.get(task_id)
+                if session:
+                    session.state = 'completed'
+                    if session.total_size and session.received_bytes < session.total_size:
+                        session.received_bytes = session.total_size
                 # 清理缓冲区资源，但保留请求记录供前端查询最终状态
                 self.cleanup_task(task_id)
+            else:
+                session = self._ensure_session(task_id)
+                if session:
+                    session.received_bytes += len(chunk)
             return chunk
         return None
 
     def cancel_transfer(self, task_id: str, error: Optional[str] = None):
         if task_id in self.requests:
             self.requests[task_id].status = 'cancelled'
+        session = self.sessions.get(task_id)
+        if session:
+            session.state = 'failed'
         if task_id in self.buffers:
             self.buffers[task_id].error = error
             self.cleanup_task(task_id)

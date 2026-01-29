@@ -23,3 +23,13 @@ export interface ReceiveRequest {
   sender: User
   file: TransferFile
 }
+
+export type TransferState = 'init' | 'streaming' | 'completed' | 'failed'
+
+export interface TransferSession {
+  id: string
+  total_size: number
+  sent_bytes: number
+  received_bytes: number
+  state: TransferState
+}

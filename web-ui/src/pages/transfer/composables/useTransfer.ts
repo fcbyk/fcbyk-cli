@@ -9,15 +9,16 @@ import {
   Monitor as MonitorIcon
 } from 'lucide-vue-next'
 import type { User, TransferFile, TransferStatus, ReceiveRequest } from '../types'
-import { 
-  pingServer, 
-  getOnlineUsers, 
-  requestTransfer, 
-  getTransferStatus, 
-  respondTransfer, 
+import {
+  pingServer,
+  getOnlineUsers,
+  requestTransfer,
+  getTransferStatus,
+  respondTransfer,
   pushFileStream,
   cancelTransferTask,
-  API_BASE
+  API_BASE,
+  getTransferSession
 } from '../api'
 
 export function useTransfer() {
@@ -140,9 +141,17 @@ export function useTransfer() {
         })
         myIp.value = pingData.ip
         isServer.value = pingData.is_server
-        
+
         if (pingData.pending_request && !receiveRequest.value && !activeTransfer.value) {
-          receiveRequest.value = pingData.pending_request
+          const pending = pingData.pending_request as any
+          if (pending.sender) {
+            const iconKey = pending.sender.icon || 'Laptop'
+            pending.sender = {
+              ...pending.sender,
+              icon: icons[iconKey] || Smartphone
+            }
+          }
+          receiveRequest.value = pending
         }
 
         // 2. 获取所有在线用户
@@ -237,27 +246,59 @@ export function useTransfer() {
     }
   }
 
-  // 接收逻辑
   const acceptReceive = async () => {
     if (!receiveRequest.value) return
     const taskId = receiveRequest.value.id
-    const fileName = receiveRequest.value.file.name
+    const file = receiveRequest.value.file
+    const fileName = file.name
     
     try {
       await respondTransfer(taskId, true)
       isReceiving.value = true
-      
-      // 使用 a 标签触发下载，这在移动端兼容性更好，且能更好地触发“保存到文件”
+      currentTaskId.value = taskId
+      selectedFile.value = file
+      progress.value = 0
+
       const downloadUrl = `${API_BASE}/api/transfer/pull/${taskId}`
       const link = document.createElement('a')
       link.href = downloadUrl
-      // 提示：download 属性在跨域时可能无效，但由于我们是同源或配置了 CORS，通常没问题
       link.setAttribute('download', fileName)
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
-      
-      // 重置接收状态
+
+      const pollProgress = async () => {
+        if (!currentTaskId.value) return
+        try {
+          const session = await getTransferSession(currentTaskId.value)
+          const total = session.total_size || file.size || 0
+          if (total > 0) {
+            const p = Math.round((session.received_bytes / total) * 100)
+            progress.value = Math.min(100, Math.max(0, p))
+          }
+          if (session.state === 'completed' || session.state === 'failed') {
+            if (progressTimer) {
+              clearInterval(progressTimer)
+              progressTimer = null
+            }
+            if (session.state === 'completed') {
+              completeTransfer()
+            } else {
+              cancelTransfer()
+            }
+          }
+        } catch (e) {
+          console.error('Progress poll failed:', e)
+        }
+      }
+
+      if (progressTimer) {
+        clearInterval(progressTimer)
+        progressTimer = null
+      }
+      pollProgress()
+      progressTimer = window.setInterval(pollProgress, 1000)
+
       isReceivePreparing.value = false
       receiveRequest.value = null
     } catch (e) {
@@ -295,20 +336,13 @@ export function useTransfer() {
     if (!selectedFile.value || !nativeFile.value || activeTargetId.value === null) return
     
     try {
-      // 1. 如果目标是服务器，走普通上传逻辑
       const receiverIp = activeTargetId.value === -1 ? 'SERVER' : String(activeTargetId.value)
-      
-      // 2. 发起请求
       const taskId = await requestTransfer(receiverIp, selectedFile.value)
       currentTaskId.value = taskId
       transferStatus.value = 'waiting'
       
-      // 3. 等待对方接受 (轮询状态)
       let waitCount = 0
-      
-      // 如果目标是服务器，服务器在后端已经自动 accepted 了，
-      // 我们这里也可以直接触发 checkStatus，或者缩短第一次轮询时间
-      
+
       const checkStatus = async () => {
         const status = await getTransferStatus(taskId)
         if (status === 'accepted') {
@@ -316,45 +350,46 @@ export function useTransfer() {
             clearInterval(statusTimer)
             statusTimer = null
           }
-          // 4. 开始推送流
-          transferStatus.value = 'transferring'
-          startProgress() // UI 进度
-          try {
-            // 如果是发给服务器，推送完成后，后端需要有一个地方来消耗这个流（保存到磁盘）
-            // 我们在后端添加了一个 /api/transfer/server/receive/<taskId> 接口
-            // 这里我们用“并发”方式通知服务器开始接收，或者后端在 push 结束时自动触发。
-            // 为了简单起见，我们在前端 push 的同时，如果是发给服务器，就触发一次服务器接收。
-            if (receiverIp === 'SERVER') {
-              fetch(`${API_BASE}/api/transfer/server/receive/${taskId}`).catch(console.error)
-            }
 
-            // 这里的 pushFileStream 现在会通过回调更新真实的 progress.value
-            await pushFileStream(taskId, nativeFile.value!, (p) => {
-              progress.value = p
-            })
-            
-            // 数据推送完成后，不要立刻调用 completeTransfer，
-            // 而是继续保持在轮询状态，直到后端返回 status === 'completed' (代表接收方也拉取完了)
-            progress.value = 100
-            
-            // 重新开启一个定时器检查最终完成状态
-            const checkFinalStatus = async () => {
-              const status = await getTransferStatus(taskId)
-              if (status === 'completed') {
+          transferStatus.value = 'transferring'
+          startProgress()
+
+          const pollSession = async () => {
+            try {
+              const session = await getTransferSession(taskId)
+              const total = session.total_size || selectedFile.value?.size || 0
+              if (total && session.sent_bytes >= 0) {
+                const percent = Math.round((session.sent_bytes / total) * 100)
+                if (percent > progress.value) {
+                  progress.value = Math.min(100, percent)
+                }
+              }
+              if (session.state === 'completed' || session.state === 'failed') {
                 if (statusTimer) {
                   clearInterval(statusTimer)
                   statusTimer = null
                 }
-                completeTransfer()
+                if (session.state === 'completed') {
+                  completeTransfer()
+                } else {
+                  cancelTransfer()
+                }
               }
+            } catch (e) {
+              console.error('Session poll failed:', e)
             }
-            statusTimer = window.setInterval(checkFinalStatus, 1000)
+          }
 
-          } catch (e) {
+          pushFileStream(taskId, nativeFile.value!, (p) => {
+            progress.value = p
+          }).catch((e) => {
             console.error('Push failed:', e)
             alert('推送失败: ' + e)
             cancelTransfer()
-          }
+          })
+
+          pollSession()
+          statusTimer = window.setInterval(pollSession, 1000)
         } else if (status === 'rejected' || status === 'cancelled') {
           if (statusTimer) {
             clearInterval(statusTimer)
@@ -364,7 +399,7 @@ export function useTransfer() {
           cancelTransfer()
         } else {
           waitCount++
-          if (waitCount > 20) { // 60秒超时
+          if (waitCount > 20) {
             if (statusTimer) {
               clearInterval(statusTimer)
               statusTimer = null

@@ -1,4 +1,4 @@
-import type { User, TransferFile, ReceiveRequest } from './types'
+import type { User, TransferFile, ReceiveRequest, TransferSession } from './types'
 
 export interface ApiResponse<T = any> {
   code: number
@@ -73,6 +73,13 @@ export async function getTransferStatus(taskId: string): Promise<string> {
   const result: ApiResponse<{ status: string }> = await response.json()
   if (result.code !== 200) throw new Error(result.message)
   return result.data.status
+}
+
+export async function getTransferSession(taskId: string): Promise<TransferSession> {
+  const response = await fetch(`${API_BASE}/api/transfer/session/${taskId}`)
+  const result: ApiResponse<TransferSession> = await response.json()
+  if (result.code !== 200) throw new Error(result.message)
+  return result.data
 }
 
 /**
