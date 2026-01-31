@@ -1,44 +1,63 @@
 <template>
-  <div class="login-page">
-    <header class="header">
-      <div class="header-left">
-      </div>
-      <div class="header-right">
-        <button class="icon-btn" @click="toggleDarkMode">
-          <component :is="isDark ? Moon : Sun" class="icon-gray" :size="24" :stroke-width="1.5" />
+  <div
+    class="min-h-dvh bg-(--background) text-(--text-primary) flex flex-col overflow-hidden relative select-none font-sans transition-colors duration-300"
+  >
+    <header class="flex items-center justify-between shrink-0 z-10 pt-[4vh] px-8">
+      <div class="flex-1"></div>
+      <div class="flex items-center">
+        <button
+          class="flex items-center justify-center bg-transparent border-0 p-0 cursor-pointer transition-opacity duration-200 active:opacity-50"
+          @click="toggleDarkMode"
+        >
+          <component :is="isDark ? Moon : Sun" class="text-[#8E8E93]" :size="24" :stroke-width="1.5" />
         </button>
       </div>
     </header>
 
-    <main class="main-content">
-      <div class="title-section">
-        <h1 class="main-title">SLIDE</h1>
-        <p class="subtitle">准备好控制了吗？请输入访问密码</p>
+    <main class="flex-1 flex flex-col items-center justify-center px-10 relative min-h-0">
+      <div class="text-center mb-[8vh]">
+        <h1
+          class="font-['Syncopate',sans-serif] text-[clamp(48px,12vw,72px)] font-bold tracking-[0.25em] mb-4 pl-[0.25em] text-(--text-primary)"
+        >
+          SLIDE
+        </h1>
+        <p class="text-[12px] tracking-widest text-(--text-secondary) font-medium m-0">
+          准备好控制了吗？请输入访问密码
+        </p>
       </div>
 
-      <div class="input-section">
-        <div class="input-wrapper">
-          <Key class="input-icon" :size="20" :stroke-width="1.5" />
+      <div class="w-full max-w-[320px] relative">
+        <div class="relative flex items-center">
+          <Key class="absolute left-0 text-(--text-secondary) opacity-50" :size="20" :stroke-width="1.5" />
           <input
             ref="passwordInputRef"
             v-model="password"
             type="password"
-            class="command-input"
+            class="w-full bg-transparent border-0 border-b-2 border-(--border) py-4 pl-10 text-center text-2xl tracking-[0.5em] text-(--text-primary) transition-colors outline-none font-['Space_Mono',monospace] placeholder:text-(--text-secondary) placeholder:opacity-30 focus:border-(--primary)"
             placeholder="••••••"
             autocomplete="off"
             @keypress.enter="handleLogin"
           />
         </div>
-        <div v-if="errorMessage" class="error-message">{{ errorMessage }}</div>
+        <div v-if="errorMessage" class="text-[#FF3B30] text-xs mt-2 text-center absolute w-full">
+          {{ errorMessage }}
+        </div>
       </div>
     </main>
 
-    <footer class="footer">
-      <div class="slider-track" ref="sliderTrackRef">
-        <div class="slider-text">右滑进入控制界面</div>
+    <footer class="px-8 pb-[8vh] w-full max-w-[512px] mx-auto shrink-0 relative">
+      <div
+        ref="sliderTrackRef"
+        class="relative h-16 w-full bg-(--surface) backdrop-blur border border-(--border) rounded-[32px] flex items-center p-[6px] overflow-hidden"
+      >
         <div
-          class="slider-thumb"
-          :class="{ 'dragging': isDragging }"
+          class="absolute inset-0 flex items-center justify-center text-[13px] tracking-[0.2em] text-(--text-secondary) font-medium pl-12 pointer-events-none"
+        >
+          右滑进入控制界面
+        </div>
+        <div
+          class="h-[52px] w-[52px] bg-(--primary) rounded-[26px] flex items-center justify-center text-white cursor-pointer shadow-[0_4px_15px_rgba(0,122,255,0.4)] border-4 border-(--surface) z-10 transition-transform duration-300 ease-[cubic-bezier(0.2,0,0,1)] select-none touch-none active:scale-95"
+          :class="{ 'transition-none': isDragging }"
           :style="{ transform: `translateX(${sliderPosition}px)` }"
           @mousedown="startDrag"
           @touchstart="startDrag"
@@ -48,8 +67,10 @@
       </div>
     </footer>
 
-    <div class="decorative-circle">
-      <div class="semi-circle"></div>
+    <div class="fixed bottom-0 left-1/2 -translate-x-1/2 pointer-events-none opacity-50">
+      <div
+        class="w-[300px] h-[150px] bg-[radial-gradient(circle_at_50%_100%,var(--primary)_0%,transparent_70%)] rounded-t-[150px] opacity-10"
+      ></div>
     </div>
   </div>
 </template>
@@ -182,212 +203,5 @@ onUnmounted(() => {
 })
 </script>
 
-<style lang="scss" scoped>
-.login-page {
-  height: 100dvh;
-  background-color: var(--background);
-  color: var(--text-primary);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  position: relative;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  user-select: none;
-  transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-.header {
-  padding: 4vh 32px 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-shrink: 0;
-  z-index: 10;
-}
-
-.icon-gray {
-  color: #8E8E93;
-}
-
-.icon-btn {
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  transition: opacity 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  &:active {
-    opacity: 0.5;
-  }
-}
-
-.main-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 0 40px;
-  position: relative;
-  min-height: 0; // 防止内容溢出
-}
-
-.title-section {
-  text-align: center;
-  margin-bottom: 8vh;
-  
-  .main-title {
-    font-family: "Syncopate", sans-serif;
-    font-size: clamp(48px, 12vw, 72px);
-    font-weight: 700;
-    letter-spacing: 0.25em;
-    margin: 0 0 16px 0;
-    padding-left: 0.25em;
-    color: var(--text-primary);
-  }
-
-  .subtitle {
-    font-size: 12px;
-    letter-spacing: 0.1em;
-    color: var(--text-secondary);
-    font-weight: 500;
-    margin: 0;
-  }
-}
-
-.input-section {
-  width: 100%;
-  max-width: 320px;
-  position: relative;
-
-  .input-wrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
-
-    .input-icon {
-      position: absolute;
-      left: 0;
-      color: var(--text-secondary);
-      opacity: 0.5;
-    }
-
-    .command-input {
-      width: 100%;
-      background: transparent;
-      border: none;
-      border-bottom: 2px solid var(--border);
-      padding: 16px 0 16px 40px;
-      text-align: center;
-      font-size: 24px;
-      letter-spacing: 0.5em;
-      color: var(--text-primary);
-      transition: border-color 0.3s ease;
-      outline: none;
-      font-family: "Space Mono", monospace;
-
-      &:focus {
-        border-color: var(--primary);
-      }
-
-      &::placeholder {
-        color: var(--text-secondary);
-        opacity: 0.3;
-      }
-    }
-  }
-
-  .error-message {
-    color: #FF3B30;
-    font-size: 12px;
-    margin-top: 8px;
-    text-align: center;
-    position: absolute;
-    width: 100%;
-  }
-}
-
-.footer {
-  padding: 0 32px 8vh;
-  width: 100%;
-  max-width: 512px;
-  margin: 0 auto;
-  flex-shrink: 0;
-  position: relative;
-
-  .slider-track {
-    position: relative;
-    height: 64px;
-    width: 100%;
-    background: var(--surface);
-    backdrop-filter: blur(10px);
-    border-radius: 32px;
-    display: flex;
-    align-items: center;
-    padding: 6px;
-    overflow: hidden;
-    border: 1px solid var(--border);
-
-    .slider-text {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 13px;
-      letter-spacing: 0.2em;
-      color: var(--text-secondary);
-      font-weight: 500;
-      padding-left: 48px;
-      pointer-events: none;
-    }
-
-    .slider-thumb {
-      height: 52px;
-      width: 52px;
-      background-color: var(--primary);
-      border-radius: 26px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      cursor: pointer;
-      box-shadow: 0 4px 15px rgba(0, 122, 255, 0.4);
-      border: 4px solid var(--surface);
-      z-index: 10;
-      transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1), scale 0.2s;
-      user-select: none;
-      touch-action: none;
-
-      &.dragging {
-        transition: none;
-      }
-
-      &:active {
-        scale: 0.95;
-      }
-    }
-  }
-}
-
-.decorative-circle {
-  position: fixed;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  pointer-events: none;
-  opacity: 0.5;
-
-  .semi-circle {
-    width: 300px;
-    height: 150px;
-    background: radial-gradient(circle at 50% 100%, var(--primary) 0%, transparent 70%);
-    border-top-left-radius: 150px;
-    border-top-right-radius: 150px;
-    opacity: 0.1;
-  }
-}
+<style scoped>
 </style>

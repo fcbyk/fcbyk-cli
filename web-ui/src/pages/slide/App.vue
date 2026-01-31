@@ -1,5 +1,5 @@
 <template>
-  <div class="app-container">
+  <div class="w-full h-dvh overflow-hidden flex flex-col">
     <!-- 登录界面 -->
     <LoginView
       v-if="!isAuthenticated"
@@ -58,13 +58,3 @@ watch(isAuthenticated, (authenticated) => {
   }
 })
 </script>
-
-<style lang="scss">
-.app-container {
-  width: 100%;
-  height: 100dvh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-</style>
