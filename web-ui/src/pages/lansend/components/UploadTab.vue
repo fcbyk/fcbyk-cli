@@ -1,15 +1,15 @@
 <template>
-  <div class="tab-pane upload-pane">
+  <div class="flex flex-col h-full p-[20px] m-5">
     <!-- 需要密码但尚未验证：隐藏上传框，展示登录卡片 -->
-    <div v-if="requirePassword && !canUpload" class="login-gate">
-      <div class="login-card">
-        <div class="login-title">需要验证密码</div>
-        <div class="login-subtitle">上传已开启密码保护</div>
+    <div v-if="requirePassword && !canUpload" class="flex-1 min-h-0 flex items-center justify-center p-6">
+      <div class="w-[min(380px,92%)] px-5 py-[22px]">
+        <div class="text-base font-semibold text-[#111827] text-center">需要验证密码</div>
+        <div class="mt-2 text-[13px] leading-relaxed text-[#6b7280] text-center">上传已开启密码保护</div>
 
         <input
           v-if="showPasswordInput"
           ref="passwordInputRef"
-          class="login-password-input"
+          class="mt-[14px] w-full px-3 py-2.5 text-sm leading-5 rounded-[10px] border border-[#e5e7eb] outline-none bg-white text-[#111827] focus:border-[#111827]"
           :class="{ shake: shouldShake }"
           :value="password"
           type="password"
@@ -23,13 +23,13 @@
           @animationend="onShakeEnd"
         />
 
-        <div class="login-actions">
-          <button class="login-btn" type="button" @click="onLoginClick">
+        <div class="mt-[18px] flex justify-center">
+          <button class="appearance-none border border-[#111827] bg-transparent text-[#111827] text-sm font-semibold px-[18px] py-2.5 rounded-[10px] cursor-pointer transition-colors duration-150 ease-in-out hover:text-[#2ecc71] hover:border-[#2ecc71]" type="button" @click="onLoginClick">
             {{ showPasswordInput ? '确认密码' : '输入密码' }}
           </button>
         </div>
 
-        <div class="login-error" :class="{ visible: !!passwordError }">
+        <div class="mt-3 text-[12px] text-[#ef4444] text-center min-h-[18px] opacity-0 transition-opacity duration-160 ease-in-out" :class="{ 'opacity-100': !!passwordError }">
           {{ passwordError }}
         </div>
       </div>
@@ -37,8 +37,8 @@
 
     <div
       v-else
-      class="upload-area"
-      :class="{ dragover: isDragOver, uploading: isUploading }"
+      class="border-2 border-dashed border-[#3498db] rounded-lg p-5 text-center cursor-pointer transition-all duration-300 grow flex items-center justify-center md:min-h-[150px] min-w-0 hover:bg-[#f8f9fa] w-full"
+      :class="{ 'bg-[#e8f4f8] border-[#2980b9]': isDragOver, 'opacity-70 cursor-wait': isUploading }"
       :style="{
         pointerEvents: canUpload ? 'auto' : 'none',
         opacity: canUpload ? '1' : '0.5'
@@ -49,34 +49,34 @@
       @click="onUploadAreaClick"
     >
       <div>
-        <div class="upload-icon">📤</div>
-        <p class="upload-hint">{{ uploadHint }}</p>
-        <p v-if="uploadPathHint" class="upload-path-hint">{{ uploadPathHint }}</p>
+        <div class="text-[48px] text-[#3498db] mb-2.5">📤</div>
+        <p class="text-[#7f8c8d] text-base mt-2">{{ isDragOver ? '松开上传' : uploadHint }}</p>
+        <p v-if="uploadPathHint" class="text-[#95a5a6] text-[13px] mt-1.5 opacity-70 font-normal">{{ uploadPathHint }}</p>
       </div>
       <input ref="fileInputRef" type="file" multiple style="display: none" @change="onFileSelect" />
     </div>
 
     <!-- 上传进度 -->
-    <div v-if="showProgress" class="upload-progress">
-      <div class="progress-bar">
-        <div class="progress" :style="{ width: `${overallProgress}%` }"></div>
+    <div v-if="showProgress" class="mt-4 w-full shrink-0">
+      <div class="h-5 bg-[#f0f0f0] rounded-[10px] overflow-hidden w-full">
+        <div class="h-full bg-[#2ecc71] w-0 transition-[width] duration-300" :style="{ width: `${overallProgress}%` }"></div>
       </div>
 
-      <div class="upload-status">
+      <div class="mt-2.5 text-sm text-[#666] wrap-break-word md:text-[12px] md:leading-[1.35]">
         <div v-for="(line, idx) in statusLines" :key="idx" class="upload-line">
           <span>{{ line }}</span>
         </div>
       </div>
 
-      <div v-if="uploadStatsText" class="upload-stats">
+      <div v-if="uploadStatsText" class="mt-1.5 text-[12px] opacity-85 wrap-break-word md:text-[11px] md:leading-[1.35]">
         <div v-for="(line, idx) in statsLines" :key="idx" class="upload-line">
           <span>{{ line }}</span>
         </div>
       </div>
 
-      <div v-if="queueLength > 0" class="queue-info">队列中还有 {{ queueLength }} 个文件等待上传</div>
+      <div v-if="queueLength > 0" class="mt-2.5 text-[12px] text-[#7f8c8d]">队列中还有 {{ queueLength }} 个文件等待上传</div>
     </div>
-    <div v-if="showCompleteInfoFlag" class="complete-info">{{ completeInfo }}</div>
+    <div v-if="showCompleteInfoFlag" class="mt-4 w-full px-3.5 py-2.5 bg-[#e8f5e9] text-[#2e7d32] rounded-md text-[13px] font-medium leading-relaxed shadow-sm border-l-[3px] border-[#4caf50] animate-in fade-in slide-in-from-bottom-1 duration-300">{{ completeInfo }}</div>
   </div>
 </template>
 
@@ -206,6 +206,9 @@ function onShakeEnd() {
 
 function onDragOver(ev: DragEvent) {
   if (!props.canUpload) return
+  if (ev.dataTransfer) {
+    ev.dataTransfer.dropEffect = 'copy'
+  }
   emit('dragover', ev)
 }
 
@@ -235,86 +238,19 @@ function onFileSelect(e: Event) {
 </script>
 
 <style scoped>
-.upload-status {
-  margin-top: 10px;
-  font-size: 14px;
-  color: #666;
-  word-break: break-word;
-}
-
-.upload-stats {
-  margin-top: 6px;
-  font-size: 12px;
-  opacity: 0.85;
-  word-break: break-word;
-}
-
-@media (max-width: 768px) {
-  .upload-status {
-    font-size: 12px;
-    line-height: 1.35;
-  }
-  .upload-stats {
-    font-size: 11px;
-    line-height: 1.35;
-  }
-}
-
 /* 仅做轻量抖动反馈，避免整块 login-card 重新渲染导致的“闪”感 */
-.login-password-input.shake {
+.shake {
   animation: shake-x 320ms ease-in-out;
 }
 
-/* 错误文案区域始终占位，避免 v-if 造成布局抖动/闪烁 */
-.login-error {
-  min-height: 18px;
-  opacity: 0;
-  transition: opacity 160ms ease;
-}
-
-.login-error.visible {
-  opacity: 1;
-}
-
 @keyframes shake-x {
-  0% {
-    transform: translateX(0);
-  }
-  15% {
-    transform: translateX(-6px);
-  }
-  30% {
-    transform: translateX(6px);
-  }
-  45% {
-    transform: translateX(-5px);
-  }
-  60% {
-    transform: translateX(5px);
-  }
-  75% {
-    transform: translateX(-3px);
-  }
-  90% {
-    transform: translateX(3px);
-  }
-  100% {
-    transform: translateX(0);
-  }
-}
-
-.complete-info {
-  margin-top: 12px;
-  padding: 10px 14px;
-  background-color: #e8f5e9; /* 浅绿色背景 */
-  color: #2e7d32; /* 深绿色文字 */
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 1.5;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  border-left: 3px solid #4caf50; /* 左侧边框高亮 */
-  animation: fadeIn 0.3s ease-out;
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-6px); }
+  30% { transform: translateX(6px); }
+  45% { transform: translateX(-5px); }
+  60% { transform: translateX(5px); }
+  75% { transform: translateX(-3px); }
+  90% { transform: translateX(3px); }
 }
 
 @keyframes fadeIn {
@@ -326,5 +262,9 @@ function onFileSelect(e: Event) {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+.animate-in {
+  animation: fadeIn 0.3s ease-out;
 }
 </style>

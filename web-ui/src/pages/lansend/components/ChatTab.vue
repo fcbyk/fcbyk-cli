@@ -1,7 +1,7 @@
 <template>
-  <div class="chat-tab">
-    <div class="chat-messages" ref="messagesContainer">
-      <div v-if="messages.length === 0" class="chat-empty">
+  <div class="flex flex-col h-full overflow-hidden">
+    <div class="flex-1 overflow-y-auto p-2 md:py-2 md:px-0 flex flex-col gap-2" ref="messagesContainer">
+      <div v-if="messages.length === 0" class="flex items-center justify-center h-full text-[#999] text-sm">
         <p>暂无消息，开始聊天吧～</p>
       </div>
       <template v-else>
@@ -11,26 +11,26 @@
         >
           <div
             v-if="shouldShowTimeLabel(msg, index)"
-            class="time-label"
+            class="text-center my-3 text-[12px] text-[#999]"
           >
             {{ formatTimeLabel(msg.timestamp) }}
           </div>
           
           <!-- 消息容器 -->
           <div
-            class="message-wrapper"
+            class="block mb-1 px-[15px] w-full box-border group"
             :class="{ 'own-message': isOwnMessage(msg.ip) }"
           >
-            <div class="message-content-wrapper">
-              <div class="message-avatar">
+            <div class="flex gap-2 w-fit max-w-[70%] group-[.own-message]:flex-row-reverse group-[.own-message]:ml-auto">
+              <div class="w-9 h-9 rounded-full bg-[#667eea] text-white flex items-center justify-center text-[12px] font-semibold flex-none group-[.own-message]:bg-[#f5576c]">
                 {{ getAvatarText(msg.ip) }}
               </div>
               
-              <div class="message-body">
-                <div class="message-ip-label">{{ msg.ip }}</div>
+              <div class="flex flex-col flex-1 min-w-0">
+                <div class="text-[12px] text-[#999] mb-1 px-1 group-[.own-message]:text-right">{{ msg.ip }}</div>
                 
-                <div class="chat-message">
-                  <div class="message-content">{{ msg.message }}</div>
+                <div class="p-2.5 md:px-3.5 md:py-2.5 rounded-lg bg-[#f0f0f0] relative wrap-break-word max-w-full group-[.own-message]:bg-[#007bff] group-[.own-message]:text-white">
+                  <div class="wrap-break-word whitespace-pre-wrap leading-relaxed">{{ msg.message }}</div>
                 </div>
               </div>
             </div>
@@ -38,10 +38,10 @@
         </div>
       </template>
     </div>
-    <div class="chat-input-container">
+    <div class="flex gap-2 p-3 border-t border-[#e0e0e0] bg-white flex-none">
       <textarea
         v-model="inputMessage"
-        class="chat-input"
+        class="flex-1 px-2 py-1.5 border border-[#ddd] rounded-md text-sm outline-none font-inherit resize-none h-[35px] max-h-[132px] leading-relaxed overflow-y-auto box-border focus:border-[#007bff] disabled:bg-[#f5f5f5] disabled:cursor-not-allowed"
         placeholder="输入消息..."
         @keydown.enter.exact="handleEnterKey"
         @input="adjustTextareaHeight"
@@ -51,7 +51,7 @@
       ></textarea>
       <button
         type="button"
-        class="chat-send-btn"
+        class="px-4 py-2 bg-[#007bff] text-white border-none rounded cursor-pointer text-sm transition-colors duration-200 hover:enabled:bg-[#0056b3] disabled:bg-[#ccc] disabled:cursor-not-allowed"
         @click="sendMessage"
         :disabled="!canSend || sending"
       >
@@ -260,4 +260,3 @@ watch(
   }
 )
 </script>
-

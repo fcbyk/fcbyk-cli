@@ -1,27 +1,28 @@
 <template>
-  <div v-if="previewFile" class="tab-pane preview-pane">
-    <div class="preview-content">
-      <div v-if="previewLoading" class="preview-loading">加载中...</div>
-      <div v-else-if="previewError" class="preview-error">
-        <div class="preview-error-msg">{{ previewError }}</div>
+  <div v-if="previewFile" class="flex flex-col h-full min-h-0 p-2.5 md:p-5">
+    <div class="flex-1 overflow-hidden w-full h-full p-0 min-h-0 flex justify-center items-stretch">
+      <div v-if="previewLoading" class="p-10 text-center text-[#999]">加载中...</div>
+      <div v-else-if="previewError" class="p-10 text-center text-[#e74c3c]">
+        <div class="mb-4">{{ previewError }}</div>
         <a
           v-if="shouldShowOpenInBrowser"
           :href="openInBrowserHref"
-          class="download-btn"
+          class="bg-[#2ecc71] text-white border-none px-[10px] py-[5px] rounded cursor-pointer no-underline text-[12px] flex-none ml-2.5 hover:bg-[#27ae60]"
           target="_blank"
           rel="noopener noreferrer"
         >
           在浏览器打开
         </a>
       </div>
-      <div v-else-if="isVideo" class="preview-video">
-        <div v-if="videoLoading" class="video-loading">
-          <div class="loading-spinner"></div>
-          <div class="loading-text">视频加载中，请稍候...</div>
+      <div v-else-if="isVideo" class="flex flex-col justify-center items-center gap-3 min-h-[200px] max-w-full max-h-full relative">
+        <div v-if="videoLoading" class="flex flex-col items-center justify-center min-h-[240px] p-8">
+          <div class="w-10 h-10 border-4 border-[#e5e7eb] border-t-[#3b82f6] rounded-full animate-spin mb-4"></div>
+          <div class="text-[#6b7280] text-[0.9rem]">视频加载中，请稍候...</div>
         </div>
         <video 
           v-show="!videoLoading"
           ref="videoPlayer"
+          class="max-w-full max-h-full object-contain rounded"
           :src="videoSrc" 
           controls 
           preload="metadata" 
@@ -30,27 +31,27 @@
           @error="onVideoError"
         />
       </div>
-      <div v-else-if="previewFile.is_image" class="preview-image">
-        <img :src="imageSrc" :alt="previewFile.name" />
+      <div v-else-if="previewFile.is_image" class="flex justify-center items-center min-h-[200px]">
+        <img class="max-w-full max-h-full object-contain" :src="imageSrc" :alt="previewFile.name" />
       </div>
-      <div v-else-if="previewFile.is_binary" class="preview-binary">
-        <p>无法预览二进制文件</p>
-        <a :href="`/api/preview/${encodeURIComponent(previewFile.path)}`" class="download-btn" target="_blank">在浏览器打开</a>
+      <div v-else-if="previewFile.is_binary" class="p-10 text-center">
+        <p class="mb-5 text-[#666]">无法预览二进制文件</p>
+        <a :href="`/api/preview/${encodeURIComponent(previewFile.path)}`" class="bg-[#2ecc71] text-white border-none px-[10px] py-[5px] rounded cursor-pointer no-underline text-[12px] flex-none ml-2.5 hover:bg-[#27ae60]" target="_blank">在浏览器打开</a>
       </div>
-      <div v-else class="preview-text-wrap">
+      <div v-else class="flex-1 min-h-0 w-full h-full relative group">
         <button
           type="button"
-          class="preview-copy-btn"
+          class="absolute top-[15px] right-[25px] z-3 appearance-none border border-[rgba(0,0,0,0.12)] bg-[rgba(255,255,255,0.9)] text-[#374151] text-[12px] leading-none px-2.5 py-[7px] rounded-lg cursor-pointer opacity-0 pointer-events-none transition-all duration-150 -translate-y-0.5 group-hover:opacity-100 group-hover:pointer-events-auto group-hover:translate-y-0 active:translate-y-0 active:scale-95 hover:border-[rgba(0,0,0,0.18)] hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed md:opacity-100 md:pointer-events-auto md:translate-y-0"
           :disabled="!previewFile?.content"
           @click="onCopyClick"
         >
           {{ copyStateLabel }}
         </button>
-        <div class="preview-text-scroller">
-          <div class="preview-text-gutter" aria-hidden="true">
-            <div v-for="n in lineCount" :key="n" class="preview-line-no">{{ n }}</div>
+        <div class="flex items-start w-full h-full min-h-0 overflow-auto touch-pan-x touch-pan-y rounded">
+          <div class="flex-none px-3 py-[15px] text-[#9ca3af] bg-[#fafafa] border-r border-[#eee] text-right select-none font-mono text-sm leading-relaxed sticky left-0 z-1" aria-hidden="true">
+            <div v-for="n in lineCount" :key="n" class="h-[1.5em] leading-relaxed whitespace-nowrap">{{ n }}</div>
           </div>
-          <pre class="preview-text"><code class="hljs" v-html="highlightedHtml"></code></pre>
+          <pre class="m-0 p-[15px] font-mono text-sm leading-relaxed whitespace-pre word-wrap-normal flex-auto min-w-0 overflow-visible"><code class="hljs p-0 font-inherit text-[#333] overflow-x-visible!" v-html="highlightedHtml"></code></pre>
         </div>
       </div>
     </div>
@@ -264,46 +265,3 @@ const highlightedHtml = computed(() => {
   }
 })
 </script>
-
-<style scoped>
-.preview-error-msg {
-  margin-bottom: 1rem;
-}
-
-.preview-video {
-  position: relative;
-}
-
-.video-loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 240px;
-  padding: 2rem;
-}
-
-.loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid #e5e7eb;
-  border-top: 4px solid #3b82f6;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 1rem;
-}
-
-.loading-text {
-  color: #6b7280;
-  font-size: 0.9rem;
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
-</style>

@@ -1,7 +1,7 @@
 <template>
-  <div class="main-container">
+  <div class="main-container flex flex-col md:flex-row gap-0 w-full max-w-full m-0 h-dvh max-h-dvh items-stretch relative p-2.5 md:p-3 min-h-0 overflow-hidden">
     <!-- 文件列表容器（目录） -->
-    <div class="file-container" :style="{ width: fileContainerWidth + 'px' }">
+    <div class="hidden md:flex flex-none min-w-[200px] max-w-[calc(100%-320px)] min-h-0 bg-white px-5 py-[15px] rounded-l-lg shadow-md flex-col h-full overflow-visible" :style="{ width: fileContainerWidth + 'px' }">
       <FileList
         :share-name="shareName"
         :path-parts="pathParts"
@@ -15,31 +15,31 @@
     </div>
 
     <!-- 可拖拽分隔条 -->
-    <div class="resizer" @mousedown="startResize" @touchstart="startResize"></div>
+    <div class="hidden md:block w-1 bg-[#e4e7ed] cursor-col-resize flex-none relative transition-colors duration-200 z-10 hover:bg-[#409eff] before:content-[''] before:absolute before:-left-0.5 before:-right-0.5 before:top-0 before:bottom-0 before:cursor-col-resize" @mousedown="startResize" @touchstart="startResize"></div>
 
     <!-- 标签页容器（上传和预览） -->
-    <div class="tabs-container" :style="{ width: tabsContainerWidth + 'px' }">
+    <div class="flex-auto min-w-0 min-h-0 bg-white rounded-lg md:rounded-l-none md:rounded-r-lg shadow-md flex flex-col h-full overflow-hidden relative" :style="!isMobileLayout ? { width: tabsContainerWidth + 'px' } : {}">
       <!-- 标签页头部 -->
-      <div class="tabs-header">
+      <div class="flex border-b border-[#e4e7ed] bg-white shrink-0 items-stretch overflow-x-auto overflow-y-hidden z-10">
         <div
-          class="tab-item mobile-only"
-          :class="{ active: activeTab === 'directory' }"
+          class="px-5 py-3 cursor-pointer text-[#606266] text-sm border-b-2 transition-all duration-300 select-none relative flex-none hover:text-[#409eff] block md:hidden"
+          :class="activeTab === 'directory' ? 'text-[#409eff] border-b-[#409eff] font-medium' : 'border-transparent'"
           @click="activeTab = 'directory'"
         >
           文件夹
         </div>
         <div
           v-if="!unUpload"
-          class="tab-item"
-          :class="{ active: activeTab === 'upload' }"
+          class="px-5 py-3 cursor-pointer text-[#606266] text-sm border-b-2 transition-all duration-300 select-none relative flex-none hover:text-[#409eff]"
+          :class="activeTab === 'upload' ? 'text-[#409eff] border-b-[#409eff] font-medium' : 'border-transparent'"
           @click="activeTab = 'upload'"
         >
           上传
         </div>
         <div
           v-if="chatEnabled"
-          class="tab-item"
-          :class="{ active: activeTab === 'chat' }"
+          class="px-5 py-3 cursor-pointer text-[#606266] text-sm border-b-2 transition-all duration-300 select-none relative flex-none hover:text-[#409eff]"
+          :class="activeTab === 'chat' ? 'text-[#409eff] border-b-[#409eff] font-medium' : 'border-transparent'"
           @click="activeTab = 'chat'"
         >
           聊天
@@ -47,33 +47,33 @@
 
         <!-- 单实例预览：tab 上展示当前预览文件名，并可关闭 -->
         <div
-          class="tab-item tab-item-file"
+          class="px-5 py-3 cursor-pointer text-[#606266] text-sm border-b-2 transition-all duration-300 select-none relative flex-none hover:text-[#409eff] inline-flex items-center gap-2 max-w-[220px]"
           v-show="previewFile"
-          :class="{ active: activeTab === 'preview' }"
+          :class="activeTab === 'preview' ? 'text-[#409eff] border-b-[#409eff] font-medium' : 'border-transparent'"
           @click="activeTab = 'preview'"
           :title="previewFile?.name"
         >
-          <span class="tab-title">{{ previewFile?.name }}</span>
-          <button class="tab-close" @click.stop="closePreview" aria-label="关闭">×</button>
+          <span class="overflow-hidden text-ellipsis whitespace-nowrap max-w-[170px]">{{ previewFile?.name }}</span>
+          <button class="border-none bg-transparent text-[#909399] cursor-pointer p-0 w-[18px] h-[18px] leading-[18px] rounded flex items-center justify-center hover:bg-[#f0f0f0] hover:text-[#333]" @click.stop="closePreview" aria-label="关闭">×</button>
         </div>
 
         <!-- 测速按钮 -->
-        <div class="tab-item tab-speedtest" @click="startSpeedTest" title="局域网测速">
+        <div class="ml-auto flex items-center gap-1 text-[#666] text-[13px] cursor-pointer px-5 py-3 md:px-3 border-l border-[#eee] hover:text-[#007bff] hover:bg-[#f8f9fa]" @click="startSpeedTest" title="局域网测速">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
-          <span>测速</span>
+          <span class="hidden md:inline">测速</span>
         </div>
       </div>
 
-      <!-- 标签页内容（仅保留下载/上传。预览改为独立层，覆盖整个 tabs-container 内容区） -->
-      <div class="tabs-content">
-        <!-- 无上传功能时的空页：还没点开文件时，右侧给出提示 -->
-        <div v-if="unUpload && activeTab === 'empty' && !previewFile" class="tab-pane empty-pane">
-          <div class="empty-hint">点击左侧文件进行预览</div>
+      <!-- 标签页内容 -->
+      <div class="flex-1 overflow-hidden flex flex-col">
+        <!-- 无上传功能时的空页 -->
+        <div v-if="unUpload && activeTab === 'empty' && !previewFile" class="flex-1 flex items-center justify-center p-[15px] md:p-5">
+          <div class="text-center text-[#9ca3af] text-sm leading-relaxed px-4 py-3 border border-dashed border-[#e5e7eb] rounded-[10px] bg-[#fafafa]">点击左侧文件进行预览</div>
         </div>
-        <!-- 文件目录内容（移动端 Tab 展示；桌面端继续显示左侧列表） -->
-        <div v-show="activeTab === 'directory'" class="tab-pane download-pane">
+        <!-- 文件目录内容 -->
+        <div v-show="activeTab === 'directory'" class="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0">
           <FileList
             :share-name="shareName"
             :path-parts="pathParts"
@@ -87,7 +87,7 @@
         </div>
 
         <!-- 上传内容 -->
-        <div v-if="!unUpload" v-show="activeTab === 'upload'" class="tab-pane">
+        <div v-if="!unUpload" v-show="activeTab === 'upload'" class="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0">
           <UploadTab
             :can-upload="canUpload"
             :is-drag-over="isDragOver"
@@ -113,13 +113,13 @@
         </div>
 
         <!-- 聊天内容 -->
-        <div v-if="chatEnabled" v-show="activeTab === 'chat'" class="tab-pane chat-tab-pane">
+        <div v-if="chatEnabled" v-show="activeTab === 'chat'" class="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0 overscroll-contain touch-manipulation">
           <ChatTab />
         </div>
       </div>
 
-      <!-- 预览层：不放在 tabs-content 内，避免 tabs-content 的 padding/布局影响；需要占满整个内容区 -->
-      <div v-show="activeTab === 'preview' && previewFile" class="preview-layer">
+      <!-- 预览层 -->
+      <div v-show="activeTab === 'preview' && previewFile" class="absolute inset-0 z-5 bg-white flex flex-col pt-[45px]">
         <PreviewTab
           :preview-file="previewFile"
           :preview-loading="previewLoading"
@@ -134,55 +134,55 @@
 
     <!-- 测速卡片 -->
     <Transition name="slide-fade">
-      <div v-if="isSpeedTestVisible" class="speedtest-card">
-        <div class="speedtest-header">
-          <h3>局域网测速</h3>
-          <button class="close-btn" @click="closeSpeedTest">×</button>
+      <div v-if="isSpeedTestVisible" class="absolute top-[55px] md:top-[60px] right-2.5 md:right-5 w-[calc(100%-20px)] md:w-[280px] max-w-[300px] md:max-w-none bg-white rounded-xl shadow-2xl border border-[#eee] z-100 flex flex-col overflow-hidden">
+        <div class="px-4 py-3 border-b border-[#eee] flex justify-between items-center bg-[#f8f9fa]">
+          <h3 class="m-0 text-[15px] font-semibold text-[#333]">局域网测速</h3>
+          <button class="border-none bg-none text-xl text-[#999] cursor-pointer leading-none p-1 hover:text-[#666]" @click="closeSpeedTest">×</button>
         </div>
-        <div class="speedtest-content">
-          <div class="speed-item">
-            <span class="label">延迟 (Ping):</span>
-            <span class="value">{{ speedResult.ping }} ms</span>
+        <div class="p-4 flex flex-col gap-4">
+          <div class="flex flex-col gap-1.5">
+            <span class="text-[13px] text-[#666]">延迟 (Ping):</span>
+            <span class="text-sm font-semibold text-[#333] font-mono">{{ speedResult.ping }} ms</span>
           </div>
-          <div class="speed-item" :class="{ active: speedResult.status === 'downloading' }">
-            <div class="speed-info">
-              <span class="label">下载速度:</span>
-              <span class="value">{{ formatSpeed(speedResult.download) }}</span>
+          <div class="flex flex-col gap-1.5">
+            <div class="flex justify-between items-center">
+              <span class="text-[13px]" :class="speedResult.status === 'downloading' ? 'text-[#007bff] font-semibold' : 'text-[#666]'">下载速度:</span>
+              <span class="text-sm font-semibold text-[#333] font-mono">{{ formatSpeed(speedResult.download) }}</span>
             </div>
-            <div v-if="speedResult.status === 'downloading'" class="progress-bar">
-              <div class="progress-inner" :style="{ width: currentProgress + '%' }"></div>
-            </div>
-          </div>
-          <div class="speed-item" :class="{ active: speedResult.status === 'uploading' }">
-            <div class="speed-info">
-              <span class="label">上传速度:</span>
-              <span class="value">{{ formatSpeed(speedResult.upload) }}</span>
-            </div>
-            <div v-if="speedResult.status === 'uploading'" class="progress-bar">
-              <div class="progress-inner" :style="{ width: currentProgress + '%' }"></div>
+            <div v-if="speedResult.status === 'downloading'" class="h-1 bg-[#eee] rounded-sm overflow-hidden">
+              <div class="h-full bg-[#007bff] transition-[width] duration-200 ease-out" :style="{ width: currentProgress + '%' }"></div>
             </div>
           </div>
-          <div v-if="speedResult.status === 'error'" class="speed-error">
+          <div class="flex flex-col gap-1.5">
+            <div class="flex justify-between items-center">
+              <span class="text-[13px]" :class="speedResult.status === 'uploading' ? 'text-[#007bff] font-semibold' : 'text-[#666]'">上传速度:</span>
+              <span class="text-sm font-semibold text-[#333] font-mono">{{ formatSpeed(speedResult.upload) }}</span>
+            </div>
+            <div v-if="speedResult.status === 'uploading'" class="h-1 bg-[#eee] rounded-sm overflow-hidden">
+              <div class="h-full bg-[#007bff] transition-[width] duration-200 ease-out" :style="{ width: currentProgress + '%' }"></div>
+            </div>
+          </div>
+          <div v-if="speedResult.status === 'error'" class="text-[12px] text-[#dc3545] p-2 bg-[#fff5f5] rounded">
             {{ speedResult.error }}
           </div>
 
-          <div v-if="speedResult.status === 'completed'" class="speed-estimation">
-            <div class="estimation-title">传输 1GB 文件预计耗时：</div>
-            <div class="estimation-grid">
-              <div class="estimation-item">
-                <span class="type">下载</span>
-                <span class="time">{{ formatDuration(1024 * 1024 * 1024 / speedResult.download) }}</span>
+          <div v-if="speedResult.status === 'completed'" class="mt-2 p-3 bg-[#f0f7ff] rounded-lg border border-[#d0e7ff]">
+            <div class="text-[12px] text-[#666] mb-2">传输 1GB 文件预计耗时：</div>
+            <div class="flex gap-3">
+              <div class="flex-1 flex flex-col gap-0.5">
+                <span class="text-[11px] text-[#999]">下载</span>
+                <span class="text-sm font-semibold text-[#0056b3]">{{ formatDuration(1024 * 1024 * 1024 / speedResult.download) }}</span>
               </div>
-              <div class="estimation-item">
-                <span class="type">上传</span>
-                <span class="time">{{ formatDuration(1024 * 1024 * 1024 / speedResult.upload) }}</span>
+              <div class="flex-1 flex flex-col gap-0.5">
+                <span class="text-[11px] text-[#999]">上传</span>
+                <span class="text-sm font-semibold text-[#0056b3]">{{ formatDuration(1024 * 1024 * 1024 / speedResult.upload) }}</span>
               </div>
             </div>
           </div>
         </div>
-        <div class="speedtest-footer">
+        <div class="p-3 border-t border-[#eee]">
           <button 
-            class="retry-btn" 
+            class="w-full p-2 bg-[#007bff] text-white border-none rounded-md text-sm cursor-pointer transition-colors duration-200 hover:bg-[#0056b3] disabled:bg-[#ccc] disabled:cursor-not-allowed" 
             :disabled="speedResult.status !== 'completed' && speedResult.status !== 'error' && speedResult.status !== 'idle'"
             @click="startSpeedTest"
           >
@@ -532,3 +532,19 @@ onBeforeUnmount(() => {
   stopPolling()
 })
 </script>
+
+<style scoped>
+.slide-fade-enter-active {
+  transition: all 0.3s ease-out;
+}
+
+.slide-fade-leave-active {
+  transition: all 0.2s cubic-bezier(1, 0.5, 0.8, 1);
+}
+
+.slide-fade-enter-from,
+.slide-fade-leave-to {
+  transform: translateX(20px);
+  opacity: 0;
+}
+</style>
