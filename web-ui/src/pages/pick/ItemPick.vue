@@ -1,70 +1,77 @@
 <template>
-  <main class="card">
-    <p class="desc">
+  <main class="w-full max-w-[960px] p-7 bg-[#1e293b]/85 rounded-[18px] border border-white/6 shadow-(--shadow) backdrop-blur-md min-[881px]:h-auto max-[880px]:h-full max-[880px]:w-full max-[880px]:overflow-y-auto max-[880px]:rounded-none">
+    <p class="mb-4 text-(--muted) text-sm">
       列表数据直接来自命令行的配置文件，使用 <code>fcbyk pick --add</code> 即可更新。
     </p>
 
     <!-- 工具栏 -->
-    <div class="toolbar">
-      <button id="start-btn" class="primary" :disabled="isDrawing" @click="handleStartDraw">
+    <div class="flex flex-wrap gap-3 mb-[18px]">
+      <button id="start-btn" 
+        class="rounded-xl px-4 py-3 text-[15px] font-semibold cursor-pointer transition-all duration-150 text-[#0b1224] border-none bg-linear-to-br from-(--primary) to-(--accent) shadow-[0_12px_30px_rgba(34,211,238,0.18)] active:translate-y-px active:shadow-none disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none" 
+        :disabled="isDrawing" @click="handleStartDraw">
         开始选择
       </button>
-      <button class="secondary" @click="loadItems">刷新列表</button>
+      <button class="rounded-xl px-4 py-3 text-[15px] font-semibold cursor-pointer transition-all duration-150 text-(--text) bg-white/12 border border-white/6 shadow-none active:translate-y-px active:shadow-none" @click="loadItems">刷新列表</button>
 
-      <div class="toggle-switch" @click="toggleNoRepeatMode">
-        <input type="checkbox" :checked="noRepeatMode" @click.stop @change="toggleNoRepeatMode">
-        <label>无放回模式</label>
+      <div class="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-white/4 border border-white/6 cursor-pointer select-none transition-all hover:bg-white/6 hover:border-white/10" @click="toggleNoRepeatMode">
+        <input type="checkbox" :checked="noRepeatMode" class="w-11 h-6 appearance-none bg-white/10 rounded-full relative cursor-pointer transition-colors duration-300 checked:bg-(--primary) before:content-[''] before:absolute before:w-5 before:h-5 before:rounded-full before:bg-white before:top-0.5 before:left-0.5 before:transition-transform before:duration-300 before:shadow-[0_2px_4px_rgba(0,0,0,0.2)] checked:before:translate-x-5" @click.stop @change="toggleNoRepeatMode">
+        <label class="text-(--text) text-sm cursor-pointer">无放回模式</label>
       </div>
 
-      <div class="speed-control">
-        <label for="speed-slider">抽奖速度：</label>
-        <input type="range" id="speed-slider" min="1" max="8" :value="drawSpeed" step="0.5" @input="handleSpeedChange">
-        <span class="speed-value">{{ drawSpeed }}秒</span>
+      <div class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-white/4 border border-white/6 text-sm">
+        <label for="speed-slider" class="text-(--muted)">抽奖速度：</label>
+        <input type="range" id="speed-slider" min="1" max="8" :value="drawSpeed" step="0.5" 
+          class="flex-1 min-w-[120px] h-1.5 appearance-none bg-white/10 rounded-lg cursor-pointer accent-(--primary)" 
+          @input="handleSpeedChange">
+        <span class="text-(--primary) font-semibold min-w-[45px] text-right">{{ drawSpeed }}秒</span>
       </div>
 
-      <button v-if="hasDrawn" class="secondary" @click="resetDrawn">
+      <button v-if="hasDrawn" class="rounded-xl px-4 py-3 text-[15px] font-semibold cursor-pointer transition-all duration-150 text-(--text) bg-white/12 border border-white/6 shadow-none active:translate-y-px active:shadow-none" @click="resetDrawn">
         重置已抽取
       </button>
     </div>
 
     <!-- 状态提示 -->
-    <div class="status" :class="statusType">
-      <span class="badge-dot"></span>
+    <div :class="['px-3.5 py-3 rounded-xl bg-white/6 border border-white/5 text-sm flex items-center gap-2.5 mb-3.5', 
+      statusType === 'ok' ? 'text-(--success)' : statusType === 'err' ? 'text-(--danger)' : 'text-(--muted)']">
+      <span :class="['w-2.5 h-2.5 rounded-full shadow-[0_0_12px_rgba(34,211,238,0.7)]', 
+        statusType === 'ok' ? 'bg-(--success)' : statusType === 'err' ? 'bg-(--danger)' : 'bg-(--primary)']"></span>
       {{ statusText }}
     </div>
 
     <!-- 主内容区 -->
-    <div class="layout">
+    <div class="grid grid-cols-1 min-[881px]:grid-cols-[1fr_320px] gap-4">
       <!-- 候选列表 -->
-      <section class="panel">
-        <h3>候选列表</h3>
-        <div v-if="hasItems" class="list">
-          <div v-for="(item, idx) in items" :key="idx" class="item" :class="{
-            active: currentHighlightIndex === idx,
-            drawn: drawnIndices.has(idx)
-          }">
-            <span class="badge">{{ idx + 1 }}</span>
+      <section class="bg-white/4 border border-white/5 rounded-[14px] p-4">
+        <h3 class="m-0 mb-2.5 text-[17px] text-(--text)">候选列表</h3>
+        <div v-if="hasItems" class="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2.5 pt-2.5 max-h-[50dvh] overflow-y-auto pr-1 scrollbar-hide">
+          <div v-for="(item, idx) in items" :key="idx" 
+            :class="['flex items-center gap-2.5 p-3 rounded-xl bg-white/5 border border-white/6 text-(--text) transition-all duration-150 wrap-break-word', 
+              { 'border-primary/50! shadow-[0_8px_18px_rgba(34,211,238,0.18)] -translate-y-px': currentHighlightIndex === idx },
+              { 'opacity-40 bg-white/2 border-white/3 pointer-events-none': drawnIndices.has(idx) }]">
+            <span :class="['w-[30px] h-[30px] rounded-[10px] inline-flex items-center justify-center font-bold text-[13px]', 
+              drawnIndices.has(idx) ? 'bg-gray-500/20 text-gray-500/60' : 'bg-(--primary)/20 text-(--primary)']">{{ idx + 1 }}</span>
             <span>{{ item }}</span>
           </div>
         </div>
-        <p v-else class="muted">
+        <p v-else class="text-(--muted) text-[13px]">
           列表为空，请在终端执行 <code>fcbyk pick --add 项目</code> 添加。
         </p>
       </section>
 
       <!-- 结果面板 -->
-      <section class="panel">
-        <h3>最终结果</h3>
-        <div class="result">
-          <div v-if="selectedWinner" class="title">本轮选中</div>
-          <div v-else class="title">点击「开始」随机选出一项</div>
+      <section class="bg-white/4 border border-white/5 rounded-[14px] p-4">
+        <h3 class="m-0 mb-2.5 text-[17px] text-(--text)">最终结果</h3>
+        <div class="bg-linear-to-br from-(--primary)/12 to-(--accent)/12 border border-(--primary)/35 rounded-[14px] p-[18px] min-h-[140px] flex flex-col justify-center gap-2.5 text-center">
+          <div v-if="selectedWinner" class="text-(--muted) tracking-[0.4px]">本轮选中</div>
+          <div v-else class="text-(--muted) tracking-[0.4px]">点击「开始」随机选出一项</div>
 
-          <div class="value">{{ selectedWinner || '—' }}</div>
+          <div class="text-[32px] font-extrabold text-(--primary) [text-shadow:0_6px_24px_rgba(34,211,238,0.3)] wrap-break-word">{{ selectedWinner || '—' }}</div>
 
-          <div v-if="selectedWinner" class="muted">
+          <div v-if="selectedWinner" class="text-(--muted) text-[13px]">
             数据来源：本地配置文件 ~/.fcbyk/pick.json
           </div>
-          <div v-if="noRepeatMode && hasDrawn" class="muted">
+          <div v-if="noRepeatMode && hasDrawn" class="text-(--muted) text-[13px]">
             已抽取 {{ drawnIndices.size }}/{{ items.length }} 项
           </div>
         </div>
@@ -158,218 +165,3 @@ onMounted(() => {
   loadItems()
 })
 </script>
-
-<style scoped lang="scss">
-@use './style.scss' as *;
-
-.card {
-  @include card();
-}
-
-button {
-  @include button-base;
-  &.primary {
-    @include button-primary;
-  }
-  &.secondary {
-    @include button-secondary;
-  }
-  &:disabled {
-    @include button-disabled;
-  }
-  &:not(:disabled):active {
-    @include button-active;
-  }
-}
-
-.speed-control {
-  @include speed-control-container;
-  input[type="range"] {
-    @include speed-control-range;
-  }
-  .speed-value {
-    @include speed-value;
-  }
-}
-
-.toolbar {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 18px;
-}
-
-.status {
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  color: var(--muted);
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 14px;
-  &.ok {
-    color: var(--success);
-  }
-  &.err {
-    color: var(--danger);
-  }
-}
-
-.layout {
-  display: grid;
-  grid-template-columns: 1fr 320px;
-  gap: 16px;
-}
-
-@media (max-width: 880px) {
-  .layout {
-    grid-template-columns: 1fr;
-  }
-  .card {
-    height: 100%;
-    width: 100%;
-    overflow-y: auto;
-    border-radius: 0;
-  }
-}
-
-.panel {
-  @include panel-surface();
-  h3 {
-    margin: 0 0 10px;
-    font-size: 17px;
-    color: var(--text);
-  }
-}
-
-.list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 10px;
-  padding-top: 10px;
-  max-height: 50dvh;
-  overflow-y: auto;
-  padding-right: 4px;
-}
-
-.item {
-  padding: 12px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  color: var(--text);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
-  word-break: break-word;
-  .badge {
-    width: 30px;
-    height: 30px;
-    border-radius: 10px;
-    background: rgba(34, 211, 238, 0.2);
-    color: var(--primary);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 13px;
-  }
-  &.active {
-    border-color: rgba(34, 211, 238, 0.5);
-    box-shadow: 0 8px 18px rgba(34, 211, 238, 0.18);
-    transform: translateY(-1px);
-  }
-  &.drawn {
-    opacity: 0.4;
-    background: rgba(255, 255, 255, 0.02);
-    border-color: rgba(255, 255, 255, 0.03);
-    pointer-events: none;
-    .badge {
-      background: rgba(128, 128, 128, 0.2);
-      color: rgba(128, 128, 128, 0.6);
-    }
-  }
-}
-
-.result {
-  @include result-box(center);
-  .title {
-    color: var(--muted);
-    letter-spacing: 0.4px;
-  }
-  .value {
-    font-size: 32px;
-    font-weight: 800;
-    color: var(--primary);
-    text-shadow: 0 6px 24px rgba(34, 211, 238, 0.3);
-    word-break: break-word;
-  }
-}
-
-.muted {
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.badge-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--primary);
-  box-shadow: 0 0 12px rgba(34, 211, 238, 0.7);
-}
-
-.toggle-switch {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  cursor: pointer;
-  user-select: none;
-  transition: background 0.2s ease, border-color 0.2s ease;
-  &:hover {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.1);
-  }
-  input[type="checkbox"] {
-    width: 44px;
-    height: 24px;
-    appearance: none;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    position: relative;
-    cursor: pointer;
-    transition: background 0.3s ease;
-    &:checked {
-      background: var(--primary);
-    }
-    &::before {
-      content: '';
-      position: absolute;
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      background: white;
-      top: 2px;
-      left: 2px;
-      transition: transform 0.3s ease;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    }
-    &:checked::before {
-      transform: translateX(20px);
-    }
-  }
-  label {
-    color: var(--text);
-    font-size: 14px;
-    cursor: pointer;
-  }
-}
-</style>

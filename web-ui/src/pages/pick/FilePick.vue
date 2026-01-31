@@ -1,73 +1,75 @@
 <template>
-  <main class="card">
-    <h1>文件抽奖</h1>
-    <p class="desc">
+  <main class="w-full max-w-[980px] p-6 bg-[#1e293b]/90 rounded-[18px] border border-white/5 shadow-(--shadow) backdrop-blur-md box-border min-[901px]:h-auto max-[900px]:h-full max-[900px]:w-full max-[900px]:overflow-y-auto max-[900px]:rounded-none">
+    <h1 class="m-0 mb-2 text-2xl font-bold">文件抽奖</h1>
+    <p class="text-sm text-(--muted) leading-6 mb-3.5">
       通过随机生成的 4 位抽奖码进行抽奖，每个抽奖码只能成功抽取一次。抽中的文件可无限次下载，用于课后给学生随机分配作品 / 素材。
     </p>
 
-    <div class="toolbar">
-      <div class="redeem">
+    <div class="flex gap-2.5 flex-wrap my-2.5 mb-4">
+      <div class="flex flex-wrap gap-2 items-center">
         <input v-model="codeInput" type="text" placeholder="输入 4 位抽奖码" maxlength="10" :disabled="isDrawing"
+          class="flex-1 min-w-0 max-w-[180px] p-2.5 rounded-xl border border-slate-400/60 bg-slate-900/80 text-(--text) text-sm outline-none placeholder:text-slate-400/90 focus:border-(--primary) focus:shadow-[0_0_0_1px_rgba(34,211,238,0.4)] disabled:opacity-60 disabled:cursor-not-allowed"
           @keyup.enter="handleStartDraw" />
-        <button class="primary" :disabled="isDrawing || !hasFiles" @click="handleStartDraw">
+        <button class="rounded-xl px-4 py-[11px] text-[15px] font-bold cursor-pointer transition-all duration-120 active:translate-y-px disabled:opacity-60 disabled:cursor-not-allowed bg-linear-to-br from-(--primary) to-(--accent) shadow-[0_12px_30px_rgba(34,211,238,0.18)] text-[#0b1224]" :disabled="isDrawing || !hasFiles" @click="handleStartDraw">
           使用抽奖码抽文件
         </button>
       </div>
-      <div class="speed-control">
-        <label for="speed-slider">抽奖速度：</label>
+      <div class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/6 text-sm">
+        <label for="speed-slider" class="text-(--muted) whitespace-nowrap">抽奖速度：</label>
         <input id="speed-slider" type="range" min="1" max="8" :value="drawSpeed" step="0.5"
+          class="w-[100px] h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-(--primary)"
           @input="handleSpeedChange" />
-        <span class="speed-value">{{ drawSpeed }}秒</span>
+        <span class="text-(--primary) font-bold min-w-[36px] text-right">{{ drawSpeed }}秒</span>
       </div>
-      <button class="secondary" @click="loadFiles">刷新列表</button>
+      <button class="rounded-xl px-4 py-[11px] text-[15px] font-bold cursor-pointer transition-all duration-120 active:translate-y-px disabled:opacity-60 disabled:cursor-not-allowed bg-white/10 border border-white/10 text-(--text) hover:bg-white/15" @click="loadFiles">刷新列表</button>
     </div>
 
-    <div class="status">
-      <div class="left">
-        <span class="badge-dot"></span>
+    <div class="p-3.5 rounded-xl bg-white/6 border border-white/5 flex items-center justify-between gap-3 mb-3.5 flex-wrap">
+      <div class="flex items-center gap-2.5 text-(--muted) text-sm">
+        <span class="w-2.5 h-2.5 rounded-full bg-(--primary) shadow-[0_0_10px_rgba(34,211,238,0.8)]"></span>
         <span>{{ statusText }}</span>
       </div>
-      <div class="counter">{{ counterText }}</div>
+      <div class="px-3 py-2 rounded-xl bg-white/8 text-(--text) font-bold text-sm">{{ counterText }}</div>
     </div>
 
-    <div class="layout">
-      <section class="panel">
-        <h3>候选文件</h3>
-        <div v-if="hasFiles" class="list">
-          <div v-for="(file, idx) in files" :key="idx" class="item" :class="{ active: currentHighlightIndex === idx }">
-            <div class="name">{{ file.name }}</div>
-            <div class="meta">大小：{{ formatSize(file.size) }}</div>
+    <div class="grid grid-cols-[1fr_320px] gap-4 max-[900px]:grid-cols-1">
+      <section class="bg-white/4 border border-white/8 rounded-[18px] p-4 flex flex-col min-h-0">
+        <h3 class="m-0 mb-3 text-[17px] font-bold">候选文件</h3>
+        <div v-if="hasFiles" class="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2.5 max-h-[50dvh] overflow-y-auto pr-1 scrollbar-hide">
+          <div v-for="(file, idx) in files" :key="idx" class="p-3 rounded-xl bg-white/5 border border-white/6 flex flex-col gap-2 break-all transition-all duration-150" :class="{ 'border-primary/50! shadow-[0_8px_18px_rgba(34,211,238,0.18)] -translate-y-px': currentHighlightIndex === idx }">
+            <div class="font-bold text-(--text)">{{ file.name }}</div>
+            <div class="text-(--muted) text-xs">大小：{{ formatSize(file.size) }}</div>
           </div>
         </div>
-        <p v-else class="muted" id="empty-hint">
+        <p v-else class="text-(--muted) text-[13px]" id="empty-hint">
           目录下没有可用文件，请检查命令行指定的路径。
         </p>
       </section>
 
-      <section class="panel">
-        <h3>抽取结果</h3>
-        <div class="result">
-          <div class="title">
+      <section class="bg-white/4 border border-white/8 rounded-[18px] p-4 flex flex-col min-h-0">
+        <h3 class="m-0 mb-3 text-[17px] font-bold">抽取结果</h3>
+        <div class="p-5 bg-white/5 border border-white/8 rounded-[18px] flex flex-col gap-4">
+          <div class="text-(--muted) tracking-[0.4px]">
             {{ selectedFile ? '本轮抽中' : '输入抽奖码并点击「使用抽奖码抽文件」随机选出一个文件' }}
           </div>
-          <div class="value">{{ selectedFile ? selectedFile.name : '—' }}</div>
-          <a v-if="selectedFile && downloadUrl" :href="downloadUrl" download>
+          <div class="text-[22px] font-extrabold text-(--primary) break-all">{{ selectedFile ? selectedFile.name : '—' }}</div>
+          <a v-if="selectedFile && downloadUrl" :href="downloadUrl" download class="text-(--text) px-3 py-2.5 rounded-xl bg-white/12 border border-white/10 no-underline font-bold inline-flex gap-1.5 items-center w-fit">
             点击下载
           </a>
-          <div v-if="selectedFile" class="muted">
+          <div v-if="selectedFile" class="text-(--muted) text-[13px]">
             大小：{{ formatSize(selectedFile.size) }}
           </div>
-          <div class="muted">{{ limitHint }}</div>
+          <div class="text-(--muted) text-[13px]">{{ limitHint }}</div>
         </div>
-        <div class="history">
-          <div class="history-title">已抽中的文件（本页）：</div>
-          <ul class="history-list">
-            <li v-if="!hasHistory">暂无记录</li>
-            <li v-else v-for="(item, idx) in history" :key="idx">
-              <a class="name" :href="`/api/files/download/${encodeURIComponent(item.name)}`" download>
+        <div class="mt-3.5 pt-2.5 border-t border-slate-400/40">
+          <div class="text-[13px] text-(--muted) mb-1.5">已抽中的文件（本页）：</div>
+          <ul class="list-none p-0 m-0 max-h-40 overflow-y-auto text-[13px] text-(--muted) scrollbar-hide">
+            <li v-if="!hasHistory" class="py-1 flex justify-between gap-2">暂无记录</li>
+            <li v-else v-for="(item, idx) in history" :key="idx" class="py-1 flex justify-between gap-2">
+              <a class="font-semibold text-(--text) break-all no-underline hover:underline" :href="`/api/files/download/${encodeURIComponent(item.name)}`" download>
                 {{ item.name }}
               </a>
-              <span class="size">{{ formatSize(item.size || 0) }}</span>
+              <span class="whitespace-nowrap">{{ formatSize(item.size || 0) }}</span>
             </li>
           </ul>
         </div>
@@ -163,255 +165,12 @@ function handlePageShow() {
 }
 </script>
 
-<style scoped lang="scss">
-@use './style.scss' as *;
-
-.card {
-  @include card(980px, 24px, rgba(30, 41, 59, 0.9));
+<style scoped>
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
-
-h1 {
-  margin: 0 0 8px;
-  font-size: 24px;
-}
-
-p.desc {
-  @include desc-text(14px, 14px);
-}
-
-.toolbar {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin: 10px 0 16px;
-}
-
-button {
-  @include button-base;
-  &.primary {
-    @include button-primary;
-  }
-  &.secondary {
-    @include button-secondary;
-  }
-  &:disabled {
-    @include button-disabled;
-  }
-  &:not(:disabled):active {
-    @include button-active;
-  }
-  padding: 11px 16px;
-  font-size: 15px;
-  font-weight: 700;
-}
-
-.status {
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 14px;
-  flex-wrap: wrap;
-  .left {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    color: var(--muted);
-    font-size: 14px;
-  }
-}
-
-.badge-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--primary);
-  box-shadow: 0 0 10px rgba(34, 211, 238, 0.8);
-}
-
-.counter {
-  padding: 8px 12px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--text);
-  font-weight: 700;
-  font-size: 14px;
-}
-
-.layout {
-  display: grid;
-  grid-template-columns: 1fr 320px;
-  gap: 16px;
-}
-
-.speed-control {
-  @include speed-control-container;
-  input[type="range"] {
-    @include speed-control-range;
-  }
-  .speed-value {
-    @include speed-value;
-  }
-}
-
-@media (max-width: 900px) {
-  .layout {
-    grid-template-columns: 1fr;
-  }
-
-  .card {
-    height: 100%;
-    width: 100%;
-    overflow-y: auto;
-    border-radius: 0;
-  }
-}
-
-.panel {
-  @include panel-surface();
-}
-
-.panel h3 {
-  margin: 0 0 12px;
-  font-size: 17px;
-}
-
-.list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 10px;
-  max-height: 50dvh;
-  overflow-y: auto;
-  padding-right: 4px;
-}
-
-.item {
-  padding: 12px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  word-break: break-all;
-  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
-  .name {
-    font-weight: 700;
-    color: var(--text);
-  }
-  .meta {
-    color: var(--muted);
-    font-size: 12px;
-  }
-  &.active {
-    border-color: rgba(34, 211, 238, 0.5);
-    box-shadow: 0 8px 18px rgba(34, 211, 238, 0.18);
-    transform: translateY(-1px);
-  }
-}
-
-.result {
-  @include result-box();
-  .title {
-    color: var(--muted);
-    letter-spacing: 0.4px;
-  }
-  .value {
-    font-size: 22px;
-    font-weight: 800;
-    color: var(--primary);
-    word-break: break-all;
-  }
-  a {
-    color: var(--text);
-    padding: 10px 12px;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.12);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    text-decoration: none;
-    font-weight: 700;
-    display: inline-flex;
-    gap: 6px;
-    align-items: center;
-    width: fit-content;
-  }
-}
-
-.muted {
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.redeem {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-  input {
-    flex: 1 1 180px;
-    min-width: 0;
-    padding: 10px 12px;
-    border-radius: 10px;
-    border: 1px solid rgba(148, 163, 184, 0.6);
-    background: rgba(15, 23, 42, 0.8);
-    color: var(--text);
-    font-size: 14px;
-    outline: none;
-    &::placeholder {
-      color: rgba(148, 163, 184, 0.9);
-    }
-    &:focus {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.4);
-    }
-    &:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-  }
-}
-
-.history {
-  margin-top: 14px;
-  padding-top: 10px;
-  border-top: 1px solid rgba(148, 163, 184, 0.4);
-}
-
-.history-title {
-  font-size: 13px;
-  color: var(--muted);
-  margin-bottom: 6px;
-}
-
-.history-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  max-height: 160px;
-  overflow-y: auto;
-  font-size: 13px;
-  color: var(--muted);
-  li {
-    padding: 4px 0;
-    display: flex;
-    justify-content: space-between;
-    gap: 8px;
-  }
-  .name {
-    font-weight: 600;
-    color: var(--text);
-    word-break: break-all;
-    text-decoration: none;
-    &:hover {
-      text-decoration: underline;
-    }
-  }
-  .size {
-    white-space: nowrap;
-  }
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 </style>

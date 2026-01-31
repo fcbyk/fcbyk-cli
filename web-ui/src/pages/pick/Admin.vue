@@ -1,128 +1,134 @@
 <template>
-  <main class="admin-layout">
+  <main class="flex gap-5 w-full max-w-[1200px] h-screen p-8 max-[900px]:p-0 max-[900px]:pt-14 mx-auto items-start box-border max-[900px]:flex-col max-[900px]:items-stretch max-[900px]:overflow-x-hidden">
     <!-- 移动端标题栏 -->
-    <header class="mobile-header">
-      <button class="mobile-menu-btn" @click="isSidebarOpen = true">
+    <header class="hidden max-[900px]:flex fixed top-0 left-0 w-full h-14 bg-[#1e293b]/90 backdrop-blur-sm z-990 px-3 items-center justify-between border-b border-white/5 box-border">
+      <button class="flex max-[900px]:flex w-10 h-10 rounded-xl bg-transparent border-none text-(--text) text-xl cursor-pointer items-center justify-center" @click="isSidebarOpen = true">
         <span class="icon">☰</span>
       </button>
-      <h1 class="mobile-title">管理后台</h1>
-      <div class="mobile-header-right"></div>
+      <h1 class="text-[17px] font-semibold m-0 text-(--text) tracking-[0.5px]">管理后台</h1>
+      <div class="w-10"></div>
     </header>
 
     <!-- 侧边栏遮罩层 -->
     <div 
       v-if="isSidebarOpen" 
-      class="sidebar-overlay" 
+      class="hidden max-[900px]:block fixed top-0 left-0 w-screen h-screen bg-black/50 backdrop-blur-xs z-998" 
       @click="isSidebarOpen = false"
     ></div>
 
     <!-- 侧边栏 -->
-    <aside :class="['card', 'admin-sidebar', { open: isSidebarOpen }]">
-      <div class="sidebar-header">
-        <h2>管理后台</h2>
-        <button class="close-sidebar" @click="isSidebarOpen = false">×</button>
+    <aside :class="['w-[240px] h-full shrink-0 bg-[#1e293b]/90 py-5 flex flex-col transition-transform duration-300 ease-out rounded-[18px] border border-white/5 shadow-(--shadow) backdrop-blur-md max-[900px]:fixed max-[900px]:left-0 max-[900px]:top-0 max-[900px]:bottom-0 max-[900px]:z-1000 max-[900px]:w-[260px] max-[900px]:h-screen max-[900px]:rounded-r-[20px] max-[900px]:rounded-l-none max-[900px]:shadow-none max-[900px]:invisible max-[900px]:transition-[transform,visibility]', { 'max-[900px]:translate-x-0 max-[900px]:shadow-[10px_0_30px_rgba(0,0,0,0.4)] max-[900px]:visible': isSidebarOpen, 'max-[900px]:-translate-x-full': !isSidebarOpen }]">
+      <div class="px-5 pb-4 border-b border-white/5 mb-3 flex items-center justify-between">
+        <h2 class="text-lg m-0 text-(--primary) tracking-[1px] font-bold">管理后台</h2>
+        <button class="hidden max-[900px]:block bg-transparent border-none text-(--muted) text-2xl cursor-pointer p-1" @click="isSidebarOpen = false">×</button>
       </div>
-      <nav class="sidebar-nav">
+      <nav class="flex flex-col gap-1 px-2.5 flex-1 overflow-y-auto scrollbar-hide">
         <button
-          :class="['nav-item', { active: activeTab === 'codes' }]"
+          :class="['flex items-center gap-3 px-4 py-3 border-none bg-transparent text-(--text) rounded-xl cursor-pointer transition-all duration-200 text-[15px] text-left w-full hover:bg-white/5', { 'bg-(--primary)/15! text-(--primary)! font-semibold': activeTab === 'codes' }]"
           @click="selectTab('codes')"
         >
-          <span class="icon">🎟️</span>
+          <span class="text-lg">🎟️</span>
           抽奖码管理
         </button>
         <button
-          :class="['nav-item', { active: activeTab === 'free' }]"
+          :class="['flex items-center gap-3 px-4 py-3 border-none bg-transparent text-(--text) rounded-xl cursor-pointer transition-all duration-200 text-[15px] text-left w-full hover:bg-white/5', { 'bg-(--primary)/15! text-(--primary)! font-semibold': activeTab === 'free' }]"
           @click="selectTab('free')"
         >
-          <span class="icon">🎲</span>
+          <span class="text-lg">🎲</span>
           自由抽奖
         </button>
-        <button class="logout-btn" @click="handleLogout">
+        <button class="mt-auto text-(--text) border-t border-white/5 rounded-none pt-4 flex items-center gap-3 px-4 py-3 bg-transparent cursor-pointer transition-all duration-200 text-[15px] text-left w-full hover:text-(--danger)" @click="handleLogout">
           退出登录
         </button>
       </nav>
     </aside>
 
     <!-- 主内容区 -->
-    <div class="admin-main">
+    <div class="flex-1 h-full min-w-0 overflow-hidden max-[900px]:p-0 max-[900px]:flex max-[900px]:flex-col max-[900px]:h-auto max-[900px]:min-h-0">
       <!-- 抽奖码管理面板 -->
-      <section v-if="activeTab === 'codes'" class="card admin-card">
-        <div class="panel">
+      <section v-if="activeTab === 'codes'" class="w-full h-full bg-[#1e293b]/90 p-6 box-border flex flex-col rounded-[18px] border border-white/5 shadow-(--shadow) backdrop-blur-md max-[900px]:rounded-none max-[900px]:border-none max-[900px]:p-4 max-[900px]:flex-1 max-[900px]:h-full">
+        <div class="flex-1 overflow-y-auto pr-1 scrollbar-hide">
           <!-- 统计条 -->
-          <div class="stats">
-            <div class="stat">
-              <div class="label">总数</div>
-              <div class="value">{{ stats.total }}</div>
+          <div class="grid grid-cols-3 gap-3 mb-4 max-[900px]:gap-2">
+            <div class="bg-white/5 border border-white/8 rounded-[14px] p-3 text-center max-[900px]:py-2 max-[900px]:px-1 max-[900px]:rounded-[10px]">
+              <div class="text-xs text-(--muted)">总数</div>
+              <div class="text-[22px] font-extrabold mt-1 max-[900px]:text-lg">{{ stats.total }}</div>
             </div>
-            <div class="stat">
-              <div class="label">已使用</div>
-              <div class="value used">{{ stats.used }}</div>
+            <div class="bg-white/5 border border-white/8 rounded-[14px] p-3 text-center max-[900px]:py-2 max-[900px]:px-1 max-[900px]:rounded-[10px]">
+              <div class="text-xs text-(--muted)">已使用</div>
+              <div class="text-[22px] font-extrabold mt-1 max-[900px]:text-lg text-(--accent)">{{ stats.used }}</div>
             </div>
-            <div class="stat">
-              <div class="label">剩余</div>
-              <div class="value left">{{ stats.left }}</div>
+            <div class="bg-white/5 border border-white/8 rounded-[14px] p-3 text-center max-[900px]:py-2 max-[900px]:px-1 max-[900px]:rounded-[10px]">
+              <div class="text-xs text-(--muted)">剩余</div>
+              <div class="text-[22px] font-extrabold mt-1 max-[900px]:text-lg text-(--primary)">{{ stats.left }}</div>
             </div>
           </div>
 
           <!-- 新增兑换码 + 快捷操作 -->
-          <div class="add-code-section">
-            <div class="add-code-form">
+          <div class="mb-4 p-4 bg-white/4 border border-white/8 rounded-[14px] max-[900px]:p-3">
+            <div class="flex gap-2 items-center flex-nowrap max-[900px]:flex-wrap max-[900px]:gap-2">
               <input
                 v-model="newCode"
                 type="text"
                 placeholder="请输入兑换码"
                 maxlength="20"
+                class="flex-1 min-w-[120px] m-0 p-3 rounded-xl border border-slate-400/60 bg-slate-900/80 text-(--text) text-[15px] outline-none focus:border-(--primary) focus:shadow-[0_0_0_1px_rgba(34,211,238,0.4)] max-[900px]:min-w-full"
                 @keypress.enter="handleAddCode"
               />
-              <button class="primary" @click="handleAddCode">新增</button>
-              <button class="primary" @click="handleGenCodes">批量生成(5)</button>
-              <button class="secondary" @click="handleExportCodes">导出</button>
-              <button class="danger" @click="handleClearCodes">清空</button>
+              <div class="flex gap-2 items-center flex-nowrap max-[900px]:w-full max-[900px]:gap-1.5">
+                <button class="whitespace-nowrap rounded-xl px-4 py-3 text-[15px] font-semibold cursor-pointer transition-all duration-120 active:translate-y-px disabled:opacity-60 disabled:cursor-not-allowed bg-linear-to-br from-(--primary) to-(--accent) shadow-[0_12px_30px_rgba(34,211,238,0.18)] text-[#0b1224] max-[900px]:flex-1 max-[900px]:py-2 max-[900px]:px-2 max-[900px]:text-xs" @click="handleAddCode">新增</button>
+                <button class="whitespace-nowrap rounded-xl px-4 py-3 text-[15px] font-semibold cursor-pointer transition-all duration-120 active:translate-y-px disabled:opacity-60 disabled:cursor-not-allowed bg-linear-to-br from-(--primary) to-(--accent) shadow-[0_12px_30px_rgba(34,211,238,0.18)] text-[#0b1224] max-[900px]:flex-1 max-[900px]:py-2 max-[900px]:px-2 max-[900px]:text-xs" @click="handleGenCodes">批量生成</button>
+                <button class="whitespace-nowrap rounded-xl px-4 py-3 text-[15px] font-semibold cursor-pointer transition-all duration-120 active:translate-y-px disabled:opacity-60 disabled:cursor-not-allowed bg-white/10 border border-white/10 text-(--text) hover:bg-white/15 max-[900px]:flex-1 max-[900px]:py-2 max-[900px]:px-2 max-[900px]:text-xs" @click="handleExportCodes">导出</button>
+                <button class="whitespace-nowrap rounded-xl px-4 py-3 text-[15px] font-semibold cursor-pointer transition-all duration-120 active:translate-y-px disabled:opacity-60 disabled:cursor-not-allowed bg-(--danger)/20 border border-(--danger)/30 text-(--danger) hover:bg-(--danger)/30 max-[900px]:flex-1 max-[900px]:py-2 max-[900px]:px-2 max-[900px]:text-xs" @click="handleClearCodes">清空</button>
+              </div>
             </div>
 
-            <div class="add-code-msgs">
-              <div :class="['add-code-msg', addCodeMsgType]">{{ addCodeMsg }}</div>
-              <div :class="['msg', genMsgType]">{{ genMsg }}</div>
-              <div :class="['msg', exportMsgType]">{{ exportMsg }}</div>
-              <div :class="['msg', clearMsgType]">{{ clearMsg }}</div>
+            <div class="mt-2 flex gap-3 flex-wrap items-center">
+              <div :class="['text-[13px] min-h-[18px]', { 'text-(--success)': addCodeMsgType === 'success', 'text-(--danger)': addCodeMsgType === 'error' }]">{{ addCodeMsg }}</div>
+              <div :class="['text-xs min-h-[16px] text-(--muted)', { 'text-(--success)': genMsgType === 'success', 'text-(--danger)': genMsgType === 'error' }]">{{ genMsg }}</div>
+              <div :class="['text-xs min-h-[16px] text-(--muted)', { 'text-(--success)': exportMsgType === 'success', 'text-(--danger)': exportMsgType === 'error' }]">{{ exportMsg }}</div>
+              <div :class="['text-xs min-h-[16px] text-(--muted)', { 'text-(--success)': clearMsgType === 'success', 'text-(--danger)': clearMsgType === 'error' }]">{{ clearMsg }}</div>
             </div>
           </div>
 
           <!-- 列表 -->
-          <div class="table">
-            <div class="row" v-for="codeInfo in codes" :key="codeInfo.code">
-              <div :class="['code', { used: codeInfo.used }]">
-                <span v-if="codeInfo.used || isCodeRevealed(codeInfo.code)" class="hidden">
+          <div class="mt-2 rounded-[14px] overflow-hidden border border-white/5">
+            <div class="flex items-center gap-3 px-3.5 py-3 border-b border-white/5 last:border-none max-[700px]:flex-wrap max-[700px]:justify-between" v-for="codeInfo in codes" :key="codeInfo.code">
+              <!-- 兑换码 -->
+              <div :class="['text-[15px] sm:text-[17px] min-w-[80px]', { 'text-(--muted)': codeInfo.used }]">
+                <span v-if="codeInfo.used || isCodeRevealed(codeInfo.code)" class="bg-white/15 rounded-lg px-3 py-1.5">
                   {{ codeInfo.code }}
                 </span>
-                <span v-else class="hidden">
+                <span v-else class="bg-white/15 rounded-lg px-3 py-1.5">
                   {{ maskCode(codeInfo.code) }}
                 </span>
               </div>
 
-              <div :class="['status', codeInfo.used ? 'bad' : 'ok']">
+              <!-- 状态 (移动端靠右，桌面端紧跟兑换码) -->
+              <div :class="['text-xs px-2.5 py-1 rounded-full bg-white/10 whitespace-nowrap max-[700px]:order-2', { 'text-(--success)': !codeInfo.used, 'text-(--danger)': codeInfo.used }]">
                 {{ codeInfo.used ? '已使用' : '未使用' }}
               </div>
 
-              <div class="actions">
+              <!-- 操作按钮 (桌面端靠右，移动端占满整行且按钮右对齐) -->
+              <div class="flex-1 flex justify-end gap-2 whitespace-nowrap max-[700px]:w-full max-[700px]:order-3 max-[700px]:mt-1.5">
                 <button
                   v-if="!codeInfo.used"
-                  class="secondary small"
+                  class="rounded-xl px-3.5 py-2 text-[13px] font-semibold cursor-pointer transition-all duration-120 active:translate-y-px disabled:opacity-60 disabled:cursor-not-allowed bg-white/10 border border-white/10 text-(--text) hover:bg-white/15"
                   @click="toggleReveal(codeInfo.code)"
                 >
                   {{ isCodeRevealed(codeInfo.code) ? '隐藏' : '查看' }}
                 </button>
-                <button class="primary small" @click="copyCode(codeInfo.code)">
+                <button class="rounded-xl px-3.5 py-2 text-[13px] font-semibold cursor-pointer transition-all duration-120 active:translate-y-px disabled:opacity-60 disabled:cursor-not-allowed bg-linear-to-br from-(--primary) to-(--accent) shadow-[0_12px_30px_rgba(34,211,238,0.18)] text-[#0b1224]" @click="copyCode(codeInfo.code)">
                   {{ isCodeCopied(codeInfo.code) ? '已复制' : '复制' }}
                 </button>
                 <button
                   v-if="codeInfo.used"
-                  class="secondary small"
+                  class="rounded-xl px-3.5 py-2 text-[13px] font-semibold cursor-pointer transition-all duration-120 active:translate-y-px disabled:opacity-60 disabled:cursor-not-allowed bg-white/10 border border-white/10 text-(--text) hover:bg-white/15"
                   @click="handleResetCode(codeInfo.code)"
                 >
                   重置
                 </button>
-                <button class="danger small" @click="handleDeleteCode(codeInfo.code)">删除</button>
+                <button class="rounded-xl px-3.5 py-2 text-[13px] font-semibold cursor-pointer transition-all duration-120 active:translate-y-px disabled:opacity-60 disabled:cursor-not-allowed bg-(--danger)/20 border border-(--danger)/30 text-(--danger) hover:bg-(--danger)/30" @click="handleDeleteCode(codeInfo.code)">删除</button>
               </div>
             </div>
           </div>
@@ -130,13 +136,13 @@
       </section>
 
       <!-- 自由抽奖管理面板 -->
-      <section v-else-if="activeTab === 'free'" class="card admin-card">
-        <h1>自由抽奖</h1>
-        <p class="desc">配置和管理自由抽奖活动</p>
+      <section v-else-if="activeTab === 'free'" class="w-full h-full bg-[#1e293b]/90 p-6 box-border flex flex-col rounded-[18px] border border-white/5 shadow-(--shadow) backdrop-blur-md max-[900px]:rounded-none max-[900px]:border-none max-[900px]:p-4 max-[900px]:flex-1 max-[900px]:h-full">
+        <h1 class="m-0 mb-2 text-2xl max-[900px]:text-xl">自由抽奖</h1>
+        <p class="text-sm text-(--muted) mb-3.5 max-[900px]:text-[13px] max-[900px]:mb-3">配置和管理自由抽奖活动</p>
         
-        <div class="placeholder-content">
-          <div class="empty-state">
-            <span class="empty-icon">🏗️</span>
+        <div class="flex-1 overflow-y-auto py-10 px-5 flex justify-center items-center scrollbar-hide max-[900px]:py-5 max-[900px]:px-3">
+          <div class="text-center text-(--muted)">
+            <span class="text-5xl block mb-4">🏗️</span>
             <p>自由抽奖管理功能正在开发中...</p>
           </div>
         </div>
@@ -205,9 +211,7 @@ onUnmounted(() => {
 })
 </script>
 
-<style scoped lang="scss">
-@use './style.scss' as *;
-
+<style scoped>
 :global(body) {
   overflow: hidden;
   height: 100vh;
@@ -221,580 +225,11 @@ onUnmounted(() => {
   display: block;
 }
 
-button {
-  @include button-base;
-  &.primary {
-    @include button-primary;
-  }
-  &.secondary {
-    @include button-secondary;
-  }
-  &.danger {
-    @include button-danger;
-  }
-  &:disabled {
-    @include button-disabled;
-  }
-  &:not(:disabled):active {
-    @include button-active;
-  }
-}
-
-.admin-layout {
-  display: flex;
-  gap: 20px;
-  width: 100%;
-  max-width: 1200px;
-  height: 100vh;
-  padding: 32px 20px;
-  margin: 0 auto;
-  align-items: flex-start;
-  box-sizing: border-box;
-}
-
-.admin-sidebar {
-  width: 240px;
-  height: 100%;
-  flex-shrink: 0;
-  background: rgba(30, 41, 59, 0.9);
-  padding: 20px 0;
-  display: flex;
-  flex-direction: column;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  @include card-surface(rgba(30, 41, 59, 0.9));
-}
-
-.mobile-menu-btn {
+.scrollbar-hide::-webkit-scrollbar {
   display: none;
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background: transparent;
-  border: none;
-  color: var(--text);
-  font-size: 20px;
-  cursor: pointer;
-  align-items: center;
-  justify-content: center;
 }
-
-.mobile-header {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 56px;
-  background: rgba(30, 41, 59, 0.9);
-  backdrop-filter: blur(8px);
-  z-index: 990;
-  padding: 0 12px;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  box-sizing: border-box;
-}
-
-.mobile-title {
-  font-size: 17px;
-  font-weight: 600;
-  margin: 0;
-  color: var(--text);
-  letter-spacing: 0.5px;
-}
-
-.mobile-header-right {
-  width: 40px; /* 占位以保持标题居中 */
-}
-
-.sidebar-overlay {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-  z-index: 998;
-}
-
-.close-sidebar {
-  display: none;
-  background: transparent;
-  border: none;
-  color: var(--muted);
-  font-size: 24px;
-  cursor: pointer;
-  padding: 4px;
-}
-
-.sidebar-header {
-  padding: 0 20px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  margin-bottom: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  h2 {
-    font-size: 18px;
-    margin: 0;
-    color: var(--primary);
-    letter-spacing: 1px;
-  }
-}
-
-.sidebar-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 0 10px;
-  flex: 1;
-  overflow-y: auto;
-  scrollbar-width: none;
+.scrollbar-hide {
   -ms-overflow-style: none;
-  &::-webkit-scrollbar {
-    display: none;
-  }
-}
-
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  border: none;
-  background: transparent;
-  color: var(--text);
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-size: 15px;
-  text-align: left;
-  width: 100%;
-  &:hover {
-    background: rgba(255, 255, 255, 0.05);
-  }
-  &.active {
-    background: rgba(34, 211, 238, 0.15);
-    color: var(--primary);
-    font-weight: 600;
-  }
-  .icon {
-    font-size: 18px;
-  }
-}
-
-.admin-main {
-  flex: 1;
-  height: 100%;
-  min-width: 0;
-  overflow: hidden;
-}
-
-.admin-card {
-  width: 100%;
-  height: 100%;
-  background: rgba(30, 41, 59, 0.9);
-  padding: 24px;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  @include card-surface(rgba(30, 41, 59, 0.9));
-}
-
-.panel {
-  flex: 1;
-  overflow-y: auto;
-  padding-right: 4px;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE and Edge */
-  &::-webkit-scrollbar {
-    display: none; /* Chrome, Safari and Opera */
-  }
-}
-
-h1 {
-  margin: 0 0 8px;
-  font-size: 24px;
-}
-
-/* ===== 统计条 ===== */
-.stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.logout-btn {
-  margin-top: auto;
-  color: var(--danger);
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 0;
-  padding-top: 16px;
-  gap: 12px;
-  background: transparent;
-  color: var(--text);
-  cursor: pointer;
-  transition: all 0.2s;
-  font-size: 15px;
-  text-align: left;
-  width: 100%;
-  &:hover {
-    color: var(--danger);
-  }
-}
-
-button.small {
-  padding: 8px 14px;
-  font-size: 13px;
-}
-
-.stat {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
-  padding: 12px 14px;
-  text-align: center;
-  .label {
-    font-size: 12px;
-    color: var(--muted);
-  }
-  .value {
-    font-size: 22px;
-    font-weight: 800;
-    margin-top: 4px;
-    &.used {
-      color: var(--accent);
-    }
-    &.left {
-      color: var(--primary);
-    }
-  }
-}
-
-/* ===== 列表 ===== */
-.table {
-  margin-top: 8px;
-  border-radius: 14px;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  &:last-child {
-    border-bottom: none;
-  }
-}
-
-.code {
-  font-size: 15px;
-  &.used {
-    color: var(--muted);
-  }
-}
-
-.hidden {
-  background: rgba(255, 255, 255, 0.14);
-  border-radius: 8px;
-  padding: 6px 12px;
-}
-
-.status {
-  font-size: 12px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
-  &.ok {
-    color: var(--success);
-  }
-  &.bad {
-    color: var(--danger);
-  }
-}
-
-.actions {
-  display: flex;
-  gap: 8px;
-  white-space: nowrap;
-}
-
-/* ===== 新增兑换码 + 快捷操作 ===== */
-.add-code-section {
-  margin-bottom: 16px;
-  padding: 16px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
-}
-
-.add-code-form {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-  input {
-    flex: 1;
-    min-width: 220px;
-    margin: 0;
-    padding: 12px;
-    border-radius: 12px;
-    border: 1px solid rgba(148, 163, 184, 0.6);
-    background: rgba(15, 23, 42, 0.8);
-    color: var(--text);
-    font-size: 15px;
-    outline: none;
-    &:focus {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.4);
-    }
-  }
-  button {
-    white-space: nowrap;
-  }
-}
-
-.add-code-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-  button.danger {
-    background: rgba(239, 68, 68, 0.9);
-    border: 1px solid rgba(239, 68, 68, 0.6);
-    color: white;
-  }
-}
-
-.add-code-msgs {
-  margin-top: 8px;
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.add-code-msg {
-  font-size: 13px;
-  min-height: 18px;
-  &.success {
-    color: var(--success);
-  }
-  &.error {
-    color: var(--danger);
-  }
-}
-
-.msg {
-  font-size: 12px;
-  min-height: 16px;
-  color: var(--muted);
-  &.success {
-    color: var(--success);
-  }
-  &.error {
-    color: var(--danger);
-  }
-}
-
-/* ===== 自由抽奖占位 ===== */
-.placeholder-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 40px 20px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
   scrollbar-width: none;
-  -ms-overflow-style: none;
-  &::-webkit-scrollbar {
-    display: none;
-  }
-}
-
-.empty-state {
-  text-align: center;
-  color: var(--muted);
-}
-
-.empty-icon {
-  font-size: 48px;
-  display: block;
-  margin-bottom: 16px;
-}
-
-/* ===== 响应式 ===== */
-@media (max-width: 860px) {
-  .admin-layout {
-    padding: 56px 0 0;
-    height: 100vh;
-    gap: 0;
-    overflow-x: hidden;
-    flex-direction: column;
-    width: 100%;
-    max-width: none;
-    align-items: stretch;
-  }
-
-  .mobile-header {
-    display: flex;
-  }
-
-  .mobile-menu-btn {
-    display: flex;
-  }
-
-  .sidebar-overlay {
-    display: block;
-  }
-
-  .admin-sidebar {
-    position: fixed;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    z-index: 1000;
-    width: 260px;
-    height: 100vh;
-    border-radius: 0 20px 20px 0;
-    transform: translateX(-100%);
-    box-shadow: none;
-    visibility: hidden;
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.3s;
-  }
-
-  .admin-sidebar.open {
-    transform: translateX(0);
-    box-shadow: 10px 0 30px rgba(0, 0, 0, 0.4);
-    visibility: visible;
-  }
-
-  .close-sidebar {
-    display: block;
-  }
-
-  .sidebar-header {
-    display: flex;
-  }
-
-  .sidebar-nav {
-    flex-direction: column;
-    overflow-y: auto;
-    padding: 0 10px;
-  }
-
-  .nav-item {
-    width: 100%;
-    white-space: normal;
-  }
-
-  /* 管理界面在移动端占满全屏并移除边框 */
-  .admin-card {
-    border-radius: 0;
-    border: none;
-    background: rgba(30, 41, 59, 0.9);
-    padding: 16px;
-    flex: 1;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    max-width: none;
-  }
-
-  .admin-main {
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    height: auto;
-    min-height: 0;
-  }
-
-  /* 统计条在移动端压缩空间 */
-  .stats {
-    gap: 8px;
-  }
-
-  .stat {
-    padding: 8px 4px;
-    border-radius: 10px;
-  }
-
-  .stat .value {
-    font-size: 18px;
-  }
-
-  /* 新增兑换码表单在移动端更紧凑 */
-  .add-code-section {
-    padding: 12px;
-  }
-
-  .add-code-form {
-    gap: 6px;
-  }
-
-  .add-code-form button {
-    flex: 1;
-    padding: 10px 8px;
-    font-size: 13px;
-    min-width: calc(50% - 6px); /* 每行两个按钮 */
-  }
-
-  .placeholder-content {
-    padding: 20px 12px;
-  }
-
-  h1 {
-    font-size: 20px;
-    margin-bottom: 4px;
-  }
-
-  p.desc {
-    font-size: 13px;
-    margin-bottom: 12px;
-  }
-}
-
-@media (max-width: 640px) {
-  .row {
-    grid-template-columns: 1fr auto;
-    grid-template-areas:
-      "code status"
-      "actions actions";
-  }
-
-  .code {
-    grid-area: code;
-    font-size: 17px;
-  }
-
-  .status {
-    grid-area: status;
-    justify-self: end;
-  }
-
-  .actions {
-    grid-area: actions;
-    justify-content: flex-end;
-    margin-top: 6px;
-    flex-wrap: wrap;
-    gap: 4px;
-  }
-
-  .add-code-form input {
-    min-width: 100%;
-  }
-
-  .add-code-actions {
-    width: 100%;
-    justify-content: flex-end;
-  }
 }
 </style>
