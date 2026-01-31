@@ -4,6 +4,7 @@
  */
 
 import { io, Socket } from 'socket.io-client'
+import { checkAuth } from './api'
 
 let socket: Socket | null = null
 let latency = 0
@@ -34,9 +35,7 @@ export function initSocket(onConnect?: () => void, onDisconnect?: () => void): S
     // 只有在连接建立失败时检查认证状态
     // 如果是服务器关闭导致的错误，checkAuth 也会失败或返回 false
     // 但我们的 handleResponse 会在 401 时触发 unauthorized 事件
-    import('./api').then(({ checkAuth }) => {
-      checkAuth()
-    })
+    checkAuth()
   })
 
   return socket
