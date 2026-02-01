@@ -1,5 +1,5 @@
 <template>
-  <div v-if="previewFile" class="flex flex-col h-full min-h-0 p-2.5 md:p-5">
+  <div v-if="previewFile" class="flex flex-col h-full min-h-0">
     <div class="flex-1 overflow-hidden w-full h-full p-0 min-h-0 flex justify-center items-stretch">
       <div v-if="previewLoading" class="p-10 text-center text-[#999]">加载中...</div>
       <div v-else-if="previewError" class="p-10 text-center text-[#e74c3c]">

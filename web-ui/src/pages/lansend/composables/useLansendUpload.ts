@@ -1,14 +1,24 @@
 import { computed, ref } from 'vue'
 import { verifyUploadPassword, uploadFile } from '../api'
-import { sleep } from '@/utils/time'
 import { formatFileSize } from '@/utils/files'
 
 let completeInfoTimer: ReturnType<typeof setTimeout> | null = null
 
 const PASSWORD_KEY = 'lansendUploadPassword'
 
+export interface UploadTask {
+  id: string
+  file: File
+  status: 'pending' | 'uploading' | 'completed' | 'error'
+  progress: number
+  loaded: number
+  total: number
+  targetPath: string // 新增：记录上传的目标路径
+  error?: string
+  cancel?: () => void
+}
+
 type UploadQueueParams = {
-  currentPath: string
   requirePassword: boolean
   getPassword: () => string
   onWrongPassword?: () => void
@@ -16,39 +26,31 @@ type UploadQueueParams = {
 }
 
 export function useLansendUpload() {
-  // 上传相关
   const isDragOver = ref(false)
   const isUploading = ref(false)
   const password = ref('')
   const passwordError = ref('')
   const isPasswordVerified = ref(false)
 
-  // 上传队列
-  const uploadQueue = ref<File[]>([])
-  const totalFiles = ref(0)
-  const uploadedCount = ref(0)
+  const uploadTasks = ref<UploadTask[]>([])
   const renamedFiles = ref<string[]>([])
-  const currentFileProgress = ref(0)
-  const currentFileName = ref('')
-  const currentFileSize = ref(0)
-  const currentFileLoaded = ref(0)
   const completeInfo = ref('')
   const showCompleteInfoFlag = ref(false)
 
   const canUpload = computed(() => isPasswordVerified.value)
 
-  const showProgress = computed(() => uploadQueue.value.length > 0 || isUploading.value)
+  const showProgress = computed(() => uploadTasks.value.some(t => t.status === 'uploading' || t.status === 'pending'))
 
-  const queueLength = computed(() => uploadQueue.value.length)
+  const queueLength = computed(() => uploadTasks.value.filter(t => t.status === 'pending').length)
 
-  // overallProgress 以“字节”加权：避免 5GB + 5MB 时两者各占 50% 的错觉
-  const totalBytes = ref(0)
-  const uploadedBytes = ref(0)
+  // overallProgress 以“字节”加权
+  const totalBytes = computed(() => uploadTasks.value.reduce((sum, t) => sum + t.total, 0))
+  const uploadedBytes = computed(() => uploadTasks.value.reduce((sum, t) => sum + t.loaded, 0))
 
   const overallProgress = computed(() => {
-    if (totalBytes.value === 0) return 0
-    const currentBytes = currentFileLoaded.value || 0
-    const p = ((uploadedBytes.value + currentBytes) / totalBytes.value) * 100
+    const total = totalBytes.value
+    if (total === 0) return 0
+    const p = (uploadedBytes.value / total) * 100
     return Math.min(100, Math.max(0, p))
   })
 
@@ -56,14 +58,11 @@ export function useLansendUpload() {
     return isUploading.value ? '上传中...可继续拖拽文件添加到队列' : '拖拽文件到此处或点击选择文件'
   })
 
-  // 速度/剩余时间估算：使用整体已上传字节数做平滑计算
-  const startedAtMs = ref<number | null>(null)
+  const uploadSpeedBytesPerSec = ref(0)
   const lastTickAtMs = ref<number | null>(null)
   const lastUploadedTotalBytes = ref(0)
-  const uploadSpeedBytesPerSec = ref(0)
 
-  const uploadedTotalBytes = computed(() => uploadedBytes.value + (currentFileLoaded.value || 0))
-  const remainingBytes = computed(() => Math.max(0, totalBytes.value - uploadedTotalBytes.value))
+  const remainingBytes = computed(() => Math.max(0, totalBytes.value - uploadedBytes.value))
 
   const etaSeconds = computed(() => {
     const speed = uploadSpeedBytesPerSec.value
@@ -84,64 +83,52 @@ export function useLansendUpload() {
   const uploadStatsText = computed(() => {
     if (!showProgress.value) return ''
     const total = totalBytes.value
-    const uploaded = uploadedTotalBytes.value
     const remain = remainingBytes.value
     const speed = uploadSpeedBytesPerSec.value
 
     const parts: string[] = []
     if (total > 0) parts.push(`总 ${formatFileSize(total)}`)
-    if (uploaded > 0 || isUploading.value) parts.push(`已传 ${formatFileSize(uploaded)}`)
     if (remain > 0) parts.push(`剩余 ${formatFileSize(remain)}`)
     if (isUploading.value && speed > 0) parts.push(`速度 ${formatFileSize(speed)}/s`)
     if (isUploading.value && etaSeconds.value != null) parts.push(`预计 ${formatDuration(etaSeconds.value)}`)
     return parts.join(' · ')
   })
 
-  function showCompleteInfo(uploaded: number, renamed: number) {
-    // 避免上一次的定时器把本次的提示提前清掉
+  function showCompleteInfo(renamed: number) {
     if (completeInfoTimer) {
       clearTimeout(completeInfoTimer)
       completeInfoTimer = null
     }
 
     showCompleteInfoFlag.value = true
-    completeInfo.value = `已成功上传 ${uploaded} 个文件`
     if (renamed > 0) {
-      completeInfo.value += `，${renamed} 个文件因重名已自动重命名`
+      completeInfo.value = `${renamed} 个文件因重名已自动重命名`
+    } else {
+      completeInfo.value = ''
     }
 
     completeInfoTimer = setTimeout(() => {
-      showCompleteInfoFlag.value = false
-      completeInfo.value = ''
-      completeInfoTimer = null
+      closeCompleteInfo()
     }, 15000)
   }
 
+  function closeCompleteInfo() {
+    showCompleteInfoFlag.value = false
+    completeInfo.value = ''
+    if (completeInfoTimer) {
+      clearTimeout(completeInfoTimer)
+      completeInfoTimer = null
+    }
+  }
+
   const uploadStatus = computed(() => {
-    if (uploadedCount.value === 0 && !isUploading.value) return ''
-
-    if (uploadedCount.value === totalFiles.value && !isUploading.value) {
-      if (renamedFiles.value.length > 0) {
-        return `全部完成！已上传 ${uploadedCount.value} 个文件，${renamedFiles.value.length} 个文件因重名已自动重命名`
-      }
-      return `全部完成！已上传 ${uploadedCount.value} 个文件`
+    const currentTask = uploadTasks.value.find(t => t.status === 'uploading')
+    if (currentTask) {
+      const uploadedSize = formatFileSize(currentTask.loaded)
+      const totalSize = formatFileSize(currentTask.total)
+      return `正在上传: ${currentTask.file.name} (${uploadedSize} / ${totalSize}) - ${Math.round(currentTask.progress)}%`
     }
-
-    if (currentFileName.value && currentFileSize.value > 0) {
-      const uploadedSize = formatFileSize(currentFileLoaded.value)
-      const totalSize = formatFileSize(currentFileSize.value)
-      return `正在上传: ${currentFileName.value} (${uploadedSize} / ${totalSize}) - ${Math.round(currentFileProgress.value)}%`
-    }
-
-    if (currentFileName.value) {
-      return `正在上传: ${currentFileName.value} - ${Math.round(currentFileProgress.value)}%`
-    }
-
-    if (renamedFiles.value.length > 0) {
-      return `已上传 ${uploadedCount.value}/${totalFiles.value} 个文件，${renamedFiles.value.length} 个文件因重名已自动重命名`
-    }
-
-    return `已上传 ${uploadedCount.value}/${totalFiles.value} 个文件`
+    return ''
   })
 
   async function verifyPassword(passwordToVerify: string, isAuto = false) {
@@ -178,140 +165,144 @@ export function useLansendUpload() {
   function resetUploadState() {
     isUploading.value = false
     isDragOver.value = false
-
-    uploadQueue.value = []
-    totalFiles.value = 0
-    totalBytes.value = 0
-
-    uploadedCount.value = 0
-    uploadedBytes.value = 0
-
+    uploadTasks.value = []
     renamedFiles.value = []
-    currentFileProgress.value = 0
-    currentFileName.value = ''
-    currentFileSize.value = 0
-    currentFileLoaded.value = 0
   }
 
-  function enqueueFiles(files: File[]) {
+  function enqueueFiles(files: File[], targetPath: string) {
     if (files.length === 0) return
-    uploadQueue.value.push(...files)
-    totalFiles.value += files.length
-    totalBytes.value += files.reduce((sum, f) => sum + (f.size || 0), 0)
+    const newTasks: UploadTask[] = files.map(file => ({
+      id: Math.random().toString(36).substring(2, 11) + Date.now(),
+      file,
+      status: 'pending',
+      progress: 0,
+      loaded: 0,
+      total: file.size,
+      targetPath,
+    }))
+    uploadTasks.value.push(...newTasks)
+  }
+
+  function cancelTask(taskId: string) {
+    const task = uploadTasks.value.find(t => t.id === taskId)
+    if (task) {
+      if (task.status === 'uploading' && task.cancel) {
+        task.cancel()
+      }
+      uploadTasks.value = uploadTasks.value.filter(t => t.id !== taskId)
+      if (!uploadTasks.value.some(t => t.status === 'uploading' || t.status === 'pending')) {
+        isUploading.value = false
+      }
+    }
+  }
+
+  function clearTasksByPath(path: string) {
+    uploadTasks.value = uploadTasks.value.filter(t => (t.targetPath || '/') !== (path || '/'))
+    if (!uploadTasks.value.some(t => t.status === 'uploading' || t.status === 'pending')) {
+      isUploading.value = false
+    }
   }
 
   let processingPromise: Promise<void> | null = null
 
   async function processUploadQueue(params: UploadQueueParams) {
-    // 防重入：上传过程中再次 enqueue 会再次触发 processUploadQueue，从而并发上传、UI 闪烁
     if (processingPromise) return processingPromise
 
     processingPromise = (async () => {
       showCompleteInfoFlag.value = false
       isUploading.value = true
 
-      // 进入上传循环时启动速度统计
-      const now0 = Date.now()
-      startedAtMs.value = startedAtMs.value ?? now0
-      lastTickAtMs.value = now0
-      lastUploadedTotalBytes.value = uploadedTotalBytes.value
+      lastTickAtMs.value = Date.now()
+      lastUploadedTotalBytes.value = uploadedBytes.value
       uploadSpeedBytesPerSec.value = 0
 
-      while (uploadQueue.value.length > 0) {
-        const file = uploadQueue.value.shift()!
+      while (true) {
+        const task = uploadTasks.value.find(t => t.status === 'pending')
+        if (!task) break
 
-        currentFileProgress.value = 0
-        currentFileName.value = file.name
-        currentFileSize.value = file.size
-        currentFileLoaded.value = 0
+        task.status = 'uploading'
 
-        const result = await uploadFile(
-          file,
-          params.currentPath,
-          params.requirePassword ? params.getPassword() : null,
-          (progress, meta) => {
-            currentFileProgress.value = progress
-            if (meta) {
-              currentFileLoaded.value = meta.loaded
-              currentFileSize.value = meta.total
-            } else {
-              currentFileLoaded.value = (file.size * progress) / 100
+        try {
+          const result = await uploadFile(
+            task.file,
+            task.targetPath,
+            params.requirePassword ? params.getPassword() : null,
+            (progress, meta) => {
+              task.progress = progress
+              if (meta) {
+                task.loaded = meta.loaded
+                task.total = meta.total
+              } else {
+                task.loaded = (task.file.size * progress) / 100
+              }
+
+              const now = Date.now()
+              if (lastTickAtMs.value && now - lastTickAtMs.value >= 800) {
+                const currentUploaded = uploadedBytes.value
+                const deltaBytes = currentUploaded - lastUploadedTotalBytes.value
+                const deltaSec = (now - lastTickAtMs.value) / 1000
+                if (deltaSec > 0 && deltaBytes >= 0) {
+                  const inst = deltaBytes / deltaSec
+                  uploadSpeedBytesPerSec.value = uploadSpeedBytesPerSec.value > 0
+                    ? uploadSpeedBytesPerSec.value * 0.7 + inst * 0.3
+                    : inst
+                }
+                lastTickAtMs.value = now
+                lastUploadedTotalBytes.value = currentUploaded
+              }
+            },
+            (cancelFn) => {
+              task.cancel = cancelFn
             }
+          )
 
-            // 每隔一段时间更新一次速度（平滑一些，避免闪烁）
-            const now = Date.now()
-            if (lastTickAtMs.value == null || lastUploadedTotalBytes.value == null) {
-              lastTickAtMs.value = now
-              lastUploadedTotalBytes.value = uploadedTotalBytes.value
+          if (!result.success) {
+            if (result.error === 'wrong password') {
+              isPasswordVerified.value = false
+              isUploading.value = false
+              passwordError.value = '密码错误，请重试'
+              sessionStorage.removeItem(PASSWORD_KEY)
+              params.onWrongPassword?.()
               return
             }
-            if (now - lastTickAtMs.value < 800) return
 
-            const deltaBytes = uploadedTotalBytes.value - lastUploadedTotalBytes.value
-            const deltaSec = (now - lastTickAtMs.value) / 1000
-            if (deltaSec > 0 && deltaBytes >= 0) {
-              const inst = deltaBytes / deltaSec
-              uploadSpeedBytesPerSec.value = uploadSpeedBytesPerSec.value > 0
-                ? uploadSpeedBytesPerSec.value * 0.7 + inst * 0.3
-                : inst
+            if (result.error === 'upload password required') {
+              isPasswordVerified.value = false
+              isUploading.value = false
+              return
             }
-            lastTickAtMs.value = now
-            lastUploadedTotalBytes.value = uploadedTotalBytes.value
-          }
-        )
 
-        if (!result.success) {
-          if (result.error === 'wrong password') {
-            isPasswordVerified.value = false
-            isUploading.value = false
-            passwordError.value = '密码错误，请重试'
-            sessionStorage.removeItem(PASSWORD_KEY)
-            params.onWrongPassword?.()
-            return
+            task.status = 'error'
+            task.error = result.error || '上传失败'
+            continue
           }
 
-          if (result.error === 'upload password required') {
-            isPasswordVerified.value = false
-            isUploading.value = false
-            return
+          task.status = 'completed'
+          task.progress = 100
+          task.loaded = task.total
+
+          if (result.data?.renamed) {
+            renamedFiles.value.push(result.data.filename)
           }
 
-          // 其他错误：跳过该文件继续下一个
-          continue
-        }
-
-        uploadedCount.value++
-        uploadedBytes.value += file.size
-        currentFileProgress.value = 100
-
-        if (result.data?.renamed) {
-          renamedFiles.value.push(result.data.filename)
+          params.onRefresh?.()
+        } catch (e: any) {
+          task.status = 'error'
+          task.error = e.message || '未知错误'
         }
       }
 
-      // 队列真正清空后再 refresh + 提示
-      const uploaded = uploadedCount.value
       const renamed = renamedFiles.value.length
 
-      params.onRefresh?.()
-      await sleep(2000)
-      showCompleteInfo(uploaded, renamed)
+      if (renamed > 0) {
+        showCompleteInfo(renamed)
+      } else {
+        showCompleteInfoFlag.value = false
+      }
 
-      // 重置队列状态（含 totalBytes），避免下一轮进度被“平均/稀释”
-      uploadedCount.value = 0
-      uploadedBytes.value = 0
-      renamedFiles.value = []
-      totalFiles.value = 0
-      totalBytes.value = 0
-      currentFileProgress.value = 0
-      currentFileName.value = ''
-      currentFileSize.value = 0
-      currentFileLoaded.value = 0
-      startedAtMs.value = null
-      lastTickAtMs.value = null
-      lastUploadedTotalBytes.value = 0
-      uploadSpeedBytesPerSec.value = 0
       isUploading.value = false
+      renamedFiles.value = []
+      uploadSpeedBytesPerSec.value = 0
     })().finally(() => {
       processingPromise = null
     })
@@ -320,42 +311,29 @@ export function useLansendUpload() {
   }
 
   return {
-    // state
     isDragOver,
     isUploading,
     password,
     passwordError,
     isPasswordVerified,
-
-    uploadQueue,
-    totalFiles,
-    totalBytes,
-    uploadedCount,
-    uploadedBytes,
-    renamedFiles,
-    currentFileProgress,
-    currentFileName,
-    currentFileSize,
-    currentFileLoaded,
-
+    uploadTasks,
     uploadStatsText,
-
     completeInfo,
     showCompleteInfoFlag,
-
-    // computed
     canUpload,
     showProgress,
     queueLength,
     overallProgress,
     uploadHint,
     uploadStatus,
-
-    // actions
+    uploadSpeedBytesPerSec,
     verifyPassword,
     restorePasswordFromSession,
     resetUploadState,
     enqueueFiles,
-    processUploadQueue
+    processUploadQueue,
+    cancelTask,
+    clearTasksByPath,
+    closeCompleteInfo
   }
 }

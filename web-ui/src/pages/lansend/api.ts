@@ -78,7 +78,8 @@ export function uploadFile(
   file: File,
   path: string,
   password: string | null,
-  onProgress: (progress: number, meta?: { loaded: number; total: number }) => void
+  onProgress: (progress: number, meta?: { loaded: number; total: number }) => void,
+  onCancel?: (cancelFn: () => void) => void
 ): Promise<UploadFileResponse> {
   return new Promise((resolve, reject) => {
     // 开始上传时初始化进度
@@ -92,6 +93,13 @@ export function uploadFile(
     }
 
     const xhr = new XMLHttpRequest()
+
+    if (onCancel) {
+      onCancel(() => {
+        xhr.abort()
+        resolve({ success: false, error: 'cancelled' })
+      })
+    }
 
     // progress 事件处理
     xhr.upload.addEventListener('progress', (e) => {

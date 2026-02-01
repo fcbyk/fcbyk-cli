@@ -11,6 +11,14 @@ export interface DirectoryItem {
   name: string
   path: string
   is_dir: boolean
+  // 上传状态字段
+  uploading?: boolean
+  progress?: number
+  status?: 'pending' | 'uploading' | 'completed' | 'error'
+  error?: string
+  size?: number
+  speed?: string
+  id?: string
 }
 
 export interface PathPart {
