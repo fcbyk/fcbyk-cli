@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-import click,random
-
-from fcbyk import commands
+import click, random, os
+from fcbyk import commands, defaults
+from fcbyk.utils import storage
 from fcbyk.commands.alias import AliasedGroup
 from fcbyk.cli_support import (
     version_callback, 
@@ -30,6 +30,11 @@ from fcbyk.cli_support import (
 @add_gui_options
 @click.pass_context
 def cli(ctx):
+    # 初始化默认配置
+    config_path = storage.get_path(defaults.CONFIG_FILE)
+    if not os.path.exists(config_path):
+        storage.save_json(config_path, defaults.DEFAULT_CONFIG)
+
     if ctx.invoked_subcommand is None:
         banner_text = random.choice(banner)
         
