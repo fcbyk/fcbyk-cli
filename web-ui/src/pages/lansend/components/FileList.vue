@@ -44,7 +44,7 @@
           </div>
         </div>
 
-        <div v-if="showPasswordInput && needsPassword" class="mb-2 p-3 bg-white border border-[#e4e7ed] rounded-lg shadow-sm animate-in fade-in slide-in-from-top-1 duration-300">
+        <div v-if="showPasswordInput && needsPassword" class="mb-2 p-3 bg-white border border-[#d1d5db] rounded-lg animate-in fade-in slide-in-from-top-1 duration-300">
           <div class="flex items-center justify-between mb-3 md:mb-2">
             <div class="text-[13px] md:text-[12px] font-medium text-[#374151]">请输入上传密码</div>
             <button @click="showPasswordInput = false" class="text-[#9ca3af] hover:text-[#6b7280] active:bg-[#f3f4f6] transition-colors p-2 md:p-1 rounded-md touch-manipulation">
@@ -74,7 +74,7 @@
           <div v-if="passwordError" class="mt-1 text-[11px] text-[#ef4444] font-medium">{{ passwordError }}</div>
         </div>
 
-        <div v-if="showCompleteInfoFlag" class="mb-2 w-full px-3 py-2.5 md:py-2 bg-[#fffbeb] text-[#854d0e] rounded-md text-[13px] md:text-[12px] font-medium leading-relaxed shadow-sm border border-[#fde68a] flex items-center gap-2 animate-in fade-in slide-in-from-bottom-1 duration-300">
+        <div v-if="showCompleteInfoFlag" class="mb-2 w-full px-3 py-2.5 md:py-2 bg-[#fffbeb] text-[#854d0e] rounded-md text-[13px] md:text-[12px] font-medium leading-relaxed border border-[#f59e0b]/50 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-1 duration-300">
           <div class="flex-none w-4 h-4 bg-[#f59e0b] rounded-full flex items-center justify-center">
             <AlertCircle class="w-3 h-3 text-white stroke-3" />
           </div>

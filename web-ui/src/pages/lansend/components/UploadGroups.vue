@@ -3,8 +3,8 @@
     <div
       v-for="group in groupedUploads"
       :key="group.path"
-      class="relative border rounded-md overflow-hidden shadow-sm transition-all duration-300"
-      :class="group.remainingSize === 0 ? 'bg-[#f0f9eb] border-[#e1f3d8]' : 'bg-white border-[#e1f3d8]'"
+      class="relative border rounded-md overflow-hidden transition-all duration-300"
+      :class="group.remainingSize === 0 ? 'bg-[#f0f9eb] border-[#67c23a]/50' : 'bg-white border-[#b3e19d]'"
     >
       <div
         v-if="group.remainingSize > 0"
@@ -15,7 +15,7 @@
       <div class="relative px-2 py-2 flex items-center justify-between cursor-pointer hover:bg-[#e8f5e9]/50 transition-colors">
         <div class="flex items-center gap-2 min-w-0 flex-1" @click="toggleUploadExpand(group.path)">
           <div
-            class="p-1 rounded-md text-white shadow-sm flex-none"
+            class="p-1 rounded-md text-white flex-none border border-black/5"
             :class="group.remainingSize === 0 ? 'bg-[#67c23a]' : 'bg-[#2ecc71]'"
           >
             <Check v-if="group.remainingSize === 0" class="w-3.5 h-3.5 stroke-3" />
@@ -76,12 +76,12 @@
 
       <div
         v-if="isUploadExpanded[group.path]"
-        class="relative z-1 bg-[#fafafa] border-t border-[#e1f3d8] max-h-[200px] md:max-h-[150px] overflow-y-auto"
+        class="relative z-1 bg-[#fafafa] border-t border-[#b3e19d] max-h-[200px] md:max-h-[150px] overflow-y-auto"
       >
         <div
           v-for="task in group.tasks"
           :key="task.id"
-          class="px-2 py-2.5 md:py-1.5 border-b border-[#f0f9eb] last:border-0 flex items-center justify-between gap-2 hover:bg-[#f0f9eb]/50 transition-colors"
+          class="px-2 py-2.5 md:py-1.5 border-b border-[#e1f3d8] last:border-0 flex items-center justify-between gap-2 hover:bg-[#f0f9eb]/50 transition-colors"
         >
           <div class="flex items-center gap-2 min-w-0 flex-1">
             <span class="text-sm md:text-[12px] flex-none">📄</span>
