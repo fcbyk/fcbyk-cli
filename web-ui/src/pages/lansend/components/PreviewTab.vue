@@ -48,15 +48,21 @@
           {{ copyStateLabel }}
         </button>
         <div class="flex items-start w-full h-full min-h-0 overflow-auto touch-pan-x touch-pan-y rounded">
-          <div class="flex-none px-3 py-[15px] text-[#9ca3af] bg-[#fafafa] border-r border-[#eee] text-right select-none font-mono text-sm leading-relaxed sticky left-0 z-1" aria-hidden="true">
-            <div v-for="n in lineCount" :key="n" class="h-[1.5em] leading-relaxed whitespace-nowrap">{{ n }}</div>
+          <div class="flex-none min-w-14 px-2 py-0 text-[#9ca3af] bg-[#fafafa] border-r border-[#eee] text-right select-none font-mono text-sm leading-relaxed sticky left-0 z-1" aria-hidden="true">
+            <div v-for="n in lineCount" :key="n" class="leading-relaxed whitespace-nowrap">{{ n }}</div>
           </div>
-          <pre class="m-0 p-[15px] font-mono text-sm leading-relaxed whitespace-pre word-wrap-normal flex-auto min-w-0 overflow-visible"><code class="hljs p-0 font-inherit text-[#333] overflow-x-visible!" v-html="highlightedHtml"></code></pre>
+          <pre class="m-0 py-0 px-2 font-mono text-sm leading-relaxed whitespace-pre word-wrap-normal flex-auto min-w-0 overflow-visible"><code class="hljs p-0! font-inherit text-[#333] overflow-x-visible!" v-html="highlightedHtml"></code></pre>
         </div>
       </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+:deep(pre code.hljs) {
+  padding: 0 !important;
+}
+</style>
 
 <script setup lang="ts">
 import { computed, ref, watch, onBeforeUnmount } from 'vue'
