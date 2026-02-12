@@ -1,3 +1,29 @@
+## 🎉 v0.3.0-alpha.1 (2026-02-13)
+
+### ♻️ Refactor
+
+- **pick**: 迁移样式从 SCSS 到 Tailwind CSS
+- **slide**: 迁移样式，从 SCSS 到 Tailwind
+- **lansend**: 样式从 SCSS 迁移到 Tailwind CSS
+
+### ✨ Features
+
+- **cli**: 初始化默认配置文件
+- **lansend**: 重构上传功能并集成到文件列表
+- **get**: 新增资源获取命令，支持下载和打开官网
+- **cmd**: 添加危险命令执行前的检测和确认机制
+- **cmd**: 新增可复用命令管理能力
+- **alias**: 改进别名添加和显示功能
+- **alias**: 支持为多级命令新建别名
+
+### 🐛 Bug Fixes
+
+- **socket**: 去除前端构建的警告
+
+### 🔧 Chores
+
+- 更新 commitizen 配置和笔记文档
+
 ## 🎉 v0.2.2 (2026-01-25)
 
 ### ✨ Features
