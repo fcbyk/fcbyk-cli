@@ -29,7 +29,7 @@ from fcbyk.cli_support import (
 )
 @add_gui_options
 @click.pass_context
-def cli(ctx):
+def main(ctx):
     # 初始化默认配置
     config_path = storage.get_path(defaults.CONFIG_FILE)
     if not os.path.exists(config_path):
@@ -46,8 +46,8 @@ def cli(ctx):
 
 # 注册子命令
 for cmd_name in commands.__all__:
-    cli.add_command(getattr(commands, cmd_name))
+    main.add_command(getattr(commands, cmd_name))
 
 
 if __name__ == "__main__":
-    cli()
+    main()
