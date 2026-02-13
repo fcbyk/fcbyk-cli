@@ -14,23 +14,23 @@ from .service import LansendConfig, LansendService
 @click.option("-p", "--port", default=80, help="Web server port (default: 80)")
 @click.option("-d", "--directory", default=".", help="Directory to share (default: current directory)")
 @click.option(
-    "-pw",
-    "--password",
+    "-ap",
+    "--ask-password",
     is_flag=True,
     default=False,
-    help="Prompt to set upload password (default: no password, or 123456 if skipped)",
+    help="Prompt to set upload password (default: 123456 if confirmed)",
 )
 @click.option("-nb", "--no-browser", is_flag=True, help="Disable automatic browser opening")
-@click.option("-un-d","--un-download", is_flag=True, default=False, help="Hide download buttons in directory tab")
-@click.option("-un-up","--un-upload", is_flag=True, default=False, help="Disable upload functionality")
+@click.option("-nd", "--hide-download", is_flag=True, default=False, help="Hide download buttons in directory tab")
+@click.option("-nu", "--disable-upload", is_flag=True, default=False, help="Disable upload functionality")
 @click.option("--chat", is_flag=True, default=False, help="Enable chat functionality")
 def lansend(
     port: int,
     directory: str,
-    password: bool = False,
+    ask_password: bool = False,
     no_browser: bool = False,
-    un_download: bool = False,
-    un_upload: bool = False,
+    hide_download: bool = False,
+    disable_upload: bool = False,
     chat: bool = False,
 ):
     if not os.path.exists(directory):
@@ -46,12 +46,12 @@ def lansend(
     config = LansendConfig(
         shared_directory=shared_directory,
         upload_password=None,
-        un_download=un_download,
-        un_upload=un_upload,
+        un_download=hide_download,
+        un_upload=disable_upload,
         chat_enabled=chat,
     )
     service = LansendService(config)
-    config.upload_password = service.pick_upload_password(password, un_upload, click)
+    config.upload_password = service.pick_upload_password(ask_password, disable_upload, click)
     
     click.echo()
     private_networks = get_private_networks()
