@@ -3,9 +3,9 @@ import importlib
 
 def test_pick_help():
     from click.testing import CliRunner
-    from fcbyk.cli import cli
+    from fcbyk.cli import main
 
-    r = CliRunner().invoke(cli, ["pick", "--help"])
+    r = CliRunner().invoke(main, ["pick", "--help"])
     assert r.exit_code == 0
 
 

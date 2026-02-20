@@ -3,10 +3,10 @@ import importlib
 
 def test_slide_help():
     from click.testing import CliRunner
-    from fcbyk.cli import cli
+    from fcbyk.cli import main
 
     runner = CliRunner()
-    r = runner.invoke(cli, ["slide", "--help"])
+    r = runner.invoke(main, ["slide", "--help"])
     assert r.exit_code == 0
     assert "PPT remote control" in r.output.lower() or "ppt" in r.output.lower()
 
