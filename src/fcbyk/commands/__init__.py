@@ -3,8 +3,8 @@ from .ai.cli import ai
 from .pick.cli import pick
 from .slide.cli import slide
 from .alias import alias
-from .cmd.cli import cmd
+from .scripts.cli import scripts
 from .get.cli import get
 from .config.cli import config
 
-__all__ = ['lansend', 'ai', 'pick', 'slide', 'alias', 'cmd', 'get', 'config']
+__all__ = ['lansend', 'ai', 'pick', 'slide', 'alias', 'scripts', 'get', 'config']

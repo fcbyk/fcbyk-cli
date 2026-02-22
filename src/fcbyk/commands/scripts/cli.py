@@ -3,25 +3,38 @@ import subprocess
 import re
 from fcbyk.utils import storage
 
-# 持久化配置
-DATA_FILE = storage.get_path('cmd_data.json', subdir='data')
+DATA_FILE = storage.get_path('fscripts.json')
 DEFAULT_DATA = {}
 
-# 危险命令检测正则列表
 DANGEROUS_PATTERNS = [
-    r'rm\s+-[^ ]*[rf]',             # rm -rf, rm -f, rm -rvf
-    r'git\s+push\s+.*(-f|--force)',  # git push -f, git push --force
-    r'shutdown',                    # 关机
-    r'reboot',                      # 重启
-    r'format\s+[a-zA-Z]:',          # Windows 格式化
-    r'rd\s+/[sq]',                  # Windows 静默删除目录
-    r'del\s+/[sq]',                 # Windows 静默删除文件
-    r'>\s*/dev/sd',                 # Linux 直接写磁盘
+    r'rm\s+-[^ ]*[rf]',
+    r'git\s+push\s+.*(-f|--force)',
+    r'shutdown',
+    r'reboot',
+    r'format\s+[a-zA-Z]:',
+    r'rd\s+/[sq]',
+    r'del\s+/[sq]',
+    r'>\s*/dev/sd',
 ]
 
-def load_commands():
+def load_commands(merge_local=False):
     """从磁盘加载命令数据"""
-    return storage.load_json(DATA_FILE, default=DEFAULT_DATA, create_if_missing=True)
+    commands = storage.load_json(DATA_FILE, default=DEFAULT_DATA, create_if_missing=True)
+    
+    if merge_local:
+        import os
+        local_path = os.path.abspath('fscripts.json')
+        if os.path.exists(local_path):
+            try:
+                local_cmds = storage.load_json(local_path, default={}, create_if_missing=False)
+                if local_cmds:
+                    # 本地配置覆盖全局配置
+                    commands = commands.copy()
+                    commands.update(local_cmds)
+            except Exception as e:
+                click.secho(f"Warning: Failed to load local fscripts.json: {e}", fg="yellow", err=True)
+    
+    return commands
 
 def save_commands(commands):
     """保存命令数据到磁盘"""
@@ -34,68 +47,62 @@ def is_dangerous(command):
             return True
     return False
 
-@click.group(name='cmd', help='Manage reusable command snippets')
-def cmd():
-    """Manage reusable command snippets."""
+@click.group(name='scripts', help='Manage and run reusable command scripts from fscripts.json')
+def scripts():
+    """Manage and run reusable command scripts."""
     pass
 
-@cmd.command(name='add')
+@scripts.command(name='add')
 @click.argument('name')
 @click.argument('command')
 @click.option('--cwd', '-C', type=click.Path(exists=True, file_okay=False, dir_okay=True, resolve_path=True), help='Specify the default directory for the command')
 @click.option('--yes', '-y', is_flag=True, help='Confirm overwrite of existing command')
 def add(name, command, cwd, yes):
     """Add a new command snippet.
-    
+
     Supports using {1}, {2} or $1, $2 as placeholders.
     Note: When using $1 in double quotes, the Shell might try to expand it.
     Use single quotes or {1} syntax to avoid this.
     """
     commands = load_commands()
-    
-    # 检查是否已存在同名命令
+
     if name in commands and not yes:
         old_cmd = commands[name]
-        old_cmd_str = old_cmd if isinstance(old_cmd, str) else old_cmd.get("command", "")
+        old_cmd_str = old_cmd if isinstance(old_cmd, str) else old_cmd.get("cmd", "")
         if not click.confirm(f"Command '{name}' already exists (Current: {old_cmd_str}). Overwrite?"):
             click.echo("Aborted.")
             return
 
-    # 存储为字典以支持扩展属性（如 cwd）
-    cmd_info = {
-        "command": command
-    }
     if cwd:
-        # 保存时已经是绝对路径（由 click.Path(resolve_path=True) 处理）
-        cmd_info["cwd"] = cwd
-        
-    commands[name] = cmd_info
+        cmd_info = {"cmd": command, "cwd": cwd}
+        commands[name] = cmd_info
+    else:
+        commands[name] = command
+
     save_commands(commands)
-    
+
     msg = f"Added command '{name}': {command}"
     if cwd:
         msg += f" (CWD: {cwd})"
     click.echo(msg)
-    
-    # 检查潜在的 Shell 变量展开问题
+
     if '$' in command and any(f'${i}' not in command for i in range(1, 10) if f'${i}' in command):
         pass
-    
-    # 如果发现异常空格，发出警告
-    if command.count('  ') > 0 or command.endswith(' '):
+
+        if command.count('  ') > 0 or command.endswith(' '):
          click.secho("\nWarning: Your command contains suspicious empty spaces. ", fg="yellow", err=True)
          click.secho("If you used $1, $2 in double quotes, the shell might have eaten them.", fg="yellow", err=True)
-         click.secho("Try using single quotes: fcbyk cmd add name 'command $1'", fg="yellow", err=True)
-         click.secho("Or use shell-safe syntax: fcbyk cmd add name \"command {1}\"", fg="yellow", err=True)
+         click.secho("Try using single quotes: fcbyk scripts add name 'command $1'", fg="yellow", err=True)
+         click.secho("Or use shell-safe syntax: fcbyk scripts add name \"command {1}\"", fg="yellow", err=True)
 
-@cmd.command(name='run')
+@scripts.command(name='run')
 @click.argument('name')
 @click.argument('args', nargs=-1)
 @click.option('--cwd', '-C', type=click.Path(exists=True, file_okay=False, dir_okay=True, resolve_path=True), help='Temporarily specify or override the execution directory')
 def run(name, args, cwd):
     """Run a saved command snippet with optional arguments."""
     import os
-    commands = load_commands()
+    commands = load_commands(merge_local=True)
     if name in commands:
         cmd_data = commands[name]
         
@@ -104,7 +111,7 @@ def run(name, args, cwd):
             command = cmd_data
             saved_cwd = None
         else:
-            command = cmd_data.get("command", "")
+            command = cmd_data.get("cmd", "")
             saved_cwd = cmd_data.get("cwd")
         
         # 优先级：命令行指定的 cwd > 保存的 cwd
@@ -140,13 +147,13 @@ def run(name, args, cwd):
     else:
         click.echo(f"Command '{name}' not found.")
 
-@cmd.command(name='list')
+@scripts.command(name='list')
 def list_cmds():
     """List all saved command snippets."""
     from fcbyk.cli_support import print_commands
-    print_commands(show_empty=True, leading_newline=False)
+    print_commands(show_empty=True, leading_newline=False, merge_local=True)
 
-@cmd.command(name='rm')
+@scripts.command(name='rm')
 @click.argument('name')
 def rm(name):
     """Remove a command snippet."""

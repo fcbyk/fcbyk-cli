@@ -15,7 +15,7 @@ DEFAULT_CONFIG = {
     },
     "aliases": {
         "ls": ["lansend"],
-        "run": ["cmd", "run"],
+        "run": ["scripts", "run"],
     },
     "lansend": {
         "port": 80,

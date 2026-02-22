@@ -84,11 +84,11 @@ def print_aliases(show_empty=False, leading_newline=True):
         pass
 
 
-def print_commands(show_empty=False, leading_newline=True):
+def print_commands(show_empty=False, leading_newline=True, merge_local=False):
     """打印已保存的命令脚本列表"""
     try:
-        from fcbyk.commands.cmd.cli import load_commands
-        commands = load_commands()
+        from fcbyk.commands.scripts.cli import load_commands
+        commands = load_commands(merge_local=merge_local)
         if commands:
             if leading_newline:
                 click.echo()
@@ -100,7 +100,7 @@ def print_commands(show_empty=False, leading_newline=True):
                     command = cmd_data
                     cwd_str = ""
                 else:
-                    command = cmd_data.get("command", "")
+                    command = cmd_data.get("cmd", "")
                     cwd = cmd_data.get("cwd")
                     cwd_str = f" [CWD: {cwd}]" if cwd else ""
                 
