@@ -16,7 +16,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # 前端由 web-ui 构建并拷贝到后端 web 目录；后端仓库不再包含 html 文件
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
         with:
