@@ -5,5 +5,6 @@ from .slide.cli import slide
 from .alias import alias
 from .cmd.cli import cmd
 from .get.cli import get
+from .config.cli import config
 
-__all__ = ['lansend', 'ai', 'pick', 'slide', 'alias', 'cmd', 'get']
+__all__ = ['lansend', 'ai', 'pick', 'slide', 'alias', 'cmd', 'get', 'config']
