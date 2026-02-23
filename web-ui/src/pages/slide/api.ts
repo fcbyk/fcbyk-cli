@@ -32,6 +32,42 @@ export async function checkAuth(): Promise<boolean> {
   }
 }
 
+export async function getQrLoginInfo(): Promise<{ loginUrl: string; wifiName?: string } | null> {
+  try {
+    const response = await fetch('/internal/qr/info')
+    if (!response.ok) {
+      return null
+    }
+    const result = await handleResponse<{ login_url: string; wifi_name?: string }>(response)
+    if (result.code !== 200 || !result.data || !result.data.login_url) {
+      return null
+    }
+    return { loginUrl: result.data.login_url, wifiName: result.data.wifi_name }
+  } catch {
+    return null
+  }
+}
+
+export async function getQrStatus(token: string): Promise<boolean> {
+  if (!token) {
+    return false
+  }
+  try {
+    const url = `/internal/qr/status?token=${encodeURIComponent(token)}`
+    const response = await fetch(url)
+    if (!response.ok) {
+      return false
+    }
+    const result = await handleResponse<{ valid: boolean }>(response)
+    if (result.code !== 200 || !result.data) {
+      return false
+    }
+    return !!result.data.valid
+  } catch {
+    return false
+  }
+}
+
 /** 登录 */
 export async function login(password: string): Promise<ApiResponse<{ authenticated: boolean } | null>> {
   try {

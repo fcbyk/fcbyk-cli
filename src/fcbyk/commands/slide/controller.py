@@ -3,13 +3,108 @@ slide 控制器层
 处理 Flask 路由、WebSocket 事件和 HTTP 请求/响应
 """
 import os
+import secrets
+import subprocess
+import sys
+import time
 from functools import wraps
-from flask import request, session
+from flask import request, session, current_app, redirect
 from flask_socketio import SocketIO, disconnect
 
 from fcbyk.web.app import create_spa
 from fcbyk.web.R import R
+from fcbyk.utils.network import get_private_networks
 from .service import SlideService
+
+
+QR_LOGIN_TOKENS = {}
+QR_TOKEN_TTL_SECONDS = 120
+
+
+def _collect_local_ips():
+    networks = get_private_networks()
+    ips = []
+    for net in networks:
+        values = net.get("ips") or []
+        for ip in values:
+            ips.append(ip)
+    return ips
+
+
+def _get_wifi_name():
+    try:
+        if sys.platform.startswith("win"):
+            output = subprocess.check_output(["netsh", "wlan", "show", "interfaces"], stderr=subprocess.STDOUT)
+            text = output.decode(errors="ignore")
+            for line in text.splitlines():
+                if "SSID" in line and "BSSID" not in line:
+                    parts = line.split(":", 1)
+                    if len(parts) == 2:
+                        name = parts[1].strip()
+                        if name:
+                            return name
+        elif sys.platform == "darwin":
+            try:
+                output = subprocess.check_output(
+                    ["/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport", "-I"],
+                    stderr=subprocess.STDOUT,
+                )
+            except Exception:
+                output = subprocess.check_output(
+                    ["networksetup", "-getairportnetwork", "en0"],
+                    stderr=subprocess.STDOUT,
+                )
+            text = output.decode(errors="ignore")
+            for line in text.splitlines():
+                if " SSID" in line or "Current Wi-Fi Network" in line:
+                    parts = line.split(":", 1)
+                    if len(parts) == 2:
+                        name = parts[1].strip()
+                        if name:
+                            return name
+        else:
+            try:
+                output = subprocess.check_output(["iwgetid", "-r"], stderr=subprocess.STDOUT)
+                name = output.decode(errors="ignore").strip()
+                if name:
+                    return name
+            except Exception:
+                output = subprocess.check_output(
+                    ["nmcli", "-t", "-f", "active,ssid", "dev", "wifi"],
+                    stderr=subprocess.STDOUT,
+                )
+                text = output.decode(errors="ignore")
+                for line in text.splitlines():
+                    if line.startswith("yes:"):
+                        name = line.split(":", 1)[1].strip()
+                        if name:
+                            return name
+    except Exception:
+        pass
+    return ""
+
+
+def _is_local_request():
+    client_ip = request.remote_addr or ""
+    if client_ip in ("127.0.0.1", "::1"):
+        return True
+    local_ips = current_app.config.get("SLIDE_LOCAL_IPS") or []
+    return client_ip in local_ips
+
+
+def _create_login_token():
+    token = secrets.token_urlsafe(16)
+    QR_LOGIN_TOKENS[token] = time.time()
+    return token
+
+
+def _consume_login_token(token):
+    created_at = QR_LOGIN_TOKENS.pop(token, None)
+    if not created_at:
+        return False
+    if time.time() - created_at > QR_TOKEN_TTL_SECONDS:
+        return False
+    return True
 
 
 def create_slide_app(service: SlideService):
@@ -24,7 +119,8 @@ def create_slide_app(service: SlideService):
     """
     app = create_spa("slide.html")
     app.secret_key = os.urandom(24)
-    socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+    app.config["SLIDE_LOCAL_IPS"] = _collect_local_ips()
+    socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading', manage_session=False)
     app.slide_service = service
     register_routes(app, service)
     register_socketio_events(socketio, service)
@@ -69,6 +165,43 @@ def register_routes(app, service: SlideService):
     def logout():
         session.clear()
         return R.success(message="Logged out")
+    
+    @app.route('/internal/qr/info', methods=['GET'])
+    def qr_info():
+        if not _is_local_request():
+            return "", 404
+        token = _create_login_token()
+        base_url = request.host_url.rstrip('/')
+        login_url = base_url + '/auto-login?token=' + token
+        wifi_name = _get_wifi_name()
+        data = {"login_url": login_url}
+        if wifi_name:
+            data["wifi_name"] = wifi_name
+        return R.success(data)
+    
+    @app.route('/internal/qr/status', methods=['GET'])
+    def qr_status():
+        if not _is_local_request():
+            return "", 404
+        token = request.args.get('token') or ''
+        if not token:
+            return R.success({"valid": False})
+        created_at = QR_LOGIN_TOKENS.get(token)
+        if not created_at:
+            return R.success({"valid": False})
+        if time.time() - created_at > QR_TOKEN_TTL_SECONDS:
+            return R.success({"valid": False})
+        return R.success({"valid": True})
+    
+    @app.route('/auto-login', methods=['GET'])
+    def auto_login():
+        token = request.args.get('token') or ''
+        if not token:
+            return redirect('/')
+        if not _consume_login_token(token):
+            return redirect('/')
+        session['authenticated'] = True
+        return redirect('/')
     
     @app.route('/api/next', methods=['POST'])
     @require_auth

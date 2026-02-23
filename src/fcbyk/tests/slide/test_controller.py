@@ -167,3 +167,50 @@ def test_require_auth_wrapper_blocks_when_unauthenticated(app_and_client):
             assert decorated() == ("ok", 200)
     finally:
         slide_controller.session = old
+
+
+def test_qr_info_only_available_for_local_and_auto_login(app_and_client, monkeypatch):
+    _app, client, _service = app_and_client
+
+    r = client.get("/internal/qr/info", environ_base={"REMOTE_ADDR": "192.168.0.2"})
+    assert r.status_code == 404
+
+    monkeypatch.setattr(slide_controller, "_get_wifi_name", lambda: "TestWiFi")
+
+    r = client.get("/internal/qr/info", environ_base={"REMOTE_ADDR": "127.0.0.1"})
+    assert r.status_code == 200
+    assert r.json["code"] == 200
+    login_url = r.json["data"]["login_url"]
+    assert r.json["data"]["wifi_name"] == "TestWiFi"
+    assert "/auto-login?token=" in login_url
+
+    token = login_url.split("token=", 1)[-1]
+
+    r = client.get(
+        "/internal/qr/status",
+        query_string={"token": token},
+        environ_base={"REMOTE_ADDR": "127.0.0.1"},
+    )
+    assert r.status_code == 200
+    assert r.json["code"] == 200
+    assert r.json["data"]["valid"] is True
+
+    path_and_query = login_url.split("://", 1)[-1]
+    _, _, path_with_query = path_and_query.partition("/")
+    path = "/" + path_with_query
+
+    r = client.get(path)
+    assert r.status_code in (301, 302)
+
+    r = client.get(
+        "/internal/qr/status",
+        query_string={"token": token},
+        environ_base={"REMOTE_ADDR": "127.0.0.1"},
+    )
+    assert r.status_code == 200
+    assert r.json["code"] == 200
+    assert r.json["data"]["valid"] is False
+
+    r = client.get("/api/check_auth")
+    assert r.status_code == 200
+    assert r.json["data"]["authenticated"] is True

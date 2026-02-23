@@ -15,37 +15,68 @@
     </header>
 
     <main class="flex-1 flex flex-col items-center justify-center px-10 relative min-h-0">
-      <div class="text-center mb-[8vh]">
-        <h1
-          class="font-['Syncopate',sans-serif] text-[clamp(48px,12vw,72px)] font-bold tracking-[0.25em] mb-4 pl-[0.25em] text-(--text-primary)"
-        >
-          SLIDE
-        </h1>
-        <p class="text-[12px] tracking-widest text-(--text-secondary) font-medium m-0">
-          准备好控制了吗？请输入访问密码
-        </p>
-      </div>
+      <template v-if="props.showQr && props.qrLoginUrl">
+        <div class="mb-[4vh] flex justify-center">
+          <div
+            class="bg-white rounded-2xl p-4 shadow-[0_8px_24px_rgba(0,0,0,0.12)]"
+            :class="{ 'opacity-60': qrExpired }"
+          >
+            <img v-if="qrDataUrl" :src="qrDataUrl" class="block w-[240px] h-[240px]" />
+          </div>
+        </div>
+        <div class="text-center text-[12px] tracking-widest text-(--text-secondary) font-medium mt-2">
+          <p class="m-0 mb-1" v-if="!qrExpired">
+            请确认手机已连接 Wi‑Fi：{{ wifiLabel }}
+          </p>
+          <p class="m-0 mb-1 text-[#FF3B30]" v-else>
+            当前二维码已失效，请点击下方按钮重新生成
+          </p>
+          <p v-if="!qrExpired" class="m-0 opacity-80">
+            然后使用手机浏览器扫码上方二维码进入控制界面
+          </p>
+          <button
+            v-else
+            class="mt-3 px-4 py-2 rounded-full border border-(--border) text-(--text-primary) bg-(--surface) cursor-pointer text-[12px] tracking-[0.2em]"
+            @click="handleRegenerate"
+          >
+            重新生成二维码
+          </button>
+        </div>
+      </template>
 
-      <div class="w-full max-w-[320px] relative">
-        <div class="relative flex items-center">
-          <Key class="absolute left-0 text-(--text-secondary) opacity-50" :size="20" :stroke-width="1.5" />
-          <input
-            ref="passwordInputRef"
-            v-model="password"
-            type="password"
-            class="w-full bg-transparent border-0 border-b-2 border-(--border) py-4 pl-10 text-center text-2xl tracking-[0.5em] text-(--text-primary) transition-colors outline-none font-['Space_Mono',monospace] placeholder:text-(--text-secondary) placeholder:opacity-30 focus:border-(--primary)"
-            placeholder="••••••"
-            autocomplete="off"
-            @keypress.enter="handleLogin"
-          />
+      <template v-else>
+        <div class="text-center mb-[4vh]">
+          <h1
+            class="font-['Syncopate',sans-serif] text-[clamp(48px,12vw,72px)] font-bold tracking-[0.25em] mb-4 pl-[0.25em] text-(--text-primary)"
+          >
+            SLIDE
+          </h1>
+          <p class="text-[12px] tracking-widest text-(--text-secondary) font-medium m-0">
+            准备好控制了吗？请输入访问密码
+          </p>
         </div>
-        <div v-if="errorMessage" class="text-[#FF3B30] text-xs mt-2 text-center absolute w-full">
-          {{ errorMessage }}
+
+        <div class="w-full max-w-[320px] relative">
+          <div class="relative flex items-center">
+            <Key class="absolute left-0 text-(--text-secondary) opacity-50" :size="20" :stroke-width="1.5" />
+            <input
+              ref="passwordInputRef"
+              v-model="password"
+              type="password"
+              class="w-full bg-transparent border-0 border-b-2 border-(--border) py-4 pl-10 text-center text-2xl tracking-[0.5em] text-(--text-primary) transition-colors outline-none font-['Space_Mono',monospace] placeholder:text-(--text-secondary) placeholder:opacity-30 focus:border-(--primary)"
+              placeholder="••••••"
+              autocomplete="off"
+              @keypress.enter="handleLogin"
+            />
+          </div>
+          <div v-if="errorMessage" class="text-[#FF3B30] text-xs mt-2 text-center absolute w-full">
+            {{ errorMessage }}
+          </div>
         </div>
-      </div>
+      </template>
     </main>
 
-    <footer class="px-8 pb-[8vh] w-full max-w-[512px] mx-auto shrink-0 relative">
+    <footer v-if="!props.showQr" class="px-8 pb-[8vh] w-full max-w-[512px] mx-auto shrink-0 relative">
       <div
         ref="sliderTrackRef"
         class="relative h-16 w-full bg-(--surface) backdrop-blur border border-(--border) rounded-[32px] flex items-center p-[6px] overflow-hidden"
@@ -76,31 +107,108 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, watch, nextTick, computed } from 'vue'
 import { Sun, Moon, Key, ChevronRight } from 'lucide-vue-next'
 import { useTheme } from '../composables/useTheme'
+import { getQrStatus } from '../api'
 import '@fontsource/syncopate/700.css'
 import '@fontsource/space-mono/400.css'
+import QRCode from 'qrcode'
 
 interface Props {
   isLoading?: boolean
   errorMessage?: string
+  showQr?: boolean
+  qrLoginUrl?: string
+  wifiName?: string
+  qrToken?: string
 }
 
 interface Emits {
   (e: 'login', password: string): void
   (e: 'clear-error'): void
+  (e: 'regenerate-qr'): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
   isLoading: false,
-  errorMessage: ''
+  errorMessage: '',
+  showQr: false,
+  qrLoginUrl: '',
+  wifiName: '',
+  qrToken: ''
 })
 
 const emit = defineEmits<Emits>()
 
 const password = ref('')
 const passwordInputRef = ref<HTMLInputElement | null>(null)
+const qrDataUrl = ref('')
+const qrExpired = ref(false)
+
+const wifiLabel = computed(() => {
+  if (props.wifiName && props.wifiName.trim()) {
+    return props.wifiName
+  }
+  return '未知 Wi‑Fi'
+})
+
+function handleRegenerate() {
+  emit('regenerate-qr')
+}
+
+let qrStatusTimer: number | null = null
+
+async function checkQrStatusOnce() {
+  if (!props.qrToken) {
+    return
+  }
+  const valid = await getQrStatus(props.qrToken)
+  if (!valid) {
+    qrExpired.value = true
+    if (qrStatusTimer !== null) {
+      window.clearInterval(qrStatusTimer)
+      qrStatusTimer = null
+    }
+  }
+}
+
+function startQrStatusWatch() {
+  if (!props.qrToken) {
+    qrExpired.value = false
+    if (qrStatusTimer !== null) {
+      window.clearInterval(qrStatusTimer)
+      qrStatusTimer = null
+    }
+    return
+  }
+  qrExpired.value = false
+  if (qrStatusTimer !== null) {
+    window.clearInterval(qrStatusTimer)
+    qrStatusTimer = null
+  }
+  qrStatusTimer = window.setInterval(checkQrStatusOnce, 2000)
+}
+
+watch(
+  () => props.qrToken,
+  () => {
+    startQrStatusWatch()
+  }
+)
+
+onMounted(() => {
+  if (props.qrToken) {
+    startQrStatusWatch()
+  }
+})
+
+onUnmounted(() => {
+  if (qrStatusTimer !== null) {
+    window.clearInterval(qrStatusTimer)
+    qrStatusTimer = null
+  }
+})
 
 // 暗色模式管理
 const { isDark, toggleDarkMode } = useTheme()
@@ -109,6 +217,33 @@ const { isDark, toggleDarkMode } = useTheme()
 onMounted(() => {
   isDark.value = document.documentElement.classList.contains('dark')
 })
+
+async function renderQr() {
+  if (!props.showQr || !props.qrLoginUrl) {
+    qrDataUrl.value = ''
+    return
+  }
+  try {
+    const url = await QRCode.toDataURL(props.qrLoginUrl, {
+      width: 240,
+      margin: 1
+    })
+    qrDataUrl.value = url
+  } catch {
+    qrDataUrl.value = ''
+  }
+}
+
+onMounted(() => {
+  renderQr()
+})
+
+watch(
+  () => [props.showQr, props.qrLoginUrl],
+  () => {
+    renderQr()
+  }
+)
 
 // 监听输入变化，清除错误信息
 watch(password, () => {
@@ -196,6 +331,7 @@ function stopDrag() {
 
 onMounted(() => {
   passwordInputRef.value?.focus()
+  renderQr()
 })
 
 onUnmounted(() => {
