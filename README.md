@@ -20,12 +20,13 @@
 ## 已有功能 (子命令)
 
 - [`lansend`](https://github.com/fcbyk/fcbyk-cli/blob/main/docs/LANSend.md)：在指定端口开启 `http服务器`，用于局域网内共享文件
-- `ai`：在控制台与 `ai` 聊天 （需自行配置`api-key`）
-- `pick`：随机抽取一个元素（可用于抽奖、随机选择等）
-- `slide`：同一局域网内，手机控制电脑PTT翻页
-- `alias`：为常用命令添加别名，方便快速执行
-- `cmd`：为其他终端命令添加别名，方便快速执行
-- `get`：资源获取，支持下载和打开官网
+- [`ai`](https://github.com/fcbyk/fcbyk-cli/blob/main/docs/AI.md)：在控制台与 `ai` 聊天 （需自行配置`api-key`）
+- [`pick`](https://github.com/fcbyk/fcbyk-cli/blob/main/docs/Pick.md)：随机抽取一个元素（可用于抽奖、随机选择等）
+- [`slide`](https://github.com/fcbyk/fcbyk-cli/blob/main/docs/Slide.md)：同一局域网内，手机控制电脑PTT翻页
+- [`alias`](https://github.com/fcbyk/fcbyk-cli/blob/main/docs/Alias.md)：为常用命令添加别名，方便快速执行
+- [`scripts`](https://github.com/fcbyk/fcbyk-cli/blob/main/docs/Scripts.md)：以脚本形式管理和运行常用命令
+- [`get`](https://github.com/fcbyk/fcbyk-cli/blob/main/docs/Get.md)：资源获取，支持下载和打开官网
+- [`config`](https://github.com/fcbyk/fcbyk-cli/blob/main/docs/Config.md)：查看数据目录、日志目录和配置文件路径
 
 ## 快速开始
 
