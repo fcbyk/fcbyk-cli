@@ -13,6 +13,7 @@ pick 命令行接口模块
 """
 
 import click
+import fcbyk.svc as svc_core
 
 from fcbyk.cli_support.output import show_dict
 from fcbyk.cli_support.guard import load_json_object_or_exit, ensure_list_field, check_port
@@ -62,9 +63,10 @@ default_data = {
 @click.option('--no-browser', is_flag=True, help='Do not auto-open browser in web mode')
 @click.option('--files','-f', type=click.Path(exists=True, dir_okay=True, file_okay=True, readable=True, resolve_path=True), help='Start web file picker with given file')
 @click.option('--password', '-pw', is_flag=True, default=False, help='Prompt to set admin password (default: 123456 if not set)')
+@click.option('-D', '--daemon', is_flag=True, help='Run web or file picker server in background')
 @click.argument('items', nargs=-1)
 @click.pass_context
-def pick(ctx, add, remove, clear, show_list, web, port, no_browser, files, password, items):
+def pick(ctx, add, remove, clear, show_list, web, port, no_browser, files, password, daemon, items):
     data = ensure_list_field(
         load_json_object_or_exit(
             ctx,
@@ -126,27 +128,44 @@ def pick(ctx, add, remove, clear, show_list, web, port, no_browser, files, passw
 
     if files:
         if password:
-            admin_password = click.prompt(
+            effective_password = click.prompt(
                 'Admin password (press Enter to use default: 123456)',
                 hide_input=True,
                 default='123456',
                 show_default=False,
             )
-            if not admin_password:
-                admin_password = '123456'
+            if not effective_password:
+                effective_password = '123456'
         else:
-            admin_password = '123456'
+            effective_password = '123456'
 
-        start_web_server(
-            port=port,
-            no_browser=no_browser,
-            files_root=files,
-            admin_password=admin_password,
-        )
+        if not daemon:
+            start_web_server(
+                port=port,
+                no_browser=no_browser,
+                files_root=files,
+                admin_password=effective_password,
+            )
+            return
+
+        args = [
+            '--files',
+            files,
+            '--port',
+            str(port),
+        ]
+        args.append('--no-browser')
+        svc_core.start_service('pick', args)
         return
 
     if web:
-        start_web_server(port, no_browser)
+        if not daemon:
+            start_web_server(port, no_browser)
+            return
+
+        args = ['--web', '--port', str(port)]
+        args.append('--no-browser')
+        svc_core.start_service('pick', args)
         return
 
     # 优先使用命令行参数，否则使用持久化数据文件中的列表

@@ -3,6 +3,7 @@ slide 命令行接口模块
 提供 PPT 远程控制的 CLI 命令
 """
 import click
+import fcbyk.svc as svc_core
 
 from fcbyk.utils.network import get_private_networks
 from fcbyk.cli_support.guard import check_port
@@ -12,30 +13,36 @@ from .controller import create_slide_app
 from fcbyk.cli_support.output import echo_network_urls, copy_to_clipboard
 
 
-@click.command(name='slide', help='Start PPT remote control server, control slides via mobile web page')
+@click.command(name="slide", help="Start PPT remote control server, control slides via mobile web page")
 @click.option(
-    "-p", "--port",
+    "-p",
+    "--port",
     default=80,
-    help="Web server port (default: 80)"
+    help="Web server port (default: 80)",
 )
-def slide(port):
+@click.option(
+    "-D",
+    "--daemon",
+    is_flag=True,
+    help="Run server in background after setup",
+)
+def slide(port, daemon):
     """启动 PPT 远程控制服务器"""
 
     # 端口占用检测
     if not check_port(port):
         return
-    
-    # 提示用户设置密码
+
     while True:
         password = click.prompt(
             "Please set access password",
             hide_input=True,
-            confirmation_prompt=True
+            confirmation_prompt=True,
         )
         if password:
             break
         click.echo(" Error: Password cannot be empty")
-    
+
     click.echo()
 
     # 创建服务
@@ -58,5 +65,9 @@ def slide(port):
     
     click.echo()
 
-    # 运行服务器（使用 socketio.run 以支持 WebSocket）
-    socketio.run(app, host='0.0.0.0', port=port, allow_unsafe_werkzeug=True)
+    if not daemon:
+        socketio.run(app, host='0.0.0.0', port=port, allow_unsafe_werkzeug=True)
+        return
+
+    args = ["--port", str(port), "--password", password]
+    svc_core.start_service("slide", args)

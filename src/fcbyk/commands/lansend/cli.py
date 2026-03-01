@@ -3,6 +3,7 @@ lansend 命令行接口模块 (局域网内共享文件)
 """
 
 import os, webbrowser, click
+import fcbyk.svc as svc_core
 from fcbyk.cli_support.output import echo_network_urls, copy_to_clipboard
 from fcbyk.cli_support.guard import check_port
 from fcbyk.utils.network import get_private_networks
@@ -24,6 +25,7 @@ from .service import LansendConfig, LansendService
 @click.option("-nd", "--hide-download", is_flag=True, default=False, help="Hide download buttons in directory tab")
 @click.option("-nu", "--disable-upload", is_flag=True, default=False, help="Disable upload functionality")
 @click.option("--chat", is_flag=True, default=False, help="Enable chat functionality")
+@click.option("-D", "--daemon", is_flag=True, help="Run server in background after setup")
 def lansend(
     port: int,
     directory: str,
@@ -32,6 +34,7 @@ def lansend(
     hide_download: bool = False,
     disable_upload: bool = False,
     chat: bool = False,
+    daemon: bool = False,
 ):
     if not os.path.exists(directory):
         click.echo(f"Error: Directory {directory} does not exist")
@@ -69,4 +72,17 @@ def lansend(
     if not no_browser:
         webbrowser.open(f"http://{local_ip}:{port}")
     click.echo()
-    start_web_server(port, service)
+
+    if not daemon:
+        start_web_server(port, service)
+        return
+
+    args = ["-p", str(port), "-d", shared_directory]
+    if hide_download:
+        args.append("--hide-download")
+    if disable_upload:
+        args.append("--disable-upload")
+    if chat:
+        args.append("--chat")
+    args.append("--no-browser")
+    svc_core.start_service("lansend", args)

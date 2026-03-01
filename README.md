@@ -27,6 +27,7 @@
 - [`scripts`](https://github.com/fcbyk/fcbyk-cli/blob/main/docs/Scripts.md)：以脚本形式管理和运行常用命令
 - [`get`](https://github.com/fcbyk/fcbyk-cli/blob/main/docs/Get.md)：资源获取，支持下载和打开官网
 - [`config`](https://github.com/fcbyk/fcbyk-cli/blob/main/docs/Config.md)：查看数据目录、日志目录和配置文件路径
+- [`svc`](https://github.com/fcbyk/fcbyk-cli/blob/main/docs/Svc.md)：统一管理由各子命令启动的后台 Web 服务进程
 
 ## 快速开始
 

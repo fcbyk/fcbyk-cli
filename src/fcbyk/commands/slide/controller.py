@@ -34,7 +34,11 @@ def _collect_local_ips():
 def _get_wifi_name():
     try:
         if sys.platform.startswith("win"):
-            output = subprocess.check_output(["netsh", "wlan", "show", "interfaces"], stderr=subprocess.STDOUT)
+            output = subprocess.check_output(
+                ["netsh", "wlan", "show", "interfaces"],
+                stderr=subprocess.STDOUT,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            )
             text = output.decode(errors="ignore")
             for line in text.splitlines():
                 if "SSID" in line and "BSSID" not in line:
