@@ -16,14 +16,5 @@ DEFAULT_CONFIG = {
     "aliases": {
         "ls": ["lansend"],
         "run": ["scripts", "run"],
-    },
-    "lansend": {
-        "port": 80,
-        "shared_directory": ".",
-        "password_flag": False,
-        "no_browser": False,
-        "un_download": False,
-        "un_upload": False,
-        "chat": False,
-    },
+    }
 }

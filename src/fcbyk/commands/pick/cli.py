@@ -67,6 +67,7 @@ default_data = {
     "--daemon-password",
     "daemon_password",
     help="Admin password for daemon/background mode (normally omit to be prompted)",
+    hidden=True
 )
 @click.option('-D', '--daemon', is_flag=True, help='Run web or file picker server in background')
 @click.argument('items', nargs=-1)

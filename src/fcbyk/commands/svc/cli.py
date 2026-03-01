@@ -1,6 +1,10 @@
 import click
+from rich.console import Console
 
 import fcbyk.svc as svc_core
+
+
+console = Console()
 
 
 @click.group(
@@ -14,22 +18,28 @@ def svc(ctx) -> None:
         return
     items = svc_core.status_all()
     if not items:
-        click.echo("No running services.")
+        console.print("No running services.")
         return
-    click.echo("Current background services:")
+    console.print("[bold]Current background services:[/bold]\n")
     for item in items:
-        status = "running" if item.get("alive") else "stopped"
+        alive = bool(item.get("alive"))
+        status = "running" if alive else "stopped"
+        status_color = "green" if alive else "red"
+        status_symbol = "●"
         port = item.get("port")
         port_str = "?" if not port else str(port)
-        click.echo(
-            "{0}: PID {1} (port {2}) [{3}]".format(
+        console.print(
+            "[{0}]{1}[/{0}] {2}: PID {3} (port {4}) [[{0}]{5}[/{0}]]".format(
+                status_color,
+                status_symbol,
                 item.get("name"),
                 item.get("pid"),
                 port_str,
                 status,
-            )
+            ),
+            highlight=False,
         )
-    click.echo("Use 'fcbyk svc stop <service>' to stop all processes of a service.")
+    click.echo("\nUse 'fcbyk svc stop <service>' to stop all processes of a service.")
     click.echo("Use 'fcbyk svc stop all' to stop all services.")
 
 
@@ -81,28 +91,34 @@ def svc_status(name: str = None) -> None:
         items = svc_core.status_all()
     else:
         if name not in svc_core.SERVICE_REGISTRY:
-            click.echo("Error: unknown service '{0}'.".format(name), err=True)
+            console.print("Error: unknown service '{0}'.".format(name))
             available = ", ".join(sorted(svc_core.SERVICE_REGISTRY.keys()))
-            click.echo("Available services: {0}".format(available), err=True)
+            console.print("Available services: {0}".format(available))
             raise click.Abort()
         items = svc_core.status_service(name)
     if not items:
         if name is None:
-            click.echo("No tracked services.")
+            console.print("No tracked services.")
         else:
-            click.echo("No tracked processes for service '{0}'.".format(name))
+            console.print("No tracked processes for service '{0}'.".format(name))
         return
     for item in items:
-        status = "running" if item.get("alive") else "stopped"
+        alive = bool(item.get("alive"))
+        status = "running" if alive else "stopped"
+        status_color = "green" if alive else "red"
+        status_symbol = "●"
         port = item.get("port")
         port_str = "?" if not port else str(port)
-        click.echo(
-            "{0}: PID {1} (port {2}) [{3}]".format(
+        console.print(
+            "[{0}]{1}[/{0}] {2}: PID {3} (port {4}) [[{0}]{5}[/{0}]]".format(
+                status_color,
+                status_symbol,
                 item.get("name"),
                 item.get("pid"),
                 port_str,
                 status,
-            )
+            ),
+            highlight=False,
         )
 
 

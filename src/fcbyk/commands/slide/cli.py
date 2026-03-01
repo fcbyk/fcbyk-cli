@@ -30,6 +30,7 @@ from fcbyk.cli_support.output import echo_network_urls, copy_to_clipboard
     "--daemon-password",
     "password",
     help="Access password for daemon/background mode (normally omit to be prompted)",
+    hidden=True
 )
 def slide(port, daemon, password):
     """启动 PPT 远程控制服务器"""

@@ -30,6 +30,7 @@ from .service import LansendConfig, LansendService
     "--daemon-password",
     "daemon_password",
     help="Upload password for daemon/background mode (normally omit to be prompted)",
+    hidden=True
 )
 def lansend(
     port: int,
