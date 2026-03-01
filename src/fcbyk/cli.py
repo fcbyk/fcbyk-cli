@@ -7,7 +7,6 @@ from fcbyk.cli_support import (
     version_callback, 
     print_aliases, 
     print_commands,
-    add_gui_options, 
     banner
 )
 
@@ -27,7 +26,6 @@ from fcbyk.cli_support import (
     is_eager=True, 
     help='Show version and exit.'
 )
-@add_gui_options
 @click.pass_context
 def main(ctx):
     # 初始化默认配置

@@ -37,12 +37,6 @@
 pip install fcbyk-cli
 ```
 
-- 安装 GUI 依赖（可选）
-
-```bash
-pip install fcbyk-cli[gui]
-```
-
 - 显示帮助信息
 
 ```bash
