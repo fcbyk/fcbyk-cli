@@ -30,29 +30,46 @@ def svc(ctx) -> None:
             )
         )
     click.echo("Use 'fcbyk svc stop <service>' to stop all processes of a service.")
+    click.echo("Use 'fcbyk svc stop all' to stop all services.")
 
 
 @svc.command(name="stop")
 @click.argument("name")
 def svc_stop(name: str) -> None:
-    if name not in svc_core.SERVICE_REGISTRY:
-        click.echo("Error: unknown service '{0}'.".format(name), err=True)
-        available = ", ".join(sorted(svc_core.SERVICE_REGISTRY.keys()))
-        click.echo("Available services: {0}".format(available), err=True)
-        raise click.Abort()
-    results = svc_core.stop_service(name)
-    if not results:
-        click.echo("No tracked processes for service '{0}'.".format(name))
-        return
+    if name == "all":
+        results = []
+        for svc_name in sorted(svc_core.SERVICE_REGISTRY.keys()):
+            svc_results = svc_core.stop_service(svc_name)
+            if svc_results:
+                results.extend(svc_results)
+        if not results:
+            click.echo("No tracked processes for any service.")
+            return
+    else:
+        if name not in svc_core.SERVICE_REGISTRY:
+            click.echo("Error: unknown service '{0}'.".format(name), err=True)
+            available = ", ".join(sorted(svc_core.SERVICE_REGISTRY.keys()))
+            click.echo("Available services: {0}".format(available), err=True)
+            raise click.Abort()
+        results = svc_core.stop_service(name)
+        if not results:
+            click.echo("No tracked processes for service '{0}'.".format(name))
+            return
     terminated = [r for r in results if r.get("status") == "terminated"]
     not_running = [r for r in results if r.get("status") == "not_running"]
     alive = [r for r in results if r.get("status") == "alive"]
     for item in terminated:
-        click.echo("PID {0} terminated.".format(item.get("pid")))
+        name = item.get("name") or "unknown"
+        pid = item.get("pid")
+        click.echo("PID {0} ({1}) terminated.".format(pid, name))
     for item in not_running:
-        click.echo("PID {0} already not running.".format(item.get("pid")))
+        name = item.get("name") or "unknown"
+        pid = item.get("pid")
+        click.echo("PID {0} ({1}) already not running.".format(pid, name))
     for item in alive:
-        click.echo("PID {0} could not be terminated.".format(item.get("pid")), err=True)
+        name = item.get("name") or "unknown"
+        pid = item.get("pid")
+        click.echo("PID {0} ({1}) could not be terminated.".format(pid, name), err=True)
     if alive:
         raise click.Abort()
 

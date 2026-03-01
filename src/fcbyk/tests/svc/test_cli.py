@@ -32,3 +32,36 @@ def test_svc_kill_uses_pid(monkeypatch):
 
     assert result.exit_code == 0
     assert called["pid"] == 1234
+
+
+def test_svc_stop_all_calls_all_services(monkeypatch):
+    import fcbyk.svc as svc_core
+
+    called = []
+
+    def _fake_stop_service(name):
+        called.append(name)
+        return [{"pid": 1, "name": name, "status": "terminated"}]
+
+    monkeypatch.setattr(svc_core, "stop_service", _fake_stop_service)
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["svc", "stop", "all"])
+
+    assert result.exit_code == 0
+    assert set(called) == set(svc_core.SERVICE_REGISTRY.keys())
+
+
+def test_svc_stop_all_no_processes(monkeypatch):
+    import fcbyk.svc as svc_core
+
+    def _fake_stop_service(name):
+        return []
+
+    monkeypatch.setattr(svc_core, "stop_service", _fake_stop_service)
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["svc", "stop", "all"])
+
+    assert result.exit_code == 0
+    assert "No tracked processes for any service." in result.output
