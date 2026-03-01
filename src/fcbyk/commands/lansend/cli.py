@@ -26,6 +26,11 @@ from .service import LansendConfig, LansendService
 @click.option("-nu", "--disable-upload", is_flag=True, default=False, help="Disable upload functionality")
 @click.option("--chat", is_flag=True, default=False, help="Enable chat functionality")
 @click.option("-D", "--daemon", is_flag=True, help="Run server in background after setup")
+@click.option(
+    "--daemon-password",
+    "daemon_password",
+    help="Upload password for daemon/background mode (normally omit to be prompted)",
+)
 def lansend(
     port: int,
     directory: str,
@@ -35,6 +40,7 @@ def lansend(
     disable_upload: bool = False,
     chat: bool = False,
     daemon: bool = False,
+    daemon_password=None,
 ):
     if not os.path.exists(directory):
         click.echo(f"Error: Directory {directory} does not exist")
@@ -54,7 +60,10 @@ def lansend(
         chat_enabled=chat,
     )
     service = LansendService(config)
-    config.upload_password = service.pick_upload_password(ask_password, disable_upload, click)
+    if daemon_password:
+        config.upload_password = daemon_password
+    else:
+        config.upload_password = service.pick_upload_password(ask_password, disable_upload, click)
     
     click.echo()
     private_networks = get_private_networks()
@@ -85,4 +94,6 @@ def lansend(
     if chat:
         args.append("--chat")
     args.append("--no-browser")
+    if config.upload_password:
+        args.extend(["--daemon-password", config.upload_password])
     svc_core.start_service("lansend", args)

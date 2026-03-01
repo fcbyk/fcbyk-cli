@@ -26,22 +26,28 @@ from fcbyk.cli_support.output import echo_network_urls, copy_to_clipboard
     is_flag=True,
     help="Run server in background after setup",
 )
-def slide(port, daemon):
+@click.option(
+    "--daemon-password",
+    "password",
+    help="Access password for daemon/background mode (normally omit to be prompted)",
+)
+def slide(port, daemon, password):
     """启动 PPT 远程控制服务器"""
+
+    if not password:
+        while True:
+            password = click.prompt(
+                "Please set access password",
+                hide_input=True,
+                confirmation_prompt=True,
+            )
+            if password:
+                break
+            click.echo(" Error: Password cannot be empty")
 
     # 端口占用检测
     if not check_port(port):
         return
-
-    while True:
-        password = click.prompt(
-            "Please set access password",
-            hide_input=True,
-            confirmation_prompt=True,
-        )
-        if password:
-            break
-        click.echo(" Error: Password cannot be empty")
 
     click.echo()
 
@@ -69,5 +75,5 @@ def slide(port, daemon):
         socketio.run(app, host='0.0.0.0', port=port, allow_unsafe_werkzeug=True)
         return
 
-    args = ["--port", str(port), "--password", password]
+    args = ["--port", str(port), "--daemon-password", password]
     svc_core.start_service("slide", args)

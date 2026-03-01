@@ -163,6 +163,50 @@ def test_pick_files_mode_prompts_password(monkeypatch, tmp_path):
     assert called["admin_password"] == "123456"
 
 
+def test_pick_files_daemon_passes_password_to_svc(monkeypatch, tmp_path):
+    pick_cli = importlib.import_module("fcbyk.commands.pick.cli")
+
+    f = tmp_path / "b.txt"
+    f.write_text("hi", encoding="utf-8")
+
+    monkeypatch.setattr(pick_cli, "load_json_object_or_exit", lambda *a, **k: {"items": []})
+
+    class _Svc:
+        def __init__(self, *a, **k):
+            pass
+
+        def generate_redeem_codes(self, _n):
+            return []
+
+        def pick_item(self, _items):
+            raise AssertionError("should not be called")
+
+    monkeypatch.setattr(pick_cli, "PickService", _Svc)
+
+    monkeypatch.setattr("click.prompt", lambda *_a, **_k: "pw999")
+
+    called = {}
+
+    def _start_service(name, args):
+        called["name"] = name
+        called["args"] = list(args)
+
+    monkeypatch.setattr(pick_cli.svc_core, "start_service", _start_service)
+    monkeypatch.setattr(pick_cli, "check_port", lambda *_a, **_k: True)
+
+    from click.testing import CliRunner
+
+    r = CliRunner().invoke(
+        pick_cli.pick,
+        ["--files", str(f), "--password", "--port", "8888", "-D"],
+    )
+
+    assert r.exit_code == 0
+    assert called["name"] == "pick"
+    assert "--daemon-password" in called["args"]
+    assert "pw999" in called["args"]
+
+
 def test_pick_items_passed_to_service(monkeypatch):
     pick_cli = importlib.import_module("fcbyk.commands.pick.cli")
 

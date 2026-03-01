@@ -63,10 +63,15 @@ default_data = {
 @click.option('--no-browser', is_flag=True, help='Do not auto-open browser in web mode')
 @click.option('--files','-f', type=click.Path(exists=True, dir_okay=True, file_okay=True, readable=True, resolve_path=True), help='Start web file picker with given file')
 @click.option('--password', '-pw', is_flag=True, default=False, help='Prompt to set admin password (default: 123456 if not set)')
+@click.option(
+    "--daemon-password",
+    "daemon_password",
+    help="Admin password for daemon/background mode (normally omit to be prompted)",
+)
 @click.option('-D', '--daemon', is_flag=True, help='Run web or file picker server in background')
 @click.argument('items', nargs=-1)
 @click.pass_context
-def pick(ctx, add, remove, clear, show_list, web, port, no_browser, files, password, daemon, items):
+def pick(ctx, add, remove, clear, show_list, web, port, no_browser, files, password, daemon_password, daemon, items):
     data = ensure_list_field(
         load_json_object_or_exit(
             ctx,
@@ -127,7 +132,9 @@ def pick(ctx, add, remove, clear, show_list, web, port, no_browser, files, passw
         return
 
     if files:
-        if password:
+        if daemon_password:
+            effective_password = daemon_password
+        elif password:
             effective_password = click.prompt(
                 'Admin password (press Enter to use default: 123456)',
                 hide_input=True,
@@ -155,6 +162,8 @@ def pick(ctx, add, remove, clear, show_list, web, port, no_browser, files, passw
             str(port),
         ]
         args.append('--no-browser')
+        if effective_password:
+            args.extend(['--daemon-password', effective_password])
         svc_core.start_service('pick', args)
         return
 
