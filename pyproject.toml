@@ -9,10 +9,10 @@ addopts = "-v --cov=fcbyk --cov-report=term-missing"
 
 [tool.commitizen]
 name = "cz_customize"
-version = "0.3.0a1"
+version = "0.3.0a2"
 tag_format = "v$version"
 changelog_file = "CHANGELOG.md"
-bump_message = "🎉 release: v$new_version"
+bump_message = "release: v$new_version"
 version_files = [
     "setup.cfg:version =",
     "pyproject.toml:version ="

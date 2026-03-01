@@ -1,3 +1,29 @@
+## 🎉 v0.3.0a2 (2026-03-01)
+
+### ♻️ Refactor
+
+- 重命名 CLI 入口函数为main
+- 添加别名命令`byk`
+
+
+### ✨ Features
+
+- 新增 **svc** 子命令，为 web 服务添加后台守护进程支持
+- 新增 **config** 子命令，显示应用目录和配置文件路径
+- **slide**: 添加扫码登录功能用于本地快速认证
+- **scripts**: scripts支持当前目录脚本合并
+
+### 📝 Documentation
+
+- 添加所有子命令添加使用文档(草稿)
+
+### BREAKING CHANGE
+
+- 修改 **lansend** 命令行选项名称
+- 重命名`cmd`子命令为`scripts`
+- 移除 **lansend** 配置持久化相关选项和逻辑
+- 移除 GUI 模块及相关支持
+
 ## 🎉 v0.3.0a1 (2026-02-13)
 
 ### ♻️ Refactor
