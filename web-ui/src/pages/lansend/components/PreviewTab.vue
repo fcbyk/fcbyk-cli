@@ -34,21 +34,21 @@
       <div v-else-if="previewFile.is_image" class="flex justify-center items-center min-h-[200px]">
         <img class="max-w-full max-h-full object-contain" :src="imageSrc" :alt="previewFile.name" />
       </div>
-      <div v-else-if="previewFile.is_binary" class="p-10 text-center">
+      <div v-else-if="previewFile.is_binary" class="p-10 text-center flex flex-col items-center justify-center">
         <p class="mb-5 text-[#666]">无法预览二进制文件</p>
         <a :href="`/api/preview/${encodeURIComponent(previewFile.path)}`" class="bg-[#2ecc71] text-white border-none px-[10px] py-[5px] rounded cursor-pointer no-underline text-[12px] flex-none ml-2.5 hover:bg-[#27ae60]" target="_blank">在浏览器打开</a>
       </div>
       <div v-else class="flex-1 min-h-0 w-full h-full relative group">
         <button
           type="button"
-          class="absolute top-[15px] right-[25px] z-3 appearance-none border border-[rgba(0,0,0,0.12)] bg-[rgba(255,255,255,0.9)] text-[#374151] text-[12px] leading-none px-2.5 py-[7px] rounded-lg cursor-pointer opacity-0 pointer-events-none transition-all duration-150 -translate-y-0.5 group-hover:opacity-100 group-hover:pointer-events-auto group-hover:translate-y-0 active:translate-y-0 active:scale-95 hover:border-[rgba(0,0,0,0.18)] hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed md:opacity-100 md:pointer-events-auto md:translate-y-0"
+          class="select-none absolute top-[15px] right-[25px] z-3 appearance-none border border-[rgba(0,0,0,0.12)] bg-[rgba(255,255,255,0.9)] text-[#374151] text-[12px] leading-none px-2.5 py-[7px] rounded-lg cursor-pointer opacity-0 pointer-events-none transition-all duration-150 -translate-y-0.5 group-hover:opacity-100 group-hover:pointer-events-auto group-hover:translate-y-0 active:translate-y-0 active:scale-95 hover:border-[rgba(0,0,0,0.18)] hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed md:opacity-100 md:pointer-events-auto md:translate-y-0"
           :disabled="!previewFile?.content"
           @click="onCopyClick"
         >
           {{ copyStateLabel }}
         </button>
         <div class="flex items-start w-full h-full min-h-0 overflow-auto touch-pan-x touch-pan-y rounded">
-          <div class="flex-none min-w-14 px-2 py-0 text-[#9ca3af] bg-[#fafafa] border-r border-[#eee] text-right select-none font-mono text-sm leading-relaxed sticky left-0 z-1" aria-hidden="true">
+          <div class="flex-none px-2 py-0 text-[#9ca3af] bg-[#fafafa] border-r border-[#eee] text-right select-none font-mono text-sm leading-relaxed sticky left-0 z-1" aria-hidden="true">
             <div v-for="n in lineCount" :key="n" class="leading-relaxed whitespace-nowrap">{{ n }}</div>
           </div>
           <pre class="m-0 py-0 px-2 font-mono text-sm leading-relaxed whitespace-pre word-wrap-normal flex-auto min-w-0 overflow-visible"><code class="hljs p-0! font-inherit text-[#333] overflow-x-visible!" v-html="highlightedHtml"></code></pre>

@@ -9,21 +9,19 @@ body {
 
 /* 统一滚动条样式 */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 
-/* 默认滚动条滑块透明 */
 ::-webkit-scrollbar-thumb {
-  background: #ccc;
-  border-radius: 10px;
+  background: #adadadad;
+  border-radius: 6px;
 }
 
-/* 滑块自身悬停时加深 */
 ::-webkit-scrollbar-thumb:hover {
-  background: #bbb !important;
+  background: #0000007e !important;
 }

@@ -41,7 +41,7 @@
     <div class="flex gap-2 p-3 border-t border-[#e0e0e0] bg-white flex-none">
       <textarea
         v-model="inputMessage"
-        class="flex-1 px-2 py-1.5 border border-[#ddd] rounded-md text-sm outline-none font-inherit resize-none h-[35px] max-h-[132px] leading-relaxed overflow-y-auto box-border focus:border-[#007bff] disabled:bg-[#f5f5f5] disabled:cursor-not-allowed"
+        class="text-box flex-1 px-2 py-1.5 border border-[#ddd] rounded-md text-sm outline-none font-inherit resize-none h-[35px] max-h-[132px] leading-relaxed overflow-y-auto box-border focus:border-[#007bff] disabled:bg-[#f5f5f5] disabled:cursor-not-allowed"
         placeholder="输入消息..."
         @keydown.enter.exact="handleEnterKey"
         @input="adjustTextareaHeight"
@@ -260,3 +260,10 @@ watch(
   }
 )
 </script>
+
+<style scoped>
+.text-box::-webkit-scrollbar {
+  width: 0px !important;
+  height: 0px !important;
+}
+</style>

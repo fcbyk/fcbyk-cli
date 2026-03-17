@@ -93,7 +93,7 @@
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
-          <span class="hidden md:inline">测速</span>
+          <span class="select-none hidden md:inline">测速</span>
         </div>
       </div>
 
@@ -176,7 +176,7 @@
     </div>
 
     <Transition name="slide-fade">
-      <div v-if="isSpeedTestVisible" class="absolute top-[55px] md:top-[60px] right-2.5 md:right-5 w-[calc(100%-20px)] md:w-[280px] max-w-[300px] md:max-w-none bg-white rounded-xl shadow-2xl border border-[#eee] z-100 flex flex-col overflow-hidden">
+      <div v-if="isSpeedTestVisible" class="select-noneabsolute top-[55px] md:top-[60px] right-2.5 md:right-5 w-[calc(100%-20px)] md:w-[280px] max-w-[300px] md:max-w-none bg-white rounded-xl shadow-2xl border border-[#eee] z-100 flex flex-col overflow-hidden">
         <div class="px-4 py-3 border-b border-[#eee] flex justify-between items-center bg-[#f8f9fa]">
           <h3 class="m-0 text-[15px] font-semibold text-[#333]">局域网测速</h3>
           <button class="border-none bg-none text-xl text-[#999] cursor-pointer leading-none p-1 hover:text-[#666]" @click="closeSpeedTest">×</button>

@@ -1,6 +1,6 @@
 <template>
   <div
-    class="file-list-container flex flex-col flex-1 min-h-0 m-4 md:m-0 relative"
+    class="file-list-container flex flex-col flex-1 min-h-0 m-4 md:m-0 relative select-none"
     @dragover.prevent="onDragOver"
     @dragenter.prevent="onDragEnter"
     @dragleave="onDragLeave"
@@ -343,21 +343,13 @@ function handleItemClick(item: DirectoryItem) {
 </script>
 
 <style scoped>
-.file-list::-webkit-scrollbar {
-  width: 8px;
-}
 
 .file-list::-webkit-scrollbar-thumb {
   background: transparent;
-  border-radius: 10px;
 }
 
 .file-list-container:hover .file-list::-webkit-scrollbar-thumb {
-  background: #ccc;
-}
-
-.file-list::-webkit-scrollbar-thumb:hover {
-  background: #bbb;
+  background: #adadad79;
 }
 
 @keyframes fadeIn {
