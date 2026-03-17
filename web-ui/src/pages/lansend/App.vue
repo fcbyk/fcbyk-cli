@@ -323,6 +323,143 @@ const uploadPathHint = computed(() => {
   return `文件将上传到：${path}`
 })
 
+type FileWithSubdir = {
+  file: File
+  subdir: string
+}
+
+function joinPathSegment(basePath: string, name: string): string {
+  if (!basePath) return name
+  if (!name) return basePath
+  return `${basePath}/${name}`
+}
+
+function joinUploadPath(base: string, subdir: string): string {
+  const b = (base || '').trim()
+  const s = (subdir || '').trim()
+  if (!b && !s) return ''
+  if (!b) return s
+  if (!s) return b
+  return `${b}/${s}`.replace(/\/+/g, '/').replace(/^\/+/, '').replace(/\/+$/, '')
+}
+
+function readEntriesAsync(reader: any): Promise<any[]> {
+  return new Promise((resolve, reject) => {
+    reader.readEntries(
+      (entries: any[]) => resolve(entries),
+      (error: any) => reject(error)
+    )
+  })
+}
+
+async function walkEntry(entry: any, basePath: string, includeSelf: boolean): Promise<FileWithSubdir[]> {
+  if (entry.isFile) {
+    return new Promise((resolve, reject) => {
+      entry.file(
+        (file: File) => {
+          resolve([{ file, subdir: basePath }])
+        },
+        (error: any) => reject(error)
+      )
+    })
+  }
+  if (entry.isDirectory) {
+    const dirPath = includeSelf ? joinPathSegment(basePath, entry.name) : basePath
+    const reader = entry.createReader()
+    const result: FileWithSubdir[] = []
+    while (true) {
+      const entries = await readEntriesAsync(reader)
+      if (!entries.length) break
+      for (const child of entries) {
+        const childFiles = await walkEntry(child, dirPath, true)
+        result.push(...childFiles)
+      }
+    }
+    return result
+  }
+  return []
+}
+
+async function extractFilesFromDataTransfer(event: DragEvent): Promise<FileWithSubdir[]> {
+  const dt = event.dataTransfer
+  if (!dt) return []
+  const items = dt.items
+  const result: FileWithSubdir[] = []
+  let usedEntries = false
+  if (items && items.length > 0) {
+    const entriesToProcess = []
+    const filesToProcess = []
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i]
+      if (item.kind !== 'file') continue
+      const anyItem = item as any
+      const entry = anyItem.webkitGetAsEntry ? anyItem.webkitGetAsEntry() : null
+      if (entry) {
+        usedEntries = true
+        entriesToProcess.push(entry)
+      } else {
+        const file = item.getAsFile && item.getAsFile()
+        if (file) {
+          filesToProcess.push({ file, subdir: '' })
+        }
+      }
+    }
+    
+    if (usedEntries) {
+      for (const entry of entriesToProcess) {
+        const files = await walkEntry(entry, '', entry.isDirectory)
+        result.push(...files)
+      }
+      return result
+    } else {
+      result.push(...filesToProcess)
+    }
+  }
+  
+  if (usedEntries) {
+    return result
+  }
+  const files: FileWithSubdir[] = []
+  for (let i = 0; i < dt.files.length; i++) {
+    const file = dt.files[i]
+    files.push({ file, subdir: '' })
+  }
+  return files
+}
+
+function groupFilesByTargetPath(files: FileWithSubdir[]): Record<string, File[]> {
+  const groups: Record<string, File[]> = {}
+  files.forEach(item => {
+    const targetPath = joinUploadPath(currentPath.value, item.subdir)
+    const key = targetPath || ''
+    if (!groups[key]) {
+      groups[key] = []
+    }
+    groups[key].push(item.file)
+  })
+  return groups
+}
+
+function startUploadForGroups(groups: Record<string, File[]>) {
+  const entries = Object.entries(groups).filter(([, files]) => files.length > 0)
+  if (entries.length === 0) return
+  stopPolling()
+  entries.forEach(([targetPath, files]) => {
+    enqueueFiles(files, targetPath)
+  })
+  processUploadQueue({
+    requirePassword: requirePassword.value,
+    getPassword: () => password.value,
+    onWrongPassword: () => {
+      passwordError.value = '密码错误，请重试'
+    },
+    onRefresh: async () => {
+      await loadDirectoryWithAuth(currentPath.value, true)
+      startPolling()
+    }
+  })
+}
+
 function closePreview() {
   originalClosePreview({ unUpload: unUpload.value })
 }
@@ -473,33 +610,28 @@ function handleDragLeave(_e?: DragEvent) {
   }
 }
 
-function handleDrop(e?: DragEvent) {
+async function handleDrop(e?: DragEvent) {
   if (!canUpload.value) return
   dragCounter.value = 0
   isDragOver.value = false
-  if (e?.dataTransfer?.files) {
-    handleFiles(Array.from(e.dataTransfer.files))
+  if (e) {
+    e.preventDefault()
+  }
+  if (e?.dataTransfer) {
+    const extracted = await extractFilesFromDataTransfer(e)
+    if (extracted.length === 0) return
+    const groups = groupFilesByTargetPath(extracted)
+    startUploadForGroups(groups)
   }
 }
 
 function handleFiles(files: File[]) {
   if (files.length === 0) return
 
-  stopPolling()
-
-  enqueueFiles(files, currentPath.value)
-
-  processUploadQueue({
-    requirePassword: requirePassword.value,
-    getPassword: () => password.value,
-    onWrongPassword: () => {
-      passwordError.value = '密码错误，请重试'
-    },
-    onRefresh: async () => {
-      loadDirectoryWithAuth(currentPath.value, true)
-      startPolling()
-    }
-  })
+  const groups: Record<string, File[]> = {}
+  const path = currentPath.value || ''
+  groups[path] = files.slice()
+  startUploadForGroups(groups)
 }
 
 onMounted(() => {

@@ -486,8 +486,14 @@ def register_upload_routes(app, service: LansendService):
 
         filename = service.safe_filename(file.filename) or "untitled"
 
-        if not os.path.exists(target_dir) or not os.path.isdir(target_dir):
-            service.log_upload(ip, 0, f"failed (target directory missing: {rel_path or 'root'})", rel_path)
+        if not os.path.exists(target_dir):
+            try:
+                os.makedirs(target_dir, exist_ok=True)
+            except Exception as e:
+                service.log_upload(ip, 0, f"failed (mkdir failed: {e})", rel_path, file_size)
+                return R.error("failed to create directory", 500)
+        elif not os.path.isdir(target_dir):
+            service.log_upload(ip, 0, f"failed (target directory missing: {rel_path or 'root'})", rel_path, file_size)
             return R.error("target directory not found", 400)
 
         # 处理文件名冲突：自动重命名为 name_1.ext, name_2.ext 等

@@ -87,6 +87,24 @@ def test_file_upload(client, temp_dir):
         assert f.read() == test_file_content
 
 
+def test_file_upload_nested_path_creates_directories(client, temp_dir):
+    from io import BytesIO
+
+    data = {
+        "path": "nested/dir",
+        "file": (BytesIO(b"nested content"), "nested.txt"),
+    }
+
+    response = client.post("/upload", data=data, content_type="multipart/form-data")
+    assert response.status_code == 200
+    assert response.json["message"] == "file uploaded"
+
+    uploaded_file = os.path.join(temp_dir, "nested", "dir", "nested.txt")
+    assert os.path.exists(uploaded_file)
+    with open(uploaded_file, "rb") as f:
+        assert f.read() == b"nested content"
+
+
 def test_api_directory(client, temp_dir):
     response = client.get('/api/directory')
     assert response.status_code == 200
