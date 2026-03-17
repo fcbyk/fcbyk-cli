@@ -25,6 +25,8 @@ lansend controller 层
 import os
 import re
 import mimetypes
+import tempfile
+import zipfile
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 
@@ -686,6 +688,92 @@ def register_routes(app, service: LansendService):
                     if not chunk:
                         break
                     yield chunk
+
+        return Response(
+            stream_with_context(generate()),
+            headers=headers,
+            status=200
+        )
+
+    @app.route("/api/download-zip", methods=["POST"])
+    def api_download_zip():
+        data = request.get_json(silent=True) or {}
+        paths = data.get("paths")
+        if not isinstance(paths, list) or not paths:
+            return R.error("paths required", 400)
+
+        base = service.ensure_shared_directory()
+        items: List[Dict[str, str]] = []
+        for raw in paths:
+            if not isinstance(raw, str) or not raw.strip():
+                return R.error("invalid path", 400)
+            rel_path = raw.strip("/").replace("\\", "/")
+            try:
+                abs_path = service.resolve_file_path(rel_path)
+            except (ValueError, PermissionError):
+                return R.error("invalid path", 400)
+            if not os.path.exists(abs_path):
+                return R.error("file not found", 404)
+            items.append({"rel": rel_path, "abs": abs_path})
+
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".zip")
+        tmp_path = tmp.name
+        tmp.close()
+
+        arcname_set = set()
+        with zipfile.ZipFile(tmp_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            for item in items:
+                rel_path = item["rel"]
+                abs_path = item["abs"]
+                if os.path.isdir(abs_path):
+                    for root, _, filenames in os.walk(abs_path):
+                        for filename in filenames:
+                            full_path = os.path.join(root, filename)
+                            arcname = os.path.relpath(full_path, base).replace("\\", "/")
+                            if arcname in arcname_set:
+                                continue
+                            arcname_set.add(arcname)
+                            zf.write(full_path, arcname)
+                else:
+                    arcname = rel_path.replace("\\", "/")
+                    if arcname in arcname_set:
+                        continue
+                    arcname_set.add(arcname)
+                    zf.write(abs_path, arcname)
+
+        file_size = os.path.getsize(tmp_path)
+        if len(items) == 1:
+            base_name = os.path.basename(items[0]["rel"].rstrip("/")) or "download"
+            zip_name = f"{base_name}.zip"
+        else:
+            zip_name = "lansend.zip"
+
+        safe_name_utf8 = urllib.parse.quote(zip_name)
+        fallback_name = zip_name.encode('ascii', 'ignore').decode('ascii').strip()
+        ext = os.path.splitext(zip_name)[1]
+        if not fallback_name or fallback_name == ext:
+            fallback_name = f"download{ext}" if ext else 'download'
+
+        headers = {
+            "Content-Type": "application/zip",
+            "Content-Length": str(file_size),
+            "Content-Disposition": f"attachment; filename=\"{fallback_name}\"; filename*=UTF-8''{safe_name_utf8}",
+            "Cache-Control": "no-cache",
+        }
+
+        def generate():
+            try:
+                with open(tmp_path, "rb") as f:
+                    while True:
+                        chunk = f.read(8192)
+                        if not chunk:
+                            break
+                        yield chunk
+            finally:
+                try:
+                    os.remove(tmp_path)
+                except Exception:
+                    pass
 
         return Response(
             stream_with_context(generate()),

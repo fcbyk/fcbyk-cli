@@ -25,8 +25,15 @@
         :un-upload="unUpload"
         :upload-tasks="uploadTasks"
         :upload-speed="uploadSpeedBytesPerSec"
+        :selection-mode="selectionMode"
+        :selected-paths="selectedPaths"
         @navigate="navigateToPath"
         @item-click="handleItemClick"
+        @toggle-select-mode="toggleSelectMode"
+        @toggle-item-select="toggleItemSelect"
+        @download-selected="handleDownloadSelected"
+        @download-selected-files="handleDownloadSelectedFiles"
+        @clear-selection="clearSelection"
         @dragover="handleDragOver"
         @dragenter="handleDragEnter"
         @dragleave="handleDragLeave"
@@ -119,8 +126,15 @@
             :un-upload="unUpload"
             :upload-tasks="uploadTasks"
             :upload-speed="uploadSpeedBytesPerSec"
+            :selection-mode="selectionMode"
+            :selected-paths="selectedPaths"
             @navigate="navigateToPath"
             @item-click="handleItemClick"
+            @toggle-select-mode="toggleSelectMode"
+            @toggle-item-select="toggleItemSelect"
+            @download-selected="handleDownloadSelected"
+            @download-selected-files="handleDownloadSelectedFiles"
+            @clear-selection="clearSelection"
             @dragover="handleDragOver"
             @dragenter="handleDragEnter"
             @dragleave="handleDragLeave"
@@ -128,8 +142,8 @@
             @files-selected="handleFiles"
             @cancel-upload="handleCancelUpload"
             @clear-all-tasks="clearAllTasks"
-        @show-details="handleShowDetails"
-        @close-complete-info="closeCompleteInfo"
+            @show-details="handleShowDetails"
+            @close-complete-info="closeCompleteInfo"
             @update:password="password = $event; passwordError = ''"
             @verify-password="handleVerifyPassword"
           />
@@ -223,7 +237,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, onBeforeUnmount } from 'vue'
+import { ref, onMounted, computed, onBeforeUnmount, watch } from 'vue'
 import FileList from './components/FileList.vue'
 import ChatTab from './components/ChatTab.vue'
 import PreviewTab from './components/PreviewTab.vue'
@@ -232,7 +246,7 @@ import { useLansendDirectory } from './composables/useLansendDirectory'
 import { useLansendUpload } from './composables/useLansendUpload'
 import { useLansendPreview } from './composables/useLansendPreview'
 import { useLansendSpeed } from './composables/useLansendSpeed'
-import { getLansendConfig } from './api'
+import { getLansendConfig, downloadZip } from './api'
 import type { DirectoryItem } from './types'
 const {
   shareName,
@@ -348,6 +362,66 @@ const {
 const canUpload = computed(() => {
   return !requirePassword.value || canUploadVerified.value
 })
+
+const selectionMode = ref(false)
+const selectedPaths = ref<string[]>([])
+
+function toggleSelectMode() {
+  if (unDownload.value) return
+  selectionMode.value = !selectionMode.value
+  if (!selectionMode.value) {
+    selectedPaths.value = []
+  }
+}
+
+function clearSelection() {
+  selectionMode.value = false
+  selectedPaths.value = []
+}
+
+function toggleItemSelect(item: DirectoryItem) {
+  if (!selectionMode.value) return
+  const path = item.path
+  if (!path) return
+  if (selectedPaths.value.includes(path)) {
+    selectedPaths.value = selectedPaths.value.filter(p => p !== path)
+  } else {
+    selectedPaths.value = [...selectedPaths.value, path]
+  }
+}
+
+async function handleDownloadSelected() {
+  if (selectedPaths.value.length === 0) return
+  try {
+    const { blob, filename } = await downloadZip(selectedPaths.value)
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+    clearSelection()
+  } catch (e) {
+    console.error('download zip failed', e)
+  }
+}
+
+function handleDownloadSelectedFiles() {
+  const filePaths = items.value
+    .filter(item => !item.is_dir && selectedPaths.value.includes(item.path))
+    .map(item => item.path)
+  if (filePaths.length === 0) return
+  filePaths.forEach(path => {
+    const link = document.createElement('a')
+    link.href = `/api/download/${path}`
+    link.download = ''
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+  })
+}
 
 const currentUploadPath = computed(() => {
   if (!shareName.value) return ''
@@ -695,6 +769,20 @@ onMounted(() => {
     startPolling()
   })
 })
+
+watch(
+  () => currentPath.value,
+  () => {
+    clearSelection()
+  }
+)
+
+watch(
+  () => unDownload.value,
+  (v) => {
+    if (v) clearSelection()
+  }
+)
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', initContainerWidths)

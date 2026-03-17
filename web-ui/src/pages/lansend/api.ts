@@ -33,6 +33,34 @@ export async function getDirectory(path: string = ''): Promise<DirectoryData> {
   return result.data
 }
 
+export async function downloadZip(paths: string[]): Promise<{ blob: Blob; filename: string }> {
+  const response = await fetch('/api/download-zip', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ paths })
+  })
+
+  const contentType = response.headers.get('Content-Type') || ''
+  if (!response.ok || contentType.includes('application/json')) {
+    const result: ApiResponse = await response.json().catch(() => ({}))
+    throw new Error(result?.message || 'download failed')
+  }
+
+  const disposition = response.headers.get('Content-Disposition') || ''
+  let filename = 'download.zip'
+  const match = disposition.match(/filename\*=UTF-8''([^;]+)|filename="([^"]+)"/)
+  if (match?.[1]) {
+    filename = decodeURIComponent(match[1])
+  } else if (match?.[2]) {
+    filename = match[2]
+  }
+
+  const blob = await response.blob()
+  return { blob, filename }
+}
+
 /**
  * 验证上传密码
  */

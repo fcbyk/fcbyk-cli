@@ -32,15 +32,25 @@
               </div>
             </template>
           </div>
-          <div v-if="shouldShowUploadButton" class="flex-none flex items-center ml-1">
+          <div class="flex-none flex items-center ml-1 gap-1">
+            <button
+              v-if="shouldShowSelectButton"
+              @click="onSelectButtonClick"
+              class="p-2 md:p-1.5 rounded-md hover:bg-[#e4e7ed] active:bg-[#e4e7ed] text-[#606266] transition-colors duration-200 flex items-center gap-1 touch-manipulation"
+              :class="selectionMode ? 'bg-[#e4e7ed] text-[#409eff]' : ''"
+              title="选择"
+            >
+              <CheckSquare class="w-5 h-5 md:w-4 md:h-4" />
+            </button>
             <button 
+              v-if="shouldShowUploadButton"
               @click="onUploadButtonClick"
               class="p-2 md:p-1.5 rounded-md hover:bg-[#e4e7ed] active:bg-[#e4e7ed] text-[#606266] transition-colors duration-200 flex items-center gap-1 touch-manipulation" :title="needsPassword ? '需要密码上传' : '上传文件'"
             >
               <Lock v-if="needsPassword" class="w-5 h-5 md:w-4 md:h-4 text-[#f39c12]" />
               <Upload v-else class="w-5 h-5 md:w-4 md:h-4" />
             </button>
-            <input ref="fileInputRef" type="file" multiple style="display: none" @change="onFileSelect" />
+            <input v-if="shouldShowUploadButton" ref="fileInputRef" type="file" multiple style="display: none" @change="onFileSelect" />
           </div>
         </div>
 
@@ -103,31 +113,43 @@
       <template v-else>
         <li v-for="item in items" :key="item.path" 
             class="group p-2.5 border-b border-[#eee] flex flex-col w-full hover:bg-[#f8f9fa] transition-all duration-300 relative overflow-hidden cursor-pointer"
-            @click="emitItemClick(item)">
+            :class="{ 'bg-[#eef7ff]': selectionMode && isSelected(item.path) }"
+            @click="handleItemClick(item)">
           <div class="flex items-center justify-between w-full relative z-1">
             <div class="flex items-center grow min-w-0 overflow-hidden">
+              <span v-if="selectionMode" class="mr-2 w-5 h-5 rounded border border-[#d1d5db] flex items-center justify-center flex-none" :class="isSelected(item.path) ? 'bg-[#409eff] border-[#409eff]' : 'bg-white'">
+                <Check v-if="isSelected(item.path)" class="w-3.5 h-3.5 text-white" />
+              </span>
               <span class="mr-2.5 w-6 text-center flex-none">
                 <span v-if="item.is_dir" class="text-[#f39c12]">📁</span>
                 <span v-else class="text-[#3498db]">📄</span>
               </span>
               <span class="flex items-center grow min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
-                <span class="text-[#3498db] no-underline overflow-hidden text-ellipsis whitespace-nowrap hover:underline">{{ item.name }}</span>
+                <span class="text-[#3498db] no-underline overflow-hidden text-ellipsis whitespace-nowrap">{{ item.name }}</span>
               </span>
             </div>
 
-            <!-- 正常文件的下载按钮 -->
-            <a
-              v-if="!unDownload && !item.is_dir"
-              :href="`/api/download/${item.path}`"
-              class="bg-[#2ecc71] text-white border-none px-[10px] py-[5px] rounded cursor-pointer no-underline text-[12px] flex-none ml-2.5 hover:bg-[#27ae60]"
-              download
-              @click.stop
-              >下载</a
-            >
           </div>
         </li>
       </template>
     </ul>
+    <div v-if="selectionMode && selectedCount > 0" class="absolute bottom-3 left-3 right-3 z-30">
+      <div class="bg-white border border-[#e5e7eb] rounded-lg shadow-lg px-3 py-2 flex items-center gap-2 flex-nowrap overflow-x-auto">
+        <div class="text-sm text-[#374151] flex-1 min-w-[72px] truncate">已选 {{ selectedCount }} 项</div>
+        <button class="px-2 md:px-3 py-1.5 bg-[#409eff] text-white text-xs md:text-sm font-medium rounded-md hover:bg-[#66b1ff] active:bg-[#3a8ee6] transition-colors touch-manipulation whitespace-nowrap" @click="emitDownloadSelected">
+          <span class="hidden md:inline">下载压缩包</span>
+          <span class="md:hidden">压缩下载</span>
+        </button>
+        <button class="px-2 md:px-3 py-1.5 bg-white text-[#409eff] border border-[#93c5fd] text-xs md:text-sm font-medium rounded-md hover:bg-[#eff6ff] active:bg-[#dbeafe] transition-colors touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap" :disabled="selectedFileCount === 0" @click="emitDownloadSelectedFiles">
+          <span class="hidden md:inline">单文件下载</span>
+          <span class="md:hidden">单文件下载</span>
+        </button>
+        <button class="px-2 md:px-3 py-1.5 bg-[#f3f4f6] text-[#374151] text-xs md:text-sm font-medium rounded-md hover:bg-[#e5e7eb] active:bg-[#e5e7eb] transition-colors touch-manipulation whitespace-nowrap" @click="emitClearSelection">
+          <span class="hidden md:inline">取消选择</span>
+          <span class="md:hidden">取消</span>
+        </button>
+      </div>
+    </div>
     </div>
   </div>
 </template>
@@ -136,7 +158,7 @@
 import { ref, computed, nextTick, watch } from 'vue'
 import type { DirectoryItem, PathPart } from '../types'
 import type { UploadTask } from '../composables/useLansendUpload'
-import { X, Upload, Lock, AlertCircle } from 'lucide-vue-next'
+import { X, Upload, Lock, AlertCircle, CheckSquare, Check } from 'lucide-vue-next'
 import UploadGroups from './UploadGroups.vue'
 import { usePasswordShake } from '../composables/usePasswordShake'
 
@@ -166,6 +188,8 @@ const props = defineProps<{
   password?: string
   passwordError?: string
   unUpload?: boolean
+  selectionMode?: boolean
+  selectedPaths?: string[]
 }>()
 
 const passwordInputRef = ref<HTMLInputElement | null>(null)
@@ -181,6 +205,12 @@ const needsPassword = computed(() => props.requirePassword && !props.canUpload)
 
 // 是否显示上传按钮
 const shouldShowUploadButton = computed(() => !props.unUpload)
+const shouldShowSelectButton = computed(() => !props.unDownload)
+const selectedCount = computed(() => props.selectedPaths?.length || 0)
+const selectedFileCount = computed(() => {
+  const selected = props.selectedPaths || []
+  return props.items.filter(item => !item.is_dir && selected.includes(item.path)).length
+})
 
 const emit = defineEmits<{
   (e: 'navigate', path: string): void
@@ -196,6 +226,11 @@ const emit = defineEmits<{
   (e: 'close-complete-info'): void
   (e: 'verify-password'): void
   (e: 'update:password', v: string): void
+  (e: 'toggle-select-mode'): void
+  (e: 'toggle-item-select', item: DirectoryItem): void
+  (e: 'download-selected'): void
+  (e: 'download-selected-files'): void
+  (e: 'clear-selection'): void
 }>()
 
 const fileInputRef = ref<HTMLInputElement | null>(null)
@@ -209,6 +244,22 @@ function onUploadButtonClick() {
     return
   }
   fileInputRef.value?.click()
+}
+
+function onSelectButtonClick() {
+  emit('toggle-select-mode')
+}
+
+function emitDownloadSelected() {
+  emit('download-selected')
+}
+
+function emitDownloadSelectedFiles() {
+  emit('download-selected-files')
+}
+
+function emitClearSelection() {
+  emit('clear-selection')
 }
 
 function onPasswordInput(e: Event) {
@@ -278,7 +329,15 @@ function emitNavigate(path: string) {
   emit('navigate', path)
 }
 
-function emitItemClick(item: DirectoryItem) {
+function isSelected(path: string) {
+  return !!props.selectedPaths?.includes(path)
+}
+
+function handleItemClick(item: DirectoryItem) {
+  if (props.selectionMode) {
+    emit('toggle-item-select', item)
+    return
+  }
   emit('item-click', item)
 }
 </script>
