@@ -89,7 +89,8 @@
           :upload-tasks="uploadTasks"
           :upload-speed="uploadSpeed"
           @cancel-upload="emitCancelUpload"
-          @clear-group-tasks="emitClearGroup"
+          @clear-all-tasks="emitClearAll"
+          @show-details="emitShowDetails"
         />
       </div>
 
@@ -190,7 +191,8 @@ const emit = defineEmits<{
   (e: 'drop', ev: DragEvent): void
   (e: 'files-selected', files: File[]): void
   (e: 'cancel-upload', taskId: string): void
-  (e: 'clear-group-tasks', path: string): void
+  (e: 'clear-all-tasks'): void
+  (e: 'show-details'): void
   (e: 'close-complete-info'): void
   (e: 'verify-password'): void
   (e: 'update:password', v: string): void
@@ -239,8 +241,12 @@ function emitCancelUpload(taskId: string) {
   emit('cancel-upload', taskId)
 }
 
-function emitClearGroup(path: string) {
-  emit('clear-group-tasks', path)
+function emitClearAll() {
+  emit('clear-all-tasks')
+}
+
+function emitShowDetails() {
+  emit('show-details')
 }
 
 function onDragOver(ev: DragEvent) {

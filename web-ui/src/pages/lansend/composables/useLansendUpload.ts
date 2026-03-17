@@ -14,6 +14,7 @@ export interface UploadTask {
   loaded: number
   total: number
   targetPath: string // 新增：记录上传的目标路径
+  completedAt?: number
   error?: string
   cancel?: () => void
 }
@@ -197,7 +198,20 @@ export function useLansendUpload() {
   }
 
   function clearTasksByPath(path: string) {
-    uploadTasks.value = uploadTasks.value.filter(t => (t.targetPath || '/') !== (path || '/'))
+    const target = path || '/'
+    uploadTasks.value.forEach(task => {
+      if ((task.targetPath || '/') === target && task.status === 'uploading' && task.cancel) {
+        task.cancel()
+      }
+    })
+    uploadTasks.value = uploadTasks.value.filter(t => (t.targetPath || '/') !== target)
+    if (!uploadTasks.value.some(t => t.status === 'uploading' || t.status === 'pending')) {
+      isUploading.value = false
+    }
+  }
+
+  function clearAllTasks() {
+    uploadTasks.value = uploadTasks.value.filter(t => t.status === 'uploading' || t.status === 'pending')
     if (!uploadTasks.value.some(t => t.status === 'uploading' || t.status === 'pending')) {
       isUploading.value = false
     }
@@ -280,6 +294,7 @@ export function useLansendUpload() {
           task.status = 'completed'
           task.progress = 100
           task.loaded = task.total
+          task.completedAt = Date.now()
 
           if (result.data?.renamed) {
             renamedFiles.value.push(result.data.filename)
@@ -334,6 +349,7 @@ export function useLansendUpload() {
     processUploadQueue,
     cancelTask,
     clearTasksByPath,
+    clearAllTasks,
     closeCompleteInfo
   }
 }

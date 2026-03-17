@@ -1,125 +1,64 @@
 <template>
-  <div v-if="groupedUploads.length > 0" class="flex flex-col gap-1.5">
+  <div v-if="globalUploadStats" class="flex flex-col gap-1.5">
     <div
-      v-for="group in groupedUploads"
-      :key="group.path"
       class="relative border rounded-md overflow-hidden transition-all duration-300"
-      :class="group.remainingSize === 0 ? 'bg-[#f0f9eb] border-[#67c23a]/50' : 'bg-white border-[#b3e19d]'"
+      :class="globalUploadStats.remainingSize === 0 ? 'bg-[#f0f9eb] border-[#67c23a]/50' : 'bg-white border-[#b3e19d]'"
     >
       <div
-        v-if="group.remainingSize > 0"
+        v-if="globalUploadStats.remainingSize > 0"
         class="absolute inset-0 bg-[#f0f9eb] transition-[width] duration-500 ease-linear pointer-events-none"
-        :style="{ width: `${group.totalProgress}%` }"
+        :style="{ width: `${globalUploadStats.totalProgress}%` }"
       ></div>
 
-      <div class="relative px-2 py-2 flex items-center justify-between cursor-pointer hover:bg-[#e8f5e9]/50 transition-colors">
-        <div class="flex items-center gap-2 min-w-0 flex-1" @click="toggleUploadExpand(group.path)">
+      <div class="relative px-2 py-2 flex items-center justify-between transition-colors">
+        <div class="flex items-center gap-2 min-w-0 flex-1">
           <div
             class="p-1 rounded-md text-white flex-none border border-black/5"
-            :class="group.remainingSize === 0 ? 'bg-[#67c23a]' : 'bg-[#2ecc71]'"
+            :class="globalUploadStats.remainingSize === 0 ? 'bg-[#67c23a]' : 'bg-[#2ecc71]'"
           >
-            <Check v-if="group.remainingSize === 0" class="w-3.5 h-3.5 stroke-3" />
+            <Check v-if="globalUploadStats.remainingSize === 0" class="w-3.5 h-3.5 stroke-3" />
             <Layers v-else class="w-3.5 h-3.5" />
           </div>
           <div class="flex items-center gap-2 min-w-0 flex-1 mr-2">
-            <span class="text-sm font-bold text-[#2c3e50] truncate" :title="group.statusText">
-              {{ group.statusText }}
+            <span class="text-sm font-bold text-[#2c3e50] truncate" :title="globalUploadStats.statusText">
+              {{ globalUploadStats.statusText }}
             </span>
           </div>
         </div>
         <div class="flex items-center gap-2 flex-none ml-2">
           <div class="flex flex-col items-end leading-none gap-0.5">
-            <span v-if="group.remainingSize > 0" class="text-[12px] font-bold text-[#2ecc71]">
-              {{ Math.round(group.totalProgress) }}%
+            <span v-if="globalUploadStats.remainingSize > 0" class="text-[12px] font-bold text-[#2ecc71]">
+              {{ Math.round(globalUploadStats.totalProgress) }}%
             </span>
             <div
-              v-if="group.remainingSize > 0"
+              v-if="globalUploadStats.remainingSize > 0"
               class="flex items-center gap-1.5 text-[10px] text-[#909399] font-normal"
             >
-              <span v-if="group.remainingTimeText" class="whitespace-nowrap">
-                {{ group.remainingTimeText }}
+              <span v-if="globalUploadStats.remainingTimeText" class="whitespace-nowrap">
+                {{ globalUploadStats.remainingTimeText }}
               </span>
               <span class="whitespace-nowrap">
-                / 剩 {{ formatFileSize(group.remainingSize) }}
+                / 剩 {{ formatFileSize(globalUploadStats.remainingSize) }}
               </span>
             </div>
           </div>
           <div class="flex items-center gap-1 flex-none ml-1 relative z-10">
             <button
-              v-if="group.remainingSize === 0"
+              v-if="globalUploadStats.remainingSize === 0"
               type="button"
-              @click="onClearGroup(group.path, $event)"
-              @touchend="onClearGroup(group.path, $event)"
-              class="p-2 text-[#909399] hover:text-[#ef4444] active:text-[#ef4444] active:bg-[#fee2e2] rounded-md transition-all touch-manipulation flex items-center justify-center"
-              title="移除已完成记录"
+              @click="onClearAll($event)"
+              @touchend="onClearAll($event)"
+              class="px-2 py-1 flex items-center justify-center rounded-md touch-manipulation text-[12px] text-[#ef4444] hover:bg-[#fee2e2] active:bg-[#fee2e2] transition-colors border border-[#fecaca] bg-[#fee2e2]/60 cursor-pointer"
+              title="移除所有已完成记录"
             >
-              <X class="w-4.5 h-4.5 pointer-events-none" />
+              关闭
             </button>
             <button
               type="button"
-              class="p-1 flex items-center justify-center rounded-md touch-manipulation"
-              @click.stop="toggleUploadExpand(group.path)"
-              aria-label="切换展开状态"
+              class="px-2 py-1 flex items-center justify-center rounded-md touch-manipulation text-[12px] text-[#409eff] hover:bg-[#ecf5ff] active:bg-[#ecf5ff] transition-colors border border-[#d9ecff] bg-[#ecf5ff]/50 cursor-pointer ml-1"
+              @click.stop="showDetails"
             >
-              <ChevronDown
-                v-if="!isUploadExpanded[group.path]"
-                class="w-4 h-4 text-[#909399] pointer-events-none"
-              />
-              <ChevronUp
-                v-else
-                class="w-4 h-4 text-[#909399] pointer-events-none"
-              />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div
-        v-if="isUploadExpanded[group.path]"
-        class="relative z-1 bg-[#fafafa] border-t border-[#b3e19d] max-h-[200px] md:max-h-[150px] overflow-y-auto"
-      >
-        <div
-          v-for="task in group.tasks"
-          :key="task.id"
-          class="px-2 py-2.5 md:py-1.5 border-b border-[#e1f3d8] last:border-0 flex items-center justify-between gap-2 hover:bg-[#f0f9eb]/50 transition-colors"
-        >
-          <div class="flex items-center gap-2 min-w-0 flex-1">
-            <span class="text-sm md:text-[12px] flex-none">📄</span>
-            <span
-              class="text-[13px] md:text-[11px] text-[#606266] truncate flex-1"
-              :title="task.file.name"
-            >
-              {{ task.file.name }}
-            </span>
-          </div>
-          <div class="flex items-center gap-2 flex-none">
-            <span
-              class="text-[11px] md:text-[10px] font-mono font-medium"
-              :class="{
-                'text-[#ef4444]': task.status === 'error',
-                'text-[#2ecc71]': task.status === 'uploading' || task.status === 'completed',
-                'text-[#909399]': task.status === 'pending'
-              }"
-            >
-              <template v-if="task.status === 'uploading'">
-                {{ Math.round(task.progress) }}%
-              </template>
-              <template v-else-if="task.status === 'pending'">
-                等待
-              </template>
-              <template v-else-if="task.status === 'error'">
-                失败
-              </template>
-              <template v-else-if="task.status === 'completed'">
-                已完成
-              </template>
-            </span>
-            <button
-              v-if="task.status !== 'completed'"
-              @click.stop="emitCancelUpload(task.id)"
-              class="p-2 md:p-0.5 text-[#909399] hover:text-[#ef4444] active:text-[#ef4444] active:bg-[#fee2e2] rounded-md transition-all touch-manipulation"
-            >
-              <X class="w-4 h-4 md:w-3 md:h-3" />
+              详细
             </button>
           </div>
         </div>
@@ -129,11 +68,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed } from 'vue'
 import type { UploadTask } from '../composables/useLansendUpload'
-import { X, ChevronDown, ChevronUp, Layers, Check } from 'lucide-vue-next'
+import { Layers, Check } from 'lucide-vue-next'
 import { formatFileSize } from '@/utils/files'
-import { useUploadTaskGroups } from '../composables/useUploadTaskGroups'
 
 const props = defineProps<{
   uploadTasks?: UploadTask[]
@@ -142,40 +80,79 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'cancel-upload', taskId: string): void
-  (e: 'clear-group-tasks', path: string): void
+  (e: 'clear-all-tasks'): void
+  (e: 'show-details'): void
 }>()
 
-const isUploadExpanded = ref<Record<string, boolean>>({})
+const globalUploadStats = computed(() => {
+  const tasks = props.uploadTasks || []
+  if (tasks.length === 0) return null
 
-const { groupedUploads } = useUploadTaskGroups(
-  () => props.uploadTasks,
-  () => props.uploadSpeed
-)
+  const totalSize = tasks.reduce((sum, t) => sum + t.total, 0)
+  const loadedSize = tasks.reduce((sum, t) => sum + t.loaded, 0)
+  const totalProgress = totalSize > 0 ? (loadedSize / totalSize) * 100 : 0
 
-watch(
-  () => groupedUploads.value,
-  newGroups => {
-    newGroups.forEach(group => {
-      if (isUploadExpanded.value[group.path] === undefined) {
-        isUploadExpanded.value[group.path] = false
-      }
-    })
-  },
-  { deep: true, immediate: true }
-)
+  const activeTasks = tasks.filter(t => t.status === 'uploading' || t.status === 'pending')
 
-function toggleUploadExpand(path: string) {
-  isUploadExpanded.value[path] = !isUploadExpanded.value[path]
+  const totalDirSet = new Set<string>()
+  tasks.forEach(t => {
+    const p = t.targetPath || '/'
+    if (p !== '/') {
+      totalDirSet.add(p)
+    }
+  })
+  const totalDirCount = totalDirSet.size
+  const totalFileCount = tasks.length
+
+  const activeDirSet = new Set<string>()
+  activeTasks.forEach(t => {
+    const p = t.targetPath || '/'
+    if (p !== '/') {
+      activeDirSet.add(p)
+    }
+  })
+  const activeDirCount = activeDirSet.size
+  const activeFileCount = activeTasks.length
+
+  let statusText = ''
+  if (activeTasks.length > 0) {
+    statusText = `剩余 ${activeDirCount > 0 ? activeDirCount + ' 个目录，' : ''}${activeFileCount} 个文件`
+  } else {
+    statusText = `${totalDirCount > 0 ? totalDirCount + ' 个目录，' : ''}${totalFileCount} 个文件已上传完成`
+  }
+
+  const remainingSize = tasks
+    .filter(t => t.status !== 'completed')
+    .reduce((sum, t) => sum + (t.total - t.loaded), 0)
+
+  let remainingTimeText = ''
+  const speed = props.uploadSpeed
+  if (remainingSize > 0 && speed && speed > 0) {
+    const seconds = remainingSize / speed
+    if (seconds > 3600) {
+      remainingTimeText = `预计还需 ${(seconds / 3600).toFixed(1)} 小时`
+    } else if (seconds > 60) {
+      remainingTimeText = `预计还需 ${Math.ceil(seconds / 60)} 分钟`
+    } else {
+      remainingTimeText = `预计还需 ${Math.ceil(seconds)} 秒`
+    }
+  }
+
+  return {
+    totalProgress,
+    remainingSize,
+    remainingTimeText,
+    statusText
+  }
+})
+
+function showDetails() {
+  emit('show-details')
 }
 
-function emitCancelUpload(taskId: string) {
-  emit('cancel-upload', taskId)
-}
-
-function onClearGroup(path: string, ev: Event) {
+function onClearAll(ev: Event) {
   ev.stopPropagation()
   ev.preventDefault()
-  emit('clear-group-tasks', path)
+  emit('clear-all-tasks')
 }
 </script>
-

@@ -12,7 +12,7 @@ function isVideoFile(file: Pick<PreviewFile, 'name' | 'is_video'>) {
   return isVideoFileName(file.name)
 }
 
-export type LansendActiveTab = 'directory' | 'preview' | 'empty' | 'chat'
+export type LansendActiveTab = 'directory' | 'preview' | 'empty' | 'chat' | 'upload-details'
 
 export function useLansendPreview() {
   const previewFile = ref<PreviewFile | null>(null)

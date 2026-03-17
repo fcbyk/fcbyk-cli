@@ -33,7 +33,8 @@
         @drop="handleDrop"
         @files-selected="handleFiles"
         @cancel-upload="handleCancelUpload"
-        @clear-group-tasks="handleClearGroupTasks"
+        @clear-all-tasks="clearAllTasks"
+        @show-details="handleShowDetails"
         @close-complete-info="closeCompleteInfo"
         @update:password="password = $event; passwordError = ''"
         @verify-password="handleVerifyPassword"
@@ -58,6 +59,16 @@
           @click="activeTab = 'chat'"
         >
           聊天
+        </div>
+
+        <div
+          class="px-5 py-3 cursor-pointer text-[#606266] text-sm border-b-2 transition-all duration-300 select-none relative flex-none hover:text-[#409eff] inline-flex items-center gap-2 max-w-[220px]"
+          v-show="showUploadDetailsTab"
+          :class="activeTab === 'upload-details' ? 'text-[#409eff] border-b-[#409eff] font-medium' : 'border-transparent'"
+          @click="openUploadDetails"
+        >
+          <span class="overflow-hidden text-ellipsis whitespace-nowrap">上传详细</span>
+          <button class="border-none bg-transparent text-[#909399] cursor-pointer p-0 w-[18px] h-[18px] leading-[18px] rounded flex items-center justify-center hover:bg-[#f0f0f0] hover:text-[#333]" @click.stop="closeUploadDetails" aria-label="关闭">×</button>
         </div>
 
         <div
@@ -116,8 +127,9 @@
             @drop="handleDrop"
             @files-selected="handleFiles"
             @cancel-upload="handleCancelUpload"
-            @clear-group-tasks="handleClearGroupTasks"
-            @close-complete-info="closeCompleteInfo"
+            @clear-all-tasks="clearAllTasks"
+        @show-details="handleShowDetails"
+        @close-complete-info="closeCompleteInfo"
             @update:password="password = $event; passwordError = ''"
             @verify-password="handleVerifyPassword"
           />
@@ -125,6 +137,14 @@
 
         <div v-if="chatEnabled" v-show="activeTab === 'chat'" class="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0 overscroll-contain touch-manipulation">
           <ChatTab />
+        </div>
+
+        <div v-show="activeTab === 'upload-details'" class="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0 bg-white">
+          <UploadDetailsTab
+            :upload-tasks="uploadTasks"
+            @cancel-upload="handleCancelUpload"
+            @clear-group="handleClearGroupTasks"
+          />
         </div>
       </div>
 
@@ -207,6 +227,7 @@ import { ref, onMounted, computed, onBeforeUnmount } from 'vue'
 import FileList from './components/FileList.vue'
 import ChatTab from './components/ChatTab.vue'
 import PreviewTab from './components/PreviewTab.vue'
+import UploadDetailsTab from './components/UploadDetailsTab.vue'
 import { useLansendDirectory } from './composables/useLansendDirectory'
 import { useLansendUpload } from './composables/useLansendUpload'
 import { useLansendPreview } from './composables/useLansendPreview'
@@ -249,6 +270,7 @@ onMounted(async () => {
 })
 
 const dragCounter = ref(0)
+const showUploadDetailsTab = ref(false)
 const {
   isDragOver,
   isUploading,
@@ -271,6 +293,7 @@ const {
   uploadTasks,
   cancelTask,
   clearTasksByPath,
+  clearAllTasks,
   closeCompleteInfo
 } = useLansendUpload()
 
@@ -280,6 +303,24 @@ function handleCancelUpload(taskId: string) {
 
 function handleClearGroupTasks(path: string) {
   clearTasksByPath(path)
+}
+
+function handleShowDetails() {
+  showUploadDetailsTab.value = true
+  activeTab.value = 'upload-details'
+}
+
+function closeUploadDetails() {
+  showUploadDetailsTab.value = false
+  if (activeTab.value === 'upload-details') {
+    const mobile = window.matchMedia('(max-width: 768px)').matches
+    activeTab.value = mobile ? 'directory' : 'empty'
+  }
+}
+
+function openUploadDetails() {
+  showUploadDetailsTab.value = true
+  activeTab.value = 'upload-details'
 }
 
 const {
