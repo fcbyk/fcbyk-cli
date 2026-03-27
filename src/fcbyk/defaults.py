@@ -14,7 +14,6 @@ DEFAULT_CONFIG = {
         "rich": False,
     },
     "aliases": {
-        "ls": ["lansend"],
-        "run": ["scripts", "run"],
-    }
+        "ls": ["lansend"]
+   } 
 }

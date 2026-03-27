@@ -12,7 +12,7 @@ def config() -> None:
     config_path = storage.get_path(defaults.CONFIG_FILE)
     data_dir = os.path.dirname(config_path)
     log_dir = os.path.join(data_dir, "log")
-    scripts_path = storage.get_path("fscripts.json")
+    scripts_path = storage.get_path("scripts.byk.json")
 
     click.echo("数据目录: {}".format(data_dir))
     click.echo("日志目录: {}".format(log_dir))

@@ -87,7 +87,7 @@ def print_aliases(show_empty=False, leading_newline=True):
 def print_commands(show_empty=False, leading_newline=True, merge_local=False):
     """打印已保存的命令脚本列表"""
     try:
-        from fcbyk.commands.scripts.cli import load_commands
+        from fcbyk.commands.run.cli import load_commands
         commands = load_commands(merge_local=merge_local)
         if commands:
             if leading_newline:
