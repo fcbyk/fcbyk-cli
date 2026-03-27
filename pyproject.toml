@@ -19,7 +19,8 @@ version_files = [
 ]
 
 [tool.commitizen.customize]
-commit_parser = '^(?P<emoji>✨|🐛|♻️|📝|🎨|⚡️|✅|🔧)?\s*(?P<change_type>feat|fix|refactor|docs|perf|test|style|chore)(?:\((?P<scope>[^\)]+)\))?:\s*(?P<message>.+)$'
+# 兼容历史emoji提交（emoji可选存在）
+commit_parser = '^(?:✨|🐛|♻️|📝|🎨|⚡️|✅|🔧\s*)?(?P<change_type>feat|fix|refactor|docs|perf|test|style|chore)(?:\((?P<scope>[^\)]+)\))?:\s*(?P<message>.+)$'
 changelog_pattern = '^(?:(?:✨|🐛|♻️|📝|🎨|⚡️|✅|🔧)\s*)?(feat|fix|refactor|docs|perf|test|style|chore)'
 change_type_order = [
     "feat",
@@ -33,40 +34,15 @@ change_type_order = [
 ]
 
 message_template = """
-{% if change_type == 'feat' %}✨ feat{% elif change_type == 'fix' %}🐛 fix{% elif change_type == 'refactor' %}♻️ refactor{% elif change_type == 'docs' %}📝 docs{% elif change_type == 'style' %}🎨 style{% elif change_type == 'perf' %}⚡️ perf{% elif change_type == 'test' %}✅ test{% elif change_type == 'chore' %}🔧 chore{% else %}{{ change_type }}{% endif %}{% if scope %}({{ scope }}){% endif %}: {{ message }}
+{{ change_type }}{% if scope %}({{ scope }}){% endif %}: {{ message }}
 """
 
-[[tool.commitizen.customize.questions]]
-type = "list"
-name = "change_type"
-message = "选择本次提交的类型:"
-choices = [
-    { value = "feat", name = "✨ feat: 新功能" },
-    { value = "fix", name = "🐛 fix: Bug 修复" },
-    { value = "refactor", name = "♻️  refactor: 代码重构" },
-    { value = "docs", name = "📝 docs: 文档修改" },
-    { value = "style", name = "🎨 style: 代码风格/样式" },
-    { value = "perf", name = "⚡️ perf: 性能优化" },
-    { value = "test", name = "✅ test: 测试相关" },
-    { value = "chore", name = "🔧 chore: 杂项/构建/脚本" }
-]
-
-[[tool.commitizen.customize.questions]]
-type = "input"
-name = "scope"
-message = "本次提交影响的范围(可留空):"
-
-[[tool.commitizen.customize.questions]]
-type = "input"
-name = "message"
-message = "简要描述本次修改:"
-
 [tool.commitizen.customize.change_type_map]
-feat = "✨ Features"
-fix = "🐛 Bug Fixes"
-refactor = "♻️ Refactor"
-docs = "📝 Documentation"
-style = "🎨 Styles"
-perf = "⚡️ Performance"
-test = "✅ Tests"
-chore = "🔧 Chores"
+feat = "Features"
+fix = "Bug Fixes"
+refactor = "Refactor"
+docs = "Documentation"
+style = "Styles"
+perf = "Performance"
+test = "Tests"
+chore = "Chores"

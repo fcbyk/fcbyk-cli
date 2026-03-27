@@ -42,10 +42,3 @@ pip install fcbyk-cli
 ```bash
 fcbyk
 ```
-
-## 运行环境说明
-
-目前 **`fcbyk-cli`** 仅在 **Windows** 环境下进行过完整测试。
-
-在 **Linux** 和 **macOS** 上可能可以运行，但暂未经过系统性验证，
-如遇到问题，欢迎反馈。
