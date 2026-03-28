@@ -1,13 +1,5 @@
 <template>
-  <main class="w-full max-w-[1200px] p-8 bg-[#1e293b]/85 rounded-[18px] border border-white/6 shadow-(--shadow) backdrop-blur-md min-[881px]:h-auto max-[880px]:h-full max-[880px]:w-full max-[880px]:overflow-y-auto max-[880px]:rounded-none">
-    <!-- 标题 -->
-    <div class="text-center mb-8">
-      <h1 class="text-4xl font-extrabold text-(--text) mb-2 tracking-[1px]">Pick 抽奖</h1>
-      <p class="text-(--muted) text-sm">随机抽奖 · 公平选择</p>
-    </div>
-
-    <!-- 功能卡片 -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+  <main class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-[1200px] p-8 mx-auto min-[881px]:h-auto max-[880px]:h-full max-[880px]:w-full max-[880px]:overflow-y-auto">
       <!-- 普通抽奖 -->
       <div 
         class="group relative rounded-[18px] p-6 bg-linear-to-br from-(--primary)/15 to-(--accent)/15 border border-white/8 hover:border-(--primary)/30 transition-all duration-300 cursor-pointer overflow-hidden"
@@ -106,7 +98,7 @@
             ? 'bg-linear-to-br from-(--primary)/10 to-transparent border-white/8 hover:border-(--primary)/30 cursor-pointer'
             : 'bg-white/2 border-white/4 opacity-60 cursor-not-allowed'
         ]"
-        @click="isFilesMode && navigateTo('/admin')"
+        @click="handleAdminClick"
       >
         <!-- 背景装饰 -->
         <div v-if="isFilesMode" class="absolute -top-20 -right-20 w-40 h-40 bg-(--primary)/5 rounded-full blur-3xl group-hover:bg-(--primary)/15 transition-all duration-500"></div>
@@ -153,16 +145,12 @@
           <span class="text-xl">→</span>
         </div>
       </div>
-    </div>
 
-    <!-- 提示信息 -->
-    <div v-if="!isFilesMode" class="mt-8 p-4 rounded-xl bg-white/4 border border-white/6 text-center">
-      <p class="text-(--muted) text-sm">
-        💡 提示：文件抽奖和管理后台功能需要在启动时添加 
-        <code class="px-2 py-1 rounded bg-white/10 text-(--text)">-f</code> 
-        参数开启文件模式
-      </p>
-    </div>
+    <!-- 登录弹窗 -->
+    <LoginModal 
+      v-model="showLoginModal" 
+      @login-success="handleLoginSuccess"
+    />
   </main>
 </template>
 
@@ -170,10 +158,12 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { fetchInfo } from './api'
+import LoginModal from './Login.vue'
 
 const router = useRouter()
 const isFilesMode = ref(false)
 const loading = ref(true)
+const showLoginModal = ref(false)
 
 // 获取启动信息
 async function loadInfo() {
@@ -191,6 +181,23 @@ async function loadInfo() {
 // 导航到指定页面
 function navigateTo(path: string) {
   router.push(path)
+}
+
+// 处理管理后台点击
+function handleAdminClick() {
+  if (!isFilesMode.value) return
+  
+  // 检查是否已登录
+  if (sessionStorage.getItem('admin_authed') === '1') {
+    router.push('/admin')
+  } else {
+    showLoginModal.value = true
+  }
+}
+
+// 处理登录成功
+function handleLoginSuccess() {
+  router.push('/admin')
 }
 
 // 初始化

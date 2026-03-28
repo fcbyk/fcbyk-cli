@@ -1,28 +1,8 @@
-/**
- * Pick 页面路由配置
- * 
- * 开发环境：访问路径是 /pick/，所以 base 是 /pick/
- * 生产环境：后端挂载在根目录，base 是 /
- * 
- * 路由：
- * - /  -> 主页（Home）
- * - /  -> 普通抽奖（ItemPick）（已废弃，直接访问首页）
- * - /f -> 文件抽奖（FilePick）
- * - /admin -> 管理后台（Admin）
- * - /admin/login -> 管理后台登录（AdminLogin）
- * 
- * 注意：使用 history 模式需要后端支持：
- * - 后端需要配置 / 和 /f 都返回同一个 HTML 文件（index.html）
- * - 或者后端配置将所有路径都重定向到 index.html，让前端路由处理
- */
-
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from './Home.vue'
 import ItemPick from './ItemPick.vue'
 import FilePick from './FilePick.vue'
 import Admin from './Admin.vue'
-import AdminLogin from './Login.vue'
-import { fetchInfo } from './api'
 
 // 动态获取 base 路径
 // 开发环境：路径包含 /pick/，base 是 /pick/
@@ -57,11 +37,6 @@ const router = createRouter({
       path: '/admin',
       name: 'admin',
       component: Admin
-    },
-    {
-      path: '/admin/login',
-      name: 'admin-login',
-      component: AdminLogin
     }
   ]
 })
@@ -72,11 +47,8 @@ router.beforeEach(async (to, _from, next) => {
   
   // 管理后台登录检查
   if (normalizedPath === '/admin' && sessionStorage.getItem('admin_authed') !== '1') {
-    next('/admin/login')
-    return
-  }
-  if (normalizedPath === '/admin/login' && sessionStorage.getItem('admin_authed') === '1') {
-    next('/admin')
+    // 未登录时跳转到主页，由主页弹窗提示登录
+    next('/')
     return
   }
   

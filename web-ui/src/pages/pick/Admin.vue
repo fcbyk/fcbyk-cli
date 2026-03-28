@@ -202,7 +202,7 @@ function handleLogout() {
   sessionStorage.removeItem('admin_authed')
   sessionStorage.removeItem('admin_pw')
   _stopPolling()
-  router.push('/admin/login')
+  router.push('/')
 }
 
 // 页面卸载时停止轮询，避免后台持续请求
