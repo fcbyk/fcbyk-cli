@@ -1,23 +1,3 @@
-"""
-pick 业务逻辑层
-
-负责抽奖核心逻辑：文件列表、随机选择、兑换码生成、抽奖动画等。
-
-类:
-- PickService: 抽奖服务核心类
-  - reset_state(): 重置所有抽奖状态
-  - list_files(files_mode_root) -> List[Dict]: 列出文件模式下可供抽取的文件
-  - pick_file(candidates) -> Dict: 从候选文件列表中随机选择一个
-  - pick_random_item(items) -> str: 从列表中随机选择一个元素
-  - generate_redeem_codes(count, length) -> Iterable[str]: 生成若干个随机兑换码
-  - pick_item(items): 执行抽奖动画（命令行模式）
-
-状态管理:
-- ip_draw_records: IP 抽奖记录（旧逻辑，按 IP 限制）
-- redeem_codes: 兑换码使用状态（新逻辑，按兑换码限制）
-- ip_file_history: IP 文件历史（避免同一 IP 重复抽到同一个文件）
-- code_results: 兑换码抽奖结果（用于页面刷新后恢复）
-"""
 
 import click
 import random
@@ -315,3 +295,124 @@ class PickService:
         output.show_spinning_animation(items, random.randint(3, 10), 0.7, max_length=max_length)
 
         click.echo("\nPick finished!")
+
+    def _load_items_data(self) -> Dict:
+        """加载物品列表数据"""
+        if not self.config_file:
+            return {'items': []}
+        data = storage.load_json(
+            self.config_file,
+            default=self.default_config or {'items': []},
+            create_if_missing=True,
+            strict=False,
+        )
+        if not isinstance(data, dict):
+            return {'items': []}
+        if 'items' not in data or not isinstance(data.get('items'), list):
+            data['items'] = []
+        return data
+
+    def _save_items_data(self, data: Dict) -> None:
+        """保存物品列表数据"""
+        if self.config_file:
+            storage.save_json(self.config_file, data)
+
+    def add_item(self, item: str) -> bool:
+        """添加单个元素到列表
+        
+        Args:
+            item: 要添加的元素
+            
+        Returns:
+            bool: 是否添加成功（False 表示已存在）
+        """
+        if not item or not item.strip():
+            return False
+            
+        item = item.strip()
+        data = self._load_items_data()
+        items = data.get('items', [])
+        
+        if item in items:
+            return False
+            
+        items.append(item)
+        data['items'] = items
+        self._save_items_data(data)
+        return True
+
+    def add_items(self, items: List[str]) -> List[str]:
+        """批量添加元素
+        
+        Args:
+            items: 要添加的元素列表
+            
+        Returns:
+            List[str]: 重复的元素列表
+        """
+        duplicates = []
+        data = self._load_items_data()
+        existing_items = set(data.get('items', []))
+        
+        new_items = []
+        for item in items:
+            if not item or not item.strip():
+                continue
+            item = item.strip()
+            if item in existing_items:
+                duplicates.append(item)
+            else:
+                new_items.append(item)
+                existing_items.add(item)
+        
+        if new_items:
+            data['items'].extend(new_items)
+            self._save_items_data(data)
+        
+        return duplicates
+
+    def remove_item(self, item: str) -> bool:
+        """删除元素
+        
+        Args:
+            item: 要删除的元素
+            
+        Returns:
+            bool: 是否删除成功（False 表示不存在）
+        """
+        if not item or not item.strip():
+            return False
+            
+        item = item.strip()
+        data = self._load_items_data()
+        items = data.get('items', [])
+        
+        if item not in items:
+            return False
+            
+        items.remove(item)
+        data['items'] = items
+        self._save_items_data(data)
+        return True
+
+    def clear_items(self) -> int:
+        """清空列表
+        
+        Returns:
+            int: 清空前的元素数量
+        """
+        data = self._load_items_data()
+        count = len(data.get('items', []))
+        data['items'] = []
+        self._save_items_data(data)
+        return count
+
+    def update_items(self, items: List[str]) -> None:
+        """更新整个列表
+        
+        Args:
+            items: 新的元素列表
+        """
+        data = self._load_items_data()
+        data['items'] = [item.strip() for item in items if item and item.strip()]
+        self._save_items_data(data)

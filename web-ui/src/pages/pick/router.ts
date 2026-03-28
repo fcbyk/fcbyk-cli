@@ -5,8 +5,11 @@
  * 生产环境：后端挂载在根目录，base 是 /
  * 
  * 路由：
- * - /  -> 普通抽奖（ItemPick）
+ * - /  -> 主页（Home）
+ * - /  -> 普通抽奖（ItemPick）（已废弃，直接访问首页）
  * - /f -> 文件抽奖（FilePick）
+ * - /admin -> 管理后台（Admin）
+ * - /admin/login -> 管理后台登录（AdminLogin）
  * 
  * 注意：使用 history 模式需要后端支持：
  * - 后端需要配置 / 和 /f 都返回同一个 HTML 文件（index.html）
@@ -14,6 +17,7 @@
  */
 
 import { createRouter, createWebHistory } from 'vue-router'
+import Home from './Home.vue'
 import ItemPick from './ItemPick.vue'
 import FilePick from './FilePick.vue'
 import Admin from './Admin.vue'
@@ -36,6 +40,11 @@ const router = createRouter({
   routes: [
     {
       path: '/',
+      name: 'home',
+      component: Home
+    },
+    {
+      path: '/item-pick',
       name: 'item-pick',
       component: ItemPick
     },
@@ -57,64 +66,18 @@ const router = createRouter({
   ]
 })
 
-// 缓存启动信息，避免每次路由切换都请求
-let cachedInfo: { files_mode: boolean } | null = null
-let infoPromise: Promise<{ files_mode: boolean }> | null = null
-
-async function getInfo(): Promise<{ files_mode: boolean }> {
-  if (cachedInfo) {
-    return cachedInfo
-  }
-  if (infoPromise) {
-    return infoPromise
-  }
-  infoPromise = fetchInfo()
-  cachedInfo = await infoPromise
-  return cachedInfo
-}
-
-// 路由守卫：根据文件模式进行路由跳转
+// 路由守卫：简化的守卫逻辑，只保留登录检查
 router.beforeEach(async (to, _from, next) => {
-  // 获取当前路径（去除 base 路径）
-  const path = to.path
-  const basePath = getBasePath()
-  // 标准化路径：移除 base 路径前缀，确保以 / 开头
-  let normalizedPath = basePath !== '/' ? path.replace(basePath, '') : path
-  if (!normalizedPath.startsWith('/')) {
-    normalizedPath = '/' + normalizedPath
-  }
+  const normalizedPath = to.path
   
-  try {
-    const info = await getInfo()
-    
-    // 如果是文件模式，访问 / 时自动跳转到 /f
-    if (normalizedPath === '/' && info.files_mode) {
-      next('/f')
-      return
-    }
-    
-    // 如果不是文件模式，访问 /f 或 /admin 时跳转到 /
-    if ((normalizedPath === '/f' || normalizedPath.startsWith('/admin')) && !info.files_mode) {
-      next('/')
-      return
-    }
-
-    // 管理后台登录检查
-    if (normalizedPath === '/admin' && sessionStorage.getItem('admin_authed') !== '1') {
-      next('/admin/login')
-      return
-    }
-    if (normalizedPath === '/admin/login' && sessionStorage.getItem('admin_authed') === '1') {
-      next('/admin')
-      return
-    }
-  } catch (error) {
-    // 如果获取启动信息失败，对于 /f 和 /admin 路径，默认跳转到 /
-    // 因为如果后端不支持文件模式，这些路径不应该存在
-    if (normalizedPath === '/f' || normalizedPath.startsWith('/admin')) {
-      next('/')
-      return
-    }
+  // 管理后台登录检查
+  if (normalizedPath === '/admin' && sessionStorage.getItem('admin_authed') !== '1') {
+    next('/admin/login')
+    return
+  }
+  if (normalizedPath === '/admin/login' && sessionStorage.getItem('admin_authed') === '1') {
+    next('/admin')
+    return
   }
   
   next()

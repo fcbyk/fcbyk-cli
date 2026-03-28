@@ -1,8 +1,18 @@
 <template>
   <main class="w-full max-w-[960px] p-7 bg-[#1e293b]/85 rounded-[18px] border border-white/6 shadow-(--shadow) backdrop-blur-md min-[881px]:h-auto max-[880px]:h-full max-[880px]:w-full max-[880px]:overflow-y-auto max-[880px]:rounded-none">
-    <p class="mb-4 text-(--muted) text-sm">
-      列表数据直接来自命令行的配置文件，使用 <code>fcbyk pick --add</code> 即可更新。
-    </p>
+    <!-- 顶部工具栏 -->
+    <div class="flex justify-between items-center mb-4">
+      <p class="text-(--muted) text-sm m-0">
+        列表数据来自本地配置文件，支持批量添加和管理。
+      </p>
+      <button 
+        class="rounded-xl px-4 py-2.5 text-[14px] font-semibold cursor-pointer transition-all duration-150 text-white bg-linear-to-br from-(--primary) to-(--accent) shadow-[0_8px_20px_rgba(34,211,238,0.25)] active:translate-y-px active:shadow-none hover:shadow-[0_10px_25px_rgba(34,211,238,0.35)] flex items-center gap-2"
+        @click="showAddModal = true"
+      >
+        <span class="text-lg">➕</span>
+        <span>添加元素</span>
+      </button>
+    </div>
 
     <!-- 工具栏 -->
     <div class="flex flex-wrap gap-3 mb-[18px]">
@@ -43,7 +53,15 @@
     <div class="grid grid-cols-1 min-[881px]:grid-cols-[1fr_320px] gap-4">
       <!-- 候选列表 -->
       <section class="bg-white/4 border border-white/5 rounded-[14px] p-4">
-        <h3 class="m-0 mb-2.5 text-[17px] text-(--text)">候选列表</h3>
+        <div class="flex justify-between items-center mb-2.5">
+          <h3 class="m-0 text-[17px] text-(--text)">候选列表</h3>
+          <button 
+            class="text-xs px-3 py-1.5 rounded-lg bg-white/10 border border-white/10 text-(--text) hover:bg-white/15 cursor-pointer transition-all"
+            @click="loadItems"
+          >
+            🔄 刷新
+          </button>
+        </div>
         <div v-if="hasItems" class="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2.5 pt-2.5 max-h-[50dvh] overflow-y-auto pr-1 scrollbar-hide">
           <div v-for="(item, idx) in items" :key="idx" 
             :class="['flex items-center gap-2.5 p-3 rounded-xl bg-white/5 border border-white/6 text-(--text) transition-all duration-150 wrap-break-word', 
@@ -55,7 +73,7 @@
           </div>
         </div>
         <p v-else class="text-(--muted) text-[13px]">
-          列表为空，请在终端执行 <code>fcbyk pick --add 项目</code> 添加。
+          列表为空，请点击右上角「添加元素」或批量导入。
         </p>
       </section>
 
@@ -77,13 +95,71 @@
         </div>
       </section>
     </div>
+
+    <!-- 添加元素弹窗 -->
+    <div v-if="showAddModal" class="fixed inset-0 z-1000 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" @click="showAddModal = false">
+      <div class="w-full max-w-[500px] bg-[#1e293b] rounded-[18px] border border-white/10 shadow-2xl overflow-hidden" @click.stop>
+        <!-- 标题 -->
+        <div class="flex justify-between items-center p-5 border-b border-white/10">
+          <h3 class="text-xl font-bold text-(--text) m-0">添加抽奖元素</h3>
+          <button class="w-8 h-8 rounded-lg bg-white/5 border border-white/10 text-(--muted) hover:text-(--text) hover:bg-white/10 cursor-pointer flex items-center justify-center transition-all" @click="showAddModal = false">
+            ✕
+          </button>
+        </div>
+
+        <!-- 内容 -->
+        <div class="p-5">
+          <label class="block text-sm text-(--muted) mb-2">
+            输入元素（支持多个元素，使用以下方式分隔）：
+          </label>
+          <ul class="text-xs text-(--muted) mb-3 space-y-1">
+            <li>• 回车换行</li>
+            <li>• 逗号 ,</li>
+            <li>• 分号 ;</li>
+          </ul>
+          <textarea 
+            v-model="addItemsInput"
+            placeholder="例如：&#10;张三&#10;李四&#10;王五"
+            rows="8"
+            class="w-full p-4 rounded-xl border border-slate-400/60 bg-slate-900/80 text-(--text) text-[15px] outline-none focus:border-(--primary) focus:shadow-[0_0_0_1px_rgba(34,211,238,0.4)] resize-none scrollbar-hide"
+            @keydown.meta.enter="handleBatchAdd"
+          ></textarea>
+          
+          <!-- 提示信息 -->
+          <div v-if="addMessage" :class="['mt-3 p-3 rounded-xl text-sm', 
+            addMessageType === 'success' ? 'bg-(--success)/10 text-(--success) border border-(--success)/30' : 
+            addMessageType === 'error' ? 'bg-(--danger)/10 text-(--danger) border border-(--danger)/30' : 
+            'bg-white/5 text-(--muted) border border-white/10']">
+            {{ addMessage }}
+          </div>
+        </div>
+
+        <!-- 底部按钮 -->
+        <div class="flex justify-end gap-3 p-5 border-t border-white/10 bg-white/2">
+          <button 
+            class="rounded-xl px-5 py-2.5 text-[15px] font-semibold cursor-pointer transition-all duration-150 text-(--text) bg-white/10 border border-white/10 hover:bg-white/15"
+            @click="showAddModal = false"
+          >
+            取消
+          </button>
+          <button 
+            class="rounded-xl px-5 py-2.5 text-[15px] font-semibold cursor-pointer transition-all duration-150 text-white bg-linear-to-br from-(--primary) to-(--accent) shadow-[0_8px_20px_rgba(34,211,238,0.25)] active:translate-y-px disabled:opacity-60 disabled:cursor-not-allowed"
+            :disabled="!addItemsInput.trim() || isAdding"
+            @click="handleBatchAdd"
+          >
+            {{ isAdding ? '添加中...' : '确认添加' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </main>
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { usePick } from './composables/usePick'
 import { useAnimation } from './composables/useAnimation'
+import { addItems as apiAddItems } from './api'
 
 const {
   items,
@@ -112,10 +188,58 @@ const {
   spinToTarget
 } = useAnimation()
 
+// 添加元素相关状态
+const showAddModal = ref(false)
+const addItemsInput = ref('')
+const addMessage = ref('')
+const addMessageType = ref<'success' | 'error' | ''>('')
+const isAdding = ref(false)
+
 // 处理速度变化
 function handleSpeedChange(e: Event) {
   const target = e.target as HTMLInputElement
   updateSpeed(parseFloat(target.value))
+}
+
+// 批量添加元素
+async function handleBatchAdd() {
+  if (!addItemsInput.value.trim()) {
+    return
+  }
+
+  isAdding.value = true
+  addMessage.value = ''
+  addMessageType.value = ''
+
+  try {
+    const result = await apiAddItems(addItemsInput.value)
+    
+    if (result.addedCount > 0) {
+      addMessage.value = `成功添加 ${result.addedCount} 个元素`
+      addMessageType.value = 'success'
+      
+      // 清空输入框
+      addItemsInput.value = ''
+      
+      // 刷新列表
+      await loadItems()
+      
+      // 成功后自动关闭弹窗（延迟一点让用户看到提示）
+      setTimeout(() => {
+        showAddModal.value = false
+      }, 1000)
+    }
+    
+    if (result.duplicates.length > 0) {
+      addMessage.value = `添加了 ${result.addedCount} 个元素，${result.duplicates.length} 个重复项已跳过`
+      addMessageType.value = result.addedCount > 0 ? 'success' : ''
+    }
+  } catch (error) {
+    addMessage.value = (error as Error).message || '添加失败'
+    addMessageType.value = 'error'
+  } finally {
+    isAdding.value = false
+  }
 }
 
 // 开始抽奖

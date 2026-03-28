@@ -1,44 +1,11 @@
-"""
-pick controller 层
-
-负责 Flask 路由注册、请求解析、调用 service 并返回响应。
-
-常量:
-- config_file: 配置文件路径
-- SERVER_SESSION_ID: 服务器会话 ID（用于区分不同服务器实例）
-- default_config: 默认配置
-
-全局变量:
-- app: Flask 应用实例（SPA 模式，支持 /admin 和 /f 路由）
-- files_mode_root: 文件模式根目录（None 表示列表抽奖模式）
-- ADMIN_PASSWORD: 管理员密码
-- service: PickService 实例
-
-函数:
-- _get_client_ip() -> str: 获取客户端 IP（优先 X-Forwarded-For）
-- start_web_server(port, no_browser, files_root, admin_password): 启动抽奖 Web 服务器
-
-路由:
-- /api/info: 获取启动信息（是否文件模式）
-- /api/items: 获取当前配置中的抽奖项
-- /api/files: 列出文件列表并返回当前抽奖状态
-- /api/files/pick: 从文件列表随机抽取一个文件（支持兑换码和 IP 两种模式）
-- /api/files/result/<code>: 查询兑换码的抽奖结果（用于页面刷新后恢复）
-- /api/files/download/<path:filename>: 下载指定文件（带路径安全检查）
-- /api/pick: 从配置列表中随机抽取一项
-- /api/admin/login: 管理员登录验证
-- /api/admin/codes: 获取兑换码列表（需要管理员权限）
-- /api/admin/codes/add: 新增兑换码（需要管理员权限）
-"""
-
 import os
 import click
-import socket
 import webbrowser
 import uuid
 from typing import Optional
 from flask import jsonify, request, send_file, url_for, Response
 from fcbyk.utils import storage
+from fcbyk.utils.network import get_private_networks
 from datetime import datetime
 from .service import PickService
 from ...web.app import create_spa
@@ -92,6 +59,97 @@ def api_items():
     if not isinstance(items, list):
         items = []
     return jsonify({'items': items})
+
+
+@app.route('/api/items/add', methods=['POST'])
+def api_items_add():
+    """添加单个元素"""
+    data = request.get_json(silent=True) or {}
+    item = str(data.get('item', '')).strip()
+    
+    if not item:
+        return jsonify({'error': '元素不能为空'}), 400
+    
+    # 创建临时 service 实例进行数据操作
+    temp_service = PickService(config_file, default_config)
+    success = temp_service.add_item(item)
+    
+    if not success:
+        return jsonify({'error': '元素已存在'}), 400
+    
+    return jsonify({'success': True, 'item': item})
+
+
+@app.route('/api/items/batch', methods=['POST'])
+def api_items_batch():
+    """批量添加元素（支持回车分隔）"""
+    data = request.get_json(silent=True) or {}
+    items_str = str(data.get('items', ''))
+    
+    if not items_str:
+        return jsonify({'error': '元素列表不能为空'}), 400
+    
+    # 支持多种分隔符：回车、换行、逗号、分号
+    import re
+    items = [item.strip() for item in re.split(r'[\n\r,;]+', items_str) if item.strip()]
+    
+    if not items:
+        return jsonify({'error': '没有有效的元素'}), 400
+    
+    # 创建临时 service 实例进行数据操作
+    temp_service = PickService(config_file, default_config)
+    duplicates = temp_service.add_items(items)
+    
+    return jsonify({
+        'success': True,
+        'added_count': len(items) - len(duplicates),
+        'duplicates': duplicates
+    })
+
+
+@app.route('/api/items/remove', methods=['DELETE'])
+def api_items_remove():
+    """删除单个元素"""
+    data = request.get_json(silent=True) or {}
+    item = str(data.get('item', '')).strip()
+    
+    if not item:
+        return jsonify({'error': '元素不能为空'}), 400
+    
+    # 创建临时 service 实例进行数据操作
+    temp_service = PickService(config_file, default_config)
+    success = temp_service.remove_item(item)
+    
+    if not success:
+        return jsonify({'error': '元素不存在'}), 400
+    
+    return jsonify({'success': True, 'item': item})
+
+
+@app.route('/api/items/clear', methods=['DELETE'])
+def api_items_clear():
+    """清空列表"""
+    # 创建临时 service 实例进行数据操作
+    temp_service = PickService(config_file, default_config)
+    count = temp_service.clear_items()
+    
+    return jsonify({'success': True, 'cleared_count': count})
+
+
+@app.route('/api/items/update', methods=['PUT'])
+def api_items_update():
+    """更新整个列表"""
+    data = request.get_json(silent=True) or {}
+    items = data.get('items', [])
+    
+    if not isinstance(items, list):
+        return jsonify({'error': 'items 必须是列表'}), 400
+    
+    # 创建临时 service 实例进行数据操作
+    temp_service = PickService(config_file, default_config)
+    temp_service.update_items(items)
+    
+    return jsonify({'success': True, 'count': len(items)})
 
 
 def _get_client_ip():
@@ -558,8 +616,9 @@ def start_web_server(
             except Exception:
                 pass
 
-    hostname = socket.gethostname()
-    local_ip = socket.gethostbyname(hostname)
+    # 获取本机 IP 地址（使用 network 工具）
+    private_networks = get_private_networks()
+    local_ip = private_networks[0]["ips"][0] if private_networks else "127.0.0.1"
     url_local = f"http://127.0.0.1:{port}"
     url_network = f"http://{local_ip}:{port}"
     click.echo()

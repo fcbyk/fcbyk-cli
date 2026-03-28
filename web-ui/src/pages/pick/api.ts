@@ -41,6 +41,99 @@ export async function fetchItems(): Promise<string[]> {
   }
 }
 
+/** 添加单个元素 */
+export async function addItem(item: string): Promise<void> {
+  try {
+    const response = await fetch('/api/items/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item })
+    })
+    const data = await response.json()
+    if (!response.ok) {
+      throw new Error((data as any).error || '添加失败')
+    }
+  } catch (error) {
+    console.error('Failed to add item:', error)
+    throw new Error((error as Error).message || '添加失败')
+  }
+}
+
+/** 批量添加元素（支持回车分隔的字符串） */
+export async function addItems(itemsStr: string): Promise<{ addedCount: number, duplicates: string[] }> {
+  try {
+    const response = await fetch('/api/items/batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: itemsStr })
+    })
+    const data = await response.json()
+    if (!response.ok) {
+      throw new Error((data as any).error || '批量添加失败')
+    }
+    return {
+      addedCount: data.added_count,
+      duplicates: data.duplicates || []
+    }
+  } catch (error) {
+    console.error('Failed to add items:', error)
+    throw new Error((error as Error).message || '批量添加失败')
+  }
+}
+
+/** 删除单个元素 */
+export async function removeItem(item: string): Promise<void> {
+  try {
+    const response = await fetch('/api/items/remove', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item })
+    })
+    const data = await response.json()
+    if (!response.ok) {
+      throw new Error((data as any).error || '删除失败')
+    }
+  } catch (error) {
+    console.error('Failed to remove item:', error)
+    throw new Error((error as Error).message || '删除失败')
+  }
+}
+
+/** 清空列表 */
+export async function clearItems(): Promise<number> {
+  try {
+    const response = await fetch('/api/items/clear', {
+      method: 'DELETE'
+    })
+    const data = await response.json()
+    if (!response.ok) {
+      throw new Error((data as any).error || '清空失败')
+    }
+    return data.cleared_count
+  } catch (error) {
+    console.error('Failed to clear items:', error)
+    throw new Error((error as Error).message || '清空失败')
+  }
+}
+
+/** 更新整个列表 */
+export async function updateItems(items: string[]): Promise<void> {
+  try {
+    const response = await fetch('/api/items/update', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items })
+    })
+    const data = await response.json()
+    if (!response.ok) {
+      throw new Error((data as any).error || '更新失败')
+    }
+  } catch (error) {
+    console.error('Failed to update items:', error)
+    throw new Error((error as Error).message || '更新失败')
+  }
+}
+
 /** 获取文件列表 */
 export async function fetchFiles(): Promise<FileListApiResponse> {
   try {
