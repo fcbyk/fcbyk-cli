@@ -176,7 +176,7 @@
     </div>
 
     <Transition name="slide-fade">
-      <div v-if="isSpeedTestVisible" class="select-noneabsolute top-[55px] md:top-[60px] right-2.5 md:right-5 w-[calc(100%-20px)] md:w-[280px] max-w-[300px] md:max-w-none bg-white rounded-xl shadow-2xl border border-[#eee] z-100 flex flex-col overflow-hidden">
+      <div v-if="isSpeedTestVisible" class="select-none absolute top-[55px] md:top-[60px] right-2.5 md:right-5 w-[calc(100%-20px)] md:w-[280px] max-w-[300px] md:max-w-none bg-white rounded-xl shadow-2xl border border-[#eee] z-100 flex flex-col overflow-hidden">
         <div class="px-4 py-3 border-b border-[#eee] flex justify-between items-center bg-[#f8f9fa]">
           <h3 class="m-0 text-[15px] font-semibold text-[#333]">局域网测速</h3>
           <button class="border-none bg-none text-xl text-[#999] cursor-pointer leading-none p-1 hover:text-[#666]" @click="closeSpeedTest">×</button>
