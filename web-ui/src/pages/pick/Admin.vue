@@ -136,14 +136,102 @@
       </section>
 
       <!-- 自由抽奖管理面板 -->
-      <section v-else-if="activeTab === 'free'" class="w-full h-full bg-[#1e293b]/90 p-6 box-border flex flex-col rounded-[18px] border border-white/5 shadow-(--shadow) backdrop-blur-md max-[900px]:rounded-none max-[900px]:border-none max-[900px]:p-4 max-[900px]:flex-1 max-[900px]:h-full">
-        <h1 class="m-0 mb-2 text-2xl max-[900px]:text-xl">自由抽奖</h1>
-        <p class="text-sm text-(--muted) mb-3.5 max-[900px]:text-[13px] max-[900px]:mb-3">配置和管理自由抽奖活动</p>
-        
-        <div class="flex-1 overflow-y-auto py-10 px-5 flex justify-center items-center scrollbar-hide max-[900px]:py-5 max-[900px]:px-3">
-          <div class="text-center text-(--muted)">
-            <span class="text-5xl block mb-4">🏗️</span>
-            <p>自由抽奖管理功能正在开发中...</p>
+      <section v-else-if="activeTab === 'free'" class="w-full h-full bg-[#1e293b]/90 p-6 box-border flex flex-col rounded-[18px] border border-white/5 shadow-(--shadow) backdrop-blur-md max-[900px]:rounded-none max-[900px]:border-none max-[900px]:p-4 max-[900px]:flex-1 max-[900px]:h-full">        
+        <div class="flex-1 overflow-y-auto pr-1 scrollbar-hide">
+          <!-- 统计条 -->
+          <div class="grid grid-cols-1 gap-3 mb-4 max-[900px]:gap-2">
+            <div class="bg-white/5 border border-white/8 rounded-[14px] p-3 text-center max-[900px]:py-2 max-[900px]:px-1 max-[900px]:rounded-[10px]">
+              <div class="text-xs text-(--muted)">元素总数</div>
+              <div class="text-[22px] font-extrabold mt-1 max-[900px]:text-lg text-(--primary)">{{ freeStats.total }}</div>
+            </div>
+          </div>
+
+          <!-- 新增元素 + 批量操作 -->
+          <div class="mb-4 p-4 bg-white/4 border border-white/8 rounded-[14px] max-[900px]:p-3">
+            <div class="flex gap-2 items-center flex-nowrap max-[900px]:flex-wrap max-[900px]:gap-2">
+              <input
+                v-model="freeNewItem"
+                type="text"
+                placeholder="请输入元素"
+                maxlength="100"
+                class="flex-1 min-w-[120px] m-0 p-3 rounded-xl border border-slate-400/60 bg-slate-900/80 text-(--text) text-[15px] outline-none focus:border-(--primary) focus:shadow-[0_0_0_1px_rgba(34,211,238,0.4)] max-[900px]:min-w-full"
+                @keypress.enter="handleFreeAdd"
+              />
+              <div class="flex gap-2 items-center flex-nowrap max-[900px]:w-full max-[900px]:gap-1.5">
+                <button class="whitespace-nowrap rounded-xl px-4 py-3 text-[15px] font-semibold cursor-pointer transition-all duration-120 active:translate-y-px disabled:opacity-60 disabled:cursor-not-allowed bg-linear-to-br from-(--primary) to-(--accent) shadow-[0_12px_30px_rgba(34,211,238,0.18)] text-[#0b1224] max-[900px]:flex-1 max-[900px]:py-2 max-[900px]:px-2 max-[900px]:text-xs" @click="handleFreeAdd">添加</button>
+                <button class="whitespace-nowrap rounded-xl px-4 py-3 text-[15px] font-semibold cursor-pointer transition-all duration-120 active:translate-y-px disabled:opacity-60 disabled:cursor-not-allowed bg-white/10 border border-white/10 text-(--text) hover:bg-white/15 max-[900px]:flex-1 max-[900px]:py-2 max-[900px]:px-2 max-[900px]:text-xs" @click="showBatchInput = !showBatchInput">{{ showBatchInput ? '隐藏' : '批量添加' }}</button>
+                <button class="whitespace-nowrap rounded-xl px-4 py-3 text-[15px] font-semibold cursor-pointer transition-all duration-120 active:translate-y-px disabled:opacity-60 disabled:cursor-not-allowed bg-(--danger)/20 border border-(--danger)/30 text-(--danger) hover:bg-(--danger)/30 max-[900px]:flex-1 max-[900px]:py-2 max-[900px]:px-2 max-[900px]:text-xs" @click="handleFreeClear">清空</button>
+              </div>
+            </div>
+
+            <div class="mt-2 flex gap-3 flex-wrap items-center">
+              <div :class="['text-[13px] min-h-[18px]', { 'text-(--success)': freeAddMsgType === 'success', 'text-(--danger)': freeAddMsgType === 'error' }]">{{ freeAddMsg }}</div>
+              <div :class="['text-xs min-h-[16px] text-(--muted)', { 'text-(--success)': freeClearMsgType === 'success', 'text-(--danger)': freeClearMsgType === 'error' }]">{{ freeClearMsg }}</div>
+            </div>
+
+            <!-- 批量添加输入框 -->
+            <div v-if="showBatchInput" class="mt-3">
+              <textarea
+                v-model="freeBatchInput"
+                placeholder="每行一个元素，或使用逗号、分号分隔"
+                rows="4"
+                class="w-full m-0 p-3 rounded-xl border border-slate-400/60 bg-slate-900/80 text-(--text) text-[15px] outline-none focus:border-(--primary) focus:shadow-[0_0_0_1px_rgba(34,211,238,0.4)] resize-none"
+              ></textarea>
+              <div class="mt-2 flex justify-end">
+                <button class="rounded-xl px-4 py-2 text-[14px] font-semibold cursor-pointer transition-all duration-120 active:translate-y-px disabled:opacity-60 disabled:cursor-not-allowed bg-linear-to-br from-(--primary) to-(--accent) shadow-[0_12px_30px_rgba(34,211,238,0.18)] text-[#0b1224]" @click="handleFreeBatchAdd">确认添加</button>
+              </div>
+              <div :class="['text-xs mt-1 min-h-[16px]', { 'text-(--success)': freeBatchMsgType === 'success', 'text-(--danger)': freeBatchMsgType === 'error' }]">{{ freeBatchMsg }}</div>
+            </div>
+          </div>
+
+          <!-- 列表 -->
+          <div class="mt-2 rounded-[14px] overflow-hidden border border-white/5">
+            <div class="flex items-center gap-3 px-3.5 py-3 border-b border-white/5 last:border-none max-[700px]:flex-wrap max-[700px]:justify-between" v-for="(item, index) in freeItems" :key="item">
+              <!-- 元素内容 -->
+              <div class="flex-1 min-w-0">
+                <template v-if="editingIndex !== index">
+                  <div :class="['text-[15px] sm:text-[17px] break-all', { 'text-(--muted)': editingIndex === index }]">
+                    {{ item }}
+                  </div>
+                </template>
+                <template v-else>
+                  <input
+                    v-model="freeEditingValue"
+                    type="text"
+                    class="w-full m-0 p-2 rounded-lg border border-slate-400/60 bg-slate-900/80 text-(--text) text-[15px] outline-none focus:border-(--primary)"
+                    @keypress.enter="saveFreeEdit"
+                    @keydown.esc="cancelFreeEdit"
+                  />
+                </template>
+              </div>
+
+              <!-- 操作按钮 -->
+              <div class="flex gap-2 whitespace-nowrap max-[700px]:w-full max-[700px]:justify-end">
+                <template v-if="editingIndex !== index">
+                  <button class="rounded-xl px-3.5 py-2 text-[13px] font-semibold cursor-pointer transition-all duration-120 active:translate-y-px disabled:opacity-60 disabled:cursor-not-allowed bg-white/10 border border-white/10 text-(--text) hover:bg-white/15" @click="copyFreeItem(item)">
+                    {{ isFreeItemCopied(item) ? '已复制' : '复制' }}
+                  </button>
+                  <button class="rounded-xl px-3.5 py-2 text-[13px] font-semibold cursor-pointer transition-all duration-120 active:translate-y-px disabled:opacity-60 disabled:cursor-not-allowed bg-white/10 border border-white/10 text-(--text) hover:bg-white/15" @click="startFreeEdit(index, item)">
+                    编辑
+                  </button>
+                  <button class="rounded-xl px-3.5 py-2 text-[13px] font-semibold cursor-pointer transition-all duration-120 active:translate-y-px disabled:opacity-60 disabled:cursor-not-allowed bg-(--danger)/20 border border-(--danger)/30 text-(--danger) hover:bg-(--danger)/30" @click="handleFreeDelete(item)">删除</button>
+                </template>
+                <template v-else>
+                  <button class="rounded-xl px-3.5 py-2 text-[13px] font-semibold cursor-pointer transition-all duration-120 active:translate-y-px disabled:opacity-60 disabled:cursor-not-allowed bg-(--success)/20 border border-(--success)/30 text-(--success) hover:bg-(--success)/30" @click="saveFreeEdit">
+                    保存
+                  </button>
+                  <button class="rounded-xl px-3.5 py-2 text-[13px] font-semibold cursor-pointer transition-all duration-120 active:translate-y-px disabled:opacity-60 disabled:cursor-not-allowed bg-white/10 border border-white/10 text-(--text) hover:bg-white/15" @click="cancelFreeEdit">
+                    取消
+                  </button>
+                </template>
+              </div>
+            </div>
+            
+            <!-- 空列表提示 -->
+            <div v-if="!freeItems.length" class="text-center py-10 text-(--muted)">
+              <span class="text-5xl block mb-4">📝</span>
+              <p>暂无抽奖元素，请添加</p>
+            </div>
           </div>
         </div>
       </section>
@@ -155,10 +243,12 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAdmin } from './composables/useAdmin'
+import { useFreePick } from './composables/useFreePick'
 
 const router = useRouter()
 const activeTab = ref<'codes' | 'free'>('codes')
 const isSidebarOpen = ref(false)
+const showBatchInput = ref(false)
 
 function selectTab(tab: 'codes' | 'free') {
   activeTab.value = tab
@@ -192,9 +282,35 @@ const {
   _stopPolling
 } = useAdmin()
 
+const {
+  items: freeItems,
+  newItem: freeNewItem,
+  addMsg: freeAddMsg,
+  addMsgType: freeAddMsgType,
+  batchInput: freeBatchInput,
+  batchMsg: freeBatchMsg,
+  batchMsgType: freeBatchMsgType,
+  clearMsg: freeClearMsg,
+  clearMsgType: freeClearMsgType,
+  editingIndex,
+  editingValue: freeEditingValue,
+  stats: freeStats,
+  handleAddItem: handleFreeAdd,
+  handleBatchAdd: handleFreeBatchAdd,
+  handleDeleteItem: handleFreeDelete,
+  handleClear: handleFreeClear,
+  startEdit: startFreeEdit,
+  saveEdit: saveFreeEdit,
+  cancelEdit: cancelFreeEdit,
+  copyItem: copyFreeItem,
+  isItemCopied: isFreeItemCopied,
+  init: initFreePick
+} = useFreePick()
+
 // 初始化（自动恢复登录状态）
 onMounted(() => {
   init()
+  initFreePick()
 })
 
 // 退出登录

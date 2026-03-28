@@ -2,15 +2,23 @@
   <main class="w-full max-w-[960px] p-7 bg-[#1e293b]/85 rounded-[18px] border border-white/6 shadow-(--shadow) backdrop-blur-md min-[881px]:h-auto max-[880px]:h-full max-[880px]:w-full max-[880px]:overflow-y-auto max-[880px]:rounded-none">
     <!-- 顶部工具栏 -->
     <div class="flex justify-between items-center mb-4">
-      <p class="text-(--muted) text-sm m-0">
-        列表数据来自本地配置文件，支持批量添加和管理。
-      </p>
+      <div class="flex items-center gap-3">
+        <label class="text-sm text-(--muted)">数据模式：</label>
+        <select 
+          v-model="dataMode"
+          class="px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-(--text) text-sm outline-none focus:border-(--primary) cursor-pointer min-w-[200px]"
+          @change="handleModeChange"
+        >
+          <option value="backend">后端数据（只读，管理员页面管理）</option>
+          <option value="local">本地数据（仅本地，可添加删除）</option>
+          <option value="combined">混合模式（后端 + 本地数据）</option>
+        </select>
+      </div>
       <button 
-        class="rounded-xl px-4 py-2.5 text-[14px] font-semibold cursor-pointer transition-all duration-150 text-white bg-linear-to-br from-(--primary) to-(--accent) shadow-[0_8px_20px_rgba(34,211,238,0.25)] active:translate-y-px active:shadow-none hover:shadow-[0_10px_25px_rgba(34,211,238,0.35)] flex items-center gap-2"
+        class="rounded-xl px-4 py-3 text-[15px] font-semibold cursor-pointer transition-all duration-150 text-(--text) bg-white/12 border border-white/6 shadow-none active:translate-y-px active:shadow-none"
         @click="showAddModal = true"
       >
-        <span class="text-lg">➕</span>
-        <span>添加元素</span>
+        添加元素
       </button>
     </div>
 
@@ -21,7 +29,7 @@
         :disabled="isDrawing" @click="handleStartDraw">
         开始选择
       </button>
-      <button class="rounded-xl px-4 py-3 text-[15px] font-semibold cursor-pointer transition-all duration-150 text-(--text) bg-white/12 border border-white/6 shadow-none active:translate-y-px active:shadow-none" @click="loadItems">刷新列表</button>
+      <button class="rounded-xl px-4 py-3 text-[15px] font-semibold cursor-pointer transition-all duration-150 text-(--text) bg-white/12 border border-white/6 shadow-none active:translate-y-px active:shadow-none" @click="handleRefresh">刷新列表</button>
 
       <div class="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-white/4 border border-white/6 cursor-pointer select-none transition-all hover:bg-white/6 hover:border-white/10" @click="toggleNoRepeatMode">
         <input type="checkbox" :checked="noRepeatMode" class="w-11 h-6 appearance-none bg-white/10 rounded-full relative cursor-pointer transition-colors duration-300 checked:bg-(--primary) before:content-[''] before:absolute before:w-5 before:h-5 before:rounded-full before:bg-white before:top-0.5 before:left-0.5 before:transition-transform before:duration-300 before:shadow-[0_2px_4px_rgba(0,0,0,0.2)] checked:before:translate-x-5" @click.stop @change="toggleNoRepeatMode">
@@ -53,23 +61,23 @@
     <div class="grid grid-cols-1 min-[881px]:grid-cols-[1fr_320px] gap-4">
       <!-- 候选列表 -->
       <section class="bg-white/4 border border-white/5 rounded-[14px] p-4">
-        <div class="flex justify-between items-center mb-2.5">
-          <h3 class="m-0 text-[17px] text-(--text)">候选列表</h3>
-          <button 
-            class="text-xs px-3 py-1.5 rounded-lg bg-white/10 border border-white/10 text-(--text) hover:bg-white/15 cursor-pointer transition-all"
-            @click="loadItems"
-          >
-            🔄 刷新
-          </button>
-        </div>
-        <div v-if="hasItems" class="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2.5 pt-2.5 max-h-[50dvh] overflow-y-auto pr-1 scrollbar-hide">
+        <h3 class="m-0 text-[17px] text-(--text)">候选列表</h3>
+        <div v-if="hasItems" class="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2.5 p-3 max-h-[50dvh] overflow-y-auto scrollbar-hide">
           <div v-for="(item, idx) in items" :key="idx" 
-            :class="['flex items-center gap-2.5 p-3 rounded-xl bg-white/5 border border-white/6 text-(--text) transition-all duration-150 wrap-break-word', 
-              { 'border-primary/50! shadow-[0_8px_18px_rgba(34,211,238,0.18)] -translate-y-px': currentHighlightIndex === idx },
+            :class="['flex items-center gap-2.5 p-3 rounded-xl bg-white/5 border border-white/6 text-(--text) transition-all duration-150 wrap-break-word group', 
+              { 'border-(--primary)/80! shadow-[0_4px_12px_rgba(34,211,238,0.35)] -translate-y-0.5 scale-103 bg-(--primary)/12! z-10': currentHighlightIndex === idx },
               { 'opacity-40 bg-white/2 border-white/3 pointer-events-none': drawnIndices.has(idx) }]">
-            <span :class="['w-[30px] h-[30px] rounded-[10px] inline-flex items-center justify-center font-bold text-[13px]', 
-              drawnIndices.has(idx) ? 'bg-gray-500/20 text-gray-500/60' : 'bg-(--primary)/20 text-(--primary)']">{{ idx + 1 }}</span>
-            <span>{{ item }}</span>
+            <span :class="['w-[30px] h-[30px] rounded-[10px] inline-flex items-center justify-center font-bold text-[13px] transition-all duration-150', 
+              drawnIndices.has(idx) ? 'bg-gray-500/20 text-gray-500/60' : currentHighlightIndex === idx ? 'bg-(--primary)! text-white! scale-105 shadow-[0_2px_8px_rgba(34,211,238,0.4)]' : 'bg-(--primary)/20 text-(--primary)']">{{ idx + 1 }}</span>
+            <span class="flex-1 break-all">{{ item }}</span>
+            <button 
+              v-if="dataMode !== 'backend'"
+              class="opacity-0 group-hover:opacity-100 w-7 h-7 rounded-lg bg-(--danger)/20 border border-(--danger)/30 text-(--danger) hover:bg-(--danger)/30 cursor-pointer flex items-center justify-center transition-all duration-200"
+              @click="deleteLocalItem(idx)"
+              title="删除此元素"
+            >
+              🗑️
+            </button>
           </div>
         </div>
         <p v-else class="text-(--muted) text-[13px]">
@@ -78,27 +86,25 @@
       </section>
 
       <!-- 结果面板 -->
-      <section class="bg-white/4 border border-white/5 rounded-[14px] p-4">
+      <section class="bg-white/4 border border-white/5 rounded-[14px] p-4 flex flex-col">
         <h3 class="m-0 mb-2.5 text-[17px] text-(--text)">最终结果</h3>
-        <div class="bg-linear-to-br from-(--primary)/12 to-(--accent)/12 border border-(--primary)/35 rounded-[14px] p-[18px] min-h-[140px] flex flex-col justify-center gap-2.5 text-center">
+        <div class="bg-linear-to-br from-(--primary)/12 to-(--accent)/12 border border-(--primary)/35 rounded-[14px] p-[18px] min-h-[140px] flex flex-col justify-center gap-2.5 text-center flex-1">
           <div v-if="selectedWinner" class="text-(--muted) tracking-[0.4px]">本轮选中</div>
           <div v-else class="text-(--muted) tracking-[0.4px]">点击「开始」随机选出一项</div>
 
           <div class="text-[32px] font-extrabold text-(--primary) [text-shadow:0_6px_24px_rgba(34,211,238,0.3)] wrap-break-word">{{ selectedWinner || '—' }}</div>
 
-          <div v-if="selectedWinner" class="text-(--muted) text-[13px]">
-            数据来源：本地配置文件 ~/.fcbyk/pick.json
-          </div>
           <div v-if="noRepeatMode && hasDrawn" class="text-(--muted) text-[13px]">
             已抽取 {{ drawnIndices.size }}/{{ items.length }} 项
           </div>
         </div>
       </section>
     </div>
+  </main>
 
-    <!-- 添加元素弹窗 -->
-    <div v-if="showAddModal" class="fixed inset-0 z-1000 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" @click="showAddModal = false">
-      <div class="w-full max-w-[500px] bg-[#1e293b] rounded-[18px] border border-white/10 shadow-2xl overflow-hidden" @click.stop>
+  <!-- 添加元素弹窗 -->
+  <div v-if="showAddModal" class="fixed inset-0 z-1000 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" @click="showAddModal = false">
+    <div class="w-full max-w-[500px] bg-[#1e293b] rounded-[18px] border border-white/10 shadow-2xl overflow-hidden" @click.stop>
         <!-- 标题 -->
         <div class="flex justify-between items-center p-5 border-b border-white/10">
           <h3 class="text-xl font-bold text-(--text) m-0">添加抽奖元素</h3>
@@ -151,8 +157,7 @@
           </button>
         </div>
       </div>
-    </div>
-  </main>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -195,6 +200,135 @@ const addMessage = ref('')
 const addMessageType = ref<'success' | 'error' | ''>('')
 const isAdding = ref(false)
 
+// 数据模式相关
+const dataMode = ref<'backend' | 'local' | 'combined'>('backend')
+const localItems = ref<string[]>([])
+const BACKEND_ITEMS_KEY = 'pick_backend_items'
+const LOCAL_ITEMS_KEY = 'pick_local_items'
+const DATA_MODE_KEY = 'pick_data_mode'
+
+// 从 localStorage 加载数据模式和临时数据
+function loadFromStorage() {
+  // 加载数据模式
+  const savedMode = localStorage.getItem(DATA_MODE_KEY) as 'backend' | 'local' | 'combined'
+  if (savedMode && ['backend', 'local', 'combined'].includes(savedMode)) {
+    dataMode.value = savedMode
+  }
+  
+  // 加载临时数据
+  const savedLocalItems = localStorage.getItem(LOCAL_ITEMS_KEY)
+  if (savedLocalItems) {
+    try {
+      localItems.value = JSON.parse(savedLocalItems)
+    } catch (e) {
+      console.error('Failed to load local items:', e)
+      localItems.value = []
+    }
+  }
+}
+
+// 保存临时数据到 localStorage
+function saveLocalItems() {
+  localStorage.setItem(LOCAL_ITEMS_KEY, JSON.stringify(localItems.value))
+}
+
+// 保存数据模式到 localStorage
+function saveDataMode() {
+  localStorage.setItem(DATA_MODE_KEY, dataMode.value)
+}
+
+// 根据模式更新显示的列表
+async function updateItemsByMode() {
+  if (dataMode.value === 'backend') {
+    // 只使用后端数据
+    await loadItems()
+  } else if (dataMode.value === 'local') {
+    // 只使用本地数据
+    items.value = [...localItems.value]
+  } else if (dataMode.value === 'combined') {
+    // 后端 + 本地数据
+    const backendItems = JSON.parse(localStorage.getItem(BACKEND_ITEMS_KEY) || '[]')
+    items.value = [...backendItems, ...localItems.value]
+  }
+}
+
+// 处理模式变化
+async function handleModeChange() {
+  saveDataMode()
+  await updateItemsByMode()
+  setStatus(`已切换到${dataMode.value === 'backend' ? '后端数据' : dataMode.value === 'local' ? '临时数据' : '追加模式'}模式`)
+}
+
+// 删除本地元素
+function deleteLocalItem(index: number) {
+  let itemToDelete: string
+  let localIndex: number
+  
+  if (dataMode.value === 'local') {
+    // 纯本地模式：直接使用索引
+    itemToDelete = localItems.value[index]
+    localIndex = index
+  } else if (dataMode.value === 'combined') {
+    // 追加模式：需要找到在 localItems 中的索引
+    const backendItems = JSON.parse(localStorage.getItem(BACKEND_ITEMS_KEY) || '[]')
+    const backendCount = backendItems.length
+    
+    if (index < backendCount) {
+      // 删除的是后端数据，不允许
+      setStatus('后端数据无法删除', 'err')
+      return
+    }
+    
+    localIndex = index - backendCount
+    itemToDelete = localItems.value[localIndex]
+  } else {
+    // 后端模式：不应该出现删除按钮
+    return
+  }
+  
+  if (!confirm(`确定删除元素 "${itemToDelete}"？`)) {
+    return
+  }
+  
+  // 从本地数组中删除
+  localItems.value.splice(localIndex, 1)
+  saveLocalItems()
+  
+  // 刷新列表
+  updateItemsByMode()
+  setStatus(`已删除元素：${itemToDelete}`, 'ok')
+}
+
+// 刷新列表（根据当前模式）
+async function handleRefresh() {
+  if (dataMode.value === 'backend') {
+    // 后端模式：重新加载后端数据
+    await loadItems()
+    localStorage.setItem(BACKEND_ITEMS_KEY, JSON.stringify(items.value))
+    setStatus('后端数据已刷新', 'ok')
+  } else if (dataMode.value === 'local') {
+    // 本地模式：从 localStorage 重新加载
+    const savedLocalItems = localStorage.getItem(LOCAL_ITEMS_KEY)
+    if (savedLocalItems) {
+      try {
+        localItems.value = JSON.parse(savedLocalItems)
+      } catch (e) {
+        console.error('Failed to load local items:', e)
+        localItems.value = []
+      }
+    }
+    items.value = [...localItems.value]
+    setStatus('本地数据已刷新', 'ok')
+  } else if (dataMode.value === 'combined') {
+    // 追加模式：重新加载后端 + 本地
+    await loadItems()
+    localStorage.setItem(BACKEND_ITEMS_KEY, JSON.stringify(items.value))
+    const backendItems = JSON.parse(localStorage.getItem(BACKEND_ITEMS_KEY) || '[]')
+    items.value = [...backendItems, ...localItems.value]
+    setStatus('追加数据已刷新', 'ok')
+  }
+}
+
 // 处理速度变化
 function handleSpeedChange(e: Event) {
   const target = e.target as HTMLInputElement
@@ -212,27 +346,37 @@ async function handleBatchAdd() {
   addMessageType.value = ''
 
   try {
-    const result = await apiAddItems(addItemsInput.value)
+    // 所有模式都只添加到本地存储
+    const input = addItemsInput.value.trim()
+    const newItems = input.split(/[\n\r,;]+/).map(s => s.trim()).filter(s => s)
     
-    if (result.addedCount > 0) {
-      addMessage.value = `成功添加 ${result.addedCount} 个元素`
+    let addedCount = 0
+    let duplicates = 0
+    
+    newItems.forEach(item => {
+      if (localItems.value.includes(item)) {
+        duplicates++
+      } else {
+        localItems.value.push(item)
+        addedCount++
+      }
+    })
+    
+    saveLocalItems()
+    
+    if (addedCount > 0) {
+      addMessage.value = `成功添加 ${addedCount} 个元素`
       addMessageType.value = 'success'
-      
-      // 清空输入框
       addItemsInput.value = ''
-      
-      // 刷新列表
-      await loadItems()
-      
-      // 成功后自动关闭弹窗（延迟一点让用户看到提示）
+      updateItemsByMode()
       setTimeout(() => {
         showAddModal.value = false
       }, 1000)
     }
     
-    if (result.duplicates.length > 0) {
-      addMessage.value = `添加了 ${result.addedCount} 个元素，${result.duplicates.length} 个重复项已跳过`
-      addMessageType.value = result.addedCount > 0 ? 'success' : ''
+    if (duplicates > 0) {
+      addMessage.value = `添加了 ${addedCount} 个元素，${duplicates} 个重复项已跳过`
+      addMessageType.value = addedCount > 0 ? 'success' : ''
     }
   } catch (error) {
     addMessage.value = (error as Error).message || '添加失败'
@@ -285,7 +429,15 @@ async function handleStartDraw() {
 }
 
 // 初始化
-onMounted(() => {
-  loadItems()
+onMounted(async () => {
+  // 加载存储的数据模式和临时数据
+  loadFromStorage()
+  
+  // 初始加载后端数据并缓存
+  await loadItems()
+  // 缓存后端数据到 localStorage
+  localStorage.setItem(BACKEND_ITEMS_KEY, JSON.stringify(items.value))
+  // 根据模式更新显示
+  await updateItemsByMode()
 })
 </script>

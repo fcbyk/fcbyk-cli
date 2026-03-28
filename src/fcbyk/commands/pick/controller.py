@@ -604,17 +604,17 @@ def start_web_server(
 
     service.reset_state()
 
-    # files 模式下使用持久化兑换码
-    if files_mode_root:
-        service.redeem_codes = service.load_redeem_codes_from_storage()
-        # 初始化体验：如果兑换码为空，则自动生成 5 个（避免用户进入页面后无法使用兑换码模式）
-        if not service.redeem_codes:
-            try:
-                new_codes = service.generate_and_add_redeem_codes_to_storage(5)
-                if new_codes:
-                    click.echo(" Auto-generated %d redeem codes: %s" % (len(new_codes), ", ".join(new_codes)))
-            except Exception:
-                pass
+    # 加载持久化兑换码（所有模式都支持）
+    service.redeem_codes = service.load_redeem_codes_from_storage()
+    
+    # files 模式下，如果兑换码为空，自动生成 5 个
+    if files_mode_root and not service.redeem_codes:
+        try:
+            new_codes = service.generate_and_add_redeem_codes_to_storage(5)
+            if new_codes:
+                click.echo(" Auto-generated %d redeem codes: %s" % (len(new_codes), ", ".join(new_codes)))
+        except Exception:
+            pass
 
     # 获取本机 IP 地址（使用 network 工具）
     private_networks = get_private_networks()
@@ -629,6 +629,7 @@ def start_web_server(
         click.echo(f" Files root: {files_mode_root}")
     if not no_browser:
         try:
+            # 统一打开根目录
             webbrowser.open(url_network)
             click.echo(" Attempted to open picker page in browser (network URL)")
         except Exception:

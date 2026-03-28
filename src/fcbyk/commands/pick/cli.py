@@ -62,10 +62,23 @@ def pick(ctx, port, no_browser, files, password, daemon_password, daemon):
         return
 
     # 默认启动普通 Web 抽奖
-    if not daemon:
-        start_web_server(port, no_browser)
+    if daemon:
+        args = ['--port', str(port)]
+        args.append('--no-browser')
+        svc_core.start_service('pick', args)
         return
 
-    args = ['--port', str(port)]
-    args.append('--no-browser')
-    svc_core.start_service('pick', args)
+    # 非 daemon 模式下，根据 -pw 参数决定是否设置密码
+    if password:
+        admin_password = click.prompt(
+            'Admin password (press Enter to use default: 123456)',
+            hide_input=True,
+            default='123456',
+            show_default=False,
+        )
+        if not admin_password:
+            admin_password = '123456'
+    else:
+        admin_password = '123456'
+    
+    start_web_server(port, no_browser, admin_password=admin_password)
