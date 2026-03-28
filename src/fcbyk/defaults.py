@@ -12,8 +12,5 @@ DEFAULT_CONFIG = {
         "api_key": None,
         "stream": False,
         "rich": False,
-    },
-    "aliases": {
-        "ls": ["lansend"]
-   } 
+    }
 }

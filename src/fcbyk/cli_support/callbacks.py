@@ -63,19 +63,21 @@ def version_callback(ctx, param, value):
 def print_aliases(show_empty=False, leading_newline=True):
     """打印别名列表"""
     try:
-        from fcbyk.commands.alias import read_aliases
-        aliases = read_aliases()
+        from fcbyk.commands.alias.cli import load_aliases
+        aliases = load_aliases(merge_local=True)
         if aliases:
             if leading_newline:
                 click.echo()
             click.echo("Aliases:")
             items = list(aliases.items())
             max_name_len = max(get_display_width(name) for name, _ in items)
-            for alias_name, command_parts in items:
-                if isinstance(command_parts, list):
-                    cmd_str = " ".join(command_parts)
+            for alias_name, alias_data in items:
+                if isinstance(alias_data, str):
+                    cmd_str = alias_data
+                elif isinstance(alias_data, dict):
+                    cmd_str = alias_data.get('cmd', '')
                 else:
-                    cmd_str = str(command_parts)
+                    cmd_str = str(alias_data)
                 alias_with_padding = pad_display_text(alias_name, max_name_len, min_spaces=2)
                 click.echo("  {}->  {}".format(alias_with_padding, cmd_str))
             click.echo()
@@ -84,31 +86,3 @@ def print_aliases(show_empty=False, leading_newline=True):
     except Exception:
         pass
 
-
-def print_commands(show_empty=False, leading_newline=True, merge_local=False):
-    """打印已保存的命令脚本列表"""
-    try:
-        from fcbyk.commands.run.cli import load_commands
-        commands = load_commands(merge_local=merge_local)
-        if commands:
-            if leading_newline:
-                click.echo()
-            click.echo("Scripts:")
-            items = list(commands.items())
-            max_name_len = max(get_display_width(name) for name, _ in items)
-            for name, cmd_data in items:
-                if isinstance(cmd_data, str):
-                    command = cmd_data
-                    cwd_str = ""
-                else:
-                    command = cmd_data.get("cmd", "")
-                    cwd = cmd_data.get("cwd")
-                    cwd_str = f" [CWD: {cwd}]" if cwd else ""
-                
-                name_with_padding = pad_display_text(name, max_name_len, min_spaces=2)
-                click.echo("  {}->  {}{}".format(name_with_padding, command, cwd_str))
-            click.echo()
-        elif show_empty:
-            click.echo("No scripts saved yet.")
-    except Exception:
-        pass

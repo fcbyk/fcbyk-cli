@@ -2,11 +2,10 @@
 import click, random, os
 from fcbyk import commands, defaults
 from fcbyk.utils import storage
-from fcbyk.commands.alias import AliasedGroup
+from fcbyk.commands.alias.cli import AliasedGroup
 from fcbyk.cli_support import (
     version_callback, 
-    print_aliases, 
-    print_commands,
+    print_aliases,
     banner
 )
 
@@ -39,7 +38,6 @@ def main(ctx):
         click.secho(banner_text, fg="white", dim=True)
         click.echo(ctx.get_help())      # 帮助信息
         print_aliases()                 # 打印别名，如果有
-        print_commands(leading_newline=False, merge_local=True)  # 打印已存脚本，如果有
 
 
 # 注册子命令
