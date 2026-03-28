@@ -52,3 +52,13 @@ def test_echo_network_urls_include_virtual(monkeypatch):
     output.echo_network_urls(networks, port=80, include_virtual=True)
     assert any("10.0.0.2:80" in s for s in lines)
 
+
+def test_get_display_width_supports_mixed_cjk_text():
+    assert output.get_display_width("abc") == 3
+    assert output.get_display_width("后端测试") == 8
+    assert output.get_display_width("a中b") == 4
+
+
+def test_pad_display_text_uses_display_width():
+    padded = output.pad_display_text("后端测试", 10, min_spaces=2)
+    assert padded == "后端测试    "

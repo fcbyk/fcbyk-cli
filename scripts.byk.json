@@ -1,13 +1,18 @@
 {
-    "test": "pytest -q",
-    "build": {
+    "后端测试": "pytest -q",
+    "前端构建": {
         "cmd": "pnpm run build:flatten",
         "cwd": "/Users/coke/repo/fcbyk-cli/web-ui"
     },
-    "clean": "find . -type d \\( -name '__pycache__' -o -name '.pytest_cache' \\) -exec rm -rf {} +",
-    "changelog": "cz changelog --incremental",
-    "bump": "cz bump $1",
-    "push": "git push --follow-tags",
-    "pypi-build": "python -m build",
-    "pypi-upload": "twine upload dist/*"
+
+    "清理文件": "find . -type d \\( -name '__pycache__' -o -name '.pytest_cache' \\) -exec rm -rf {} +",
+    "生成日志": "cz changelog --incremental",
+    "打包": "cz bump $1",
+    
+    "构建python包": "python -m build",
+    "上传pypi": "twine upload dist/*",
+
+    "本地标签": "git tag",
+    "查看远程库标签": "git ls-remote --tags origin",
+    "推送标签": "git push origin --tags"
 }

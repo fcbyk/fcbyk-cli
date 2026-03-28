@@ -3,6 +3,7 @@ import subprocess
 import re
 import os
 from fcbyk.utils import storage
+from fcbyk.cli_support.output import get_display_width, pad_display_text
 
 DATA_FILE = storage.get_path('scripts.byk.json')
 DEFAULT_DATA = {}
@@ -109,7 +110,7 @@ def list_scripts():
     if commands:
         click.echo("Scripts:")
         items = list(commands.items())
-        max_name_len = max(len(str(name)) for name, _ in items)
+        max_name_len = max(get_display_width(name) for name, _ in items)
         for name, cmd_data in items:
             if isinstance(cmd_data, str):
                 command = cmd_data
@@ -119,7 +120,7 @@ def list_scripts():
                 cwd = cmd_data.get("cwd")
                 cwd_str = f" [CWD: {cwd}]" if cwd else ""
             
-            padding = " " * (max_name_len - len(str(name)) + 2)
-            click.echo(f"  {name}{padding}->  {command}{cwd_str}")
+            name_with_padding = pad_display_text(name, max_name_len, min_spaces=2)
+            click.echo("  {}->  {}{}".format(name_with_padding, command, cwd_str))
     else:
         click.echo("No scripts saved yet.")

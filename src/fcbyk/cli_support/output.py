@@ -1,6 +1,7 @@
 import click
 import random
 import time
+import unicodedata
 from typing import Any, Dict, List
 
 
@@ -18,6 +19,26 @@ def colored_key_value(key: str, value: Any, key_color: str = 'cyan', value_color
         str: 彩色格式化字符串
     """
     return f"{click.style(str(key), fg=key_color)}: {click.style(str(value), fg=value_color)}"
+
+
+def get_display_width(text):
+    """计算字符串在终端中的显示宽度，兼容中英文混排。"""
+    width = 0
+    for char in str(text):
+        if unicodedata.combining(char):
+            continue
+        if unicodedata.east_asian_width(char) in ('F', 'W'):
+            width += 2
+        else:
+            width += 1
+    return width
+
+
+def pad_display_text(text, target_width, min_spaces=0):
+    """按终端显示宽度补齐字符串后的空格。"""
+    display_width = get_display_width(text)
+    padding_width = max(0, target_width - display_width) + min_spaces
+    return "{}{}".format(text, " " * padding_width)
 
 
 def show_dict(
@@ -132,4 +153,3 @@ def show_spinning_animation(
         padding = " " * max(0, max_length - len(display_text))
         click.echo(f"\r{display_text}{padding}", nl=False)
         time.sleep(delay)
-

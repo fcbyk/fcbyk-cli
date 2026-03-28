@@ -1,5 +1,6 @@
 """CLI 命令回调函数"""
 import click
+from fcbyk.cli_support.output import get_display_width, pad_display_text
 
 
 def get_version():
@@ -69,14 +70,14 @@ def print_aliases(show_empty=False, leading_newline=True):
                 click.echo()
             click.echo("Aliases:")
             items = list(aliases.items())
-            max_name_len = max(len(str(name)) for name, _ in items)
+            max_name_len = max(get_display_width(name) for name, _ in items)
             for alias_name, command_parts in items:
                 if isinstance(command_parts, list):
                     cmd_str = " ".join(command_parts)
                 else:
                     cmd_str = str(command_parts)
-                padding = " " * (max_name_len - len(str(alias_name)) + 2)
-                click.echo(f"  {alias_name}{padding}->  {cmd_str}")
+                alias_with_padding = pad_display_text(alias_name, max_name_len, min_spaces=2)
+                click.echo("  {}->  {}".format(alias_with_padding, cmd_str))
             click.echo()
         elif show_empty:
             click.echo("No aliases configured.")
@@ -94,7 +95,7 @@ def print_commands(show_empty=False, leading_newline=True, merge_local=False):
                 click.echo()
             click.echo("Scripts:")
             items = list(commands.items())
-            max_name_len = max(len(str(name)) for name, _ in items)
+            max_name_len = max(get_display_width(name) for name, _ in items)
             for name, cmd_data in items:
                 if isinstance(cmd_data, str):
                     command = cmd_data
@@ -104,8 +105,8 @@ def print_commands(show_empty=False, leading_newline=True, merge_local=False):
                     cwd = cmd_data.get("cwd")
                     cwd_str = f" [CWD: {cwd}]" if cwd else ""
                 
-                padding = " " * (max_name_len - len(str(name)) + 2)
-                click.echo(f"  {name}{padding}->  {command}{cwd_str}")
+                name_with_padding = pad_display_text(name, max_name_len, min_spaces=2)
+                click.echo("  {}->  {}{}".format(name_with_padding, command, cwd_str))
             click.echo()
         elif show_empty:
             click.echo("No scripts saved yet.")
