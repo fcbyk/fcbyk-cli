@@ -5,6 +5,4 @@ from .callbacks import (
     print_aliases
 )
 
-from .helpers import banner
-
-__all__ = ['version_callback', 'print_aliases', 'banner']
+__all__ = ['version_callback', 'print_aliases']

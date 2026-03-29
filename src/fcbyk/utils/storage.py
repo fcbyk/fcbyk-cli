@@ -28,9 +28,9 @@
     storage.save_json(path, lottery)
 
     # 操作统一文件的某个 section
-    aliases = storage.load_section("fcbyk_config.json", "aliases", default={})
+    aliases = storage.load_section("config.byk.json", "aliases", default={})
     aliases["ppt"] = "slide"
-    storage.save_section("fcbyk_config.json", "aliases", aliases)
+    storage.save_section("config.byk.json", "aliases", aliases)
 
 """
 

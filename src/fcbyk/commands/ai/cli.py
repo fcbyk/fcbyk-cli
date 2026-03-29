@@ -25,7 +25,7 @@ from .service import (
 )
 from . import renderer as ai_renderer
 
-CONFIG_FILE = "fcbyk_config.json"
+CONFIG_FILE = "config.byk.json"
 SECTION = "ai"
 
 DEFAULT_CONFIG = {
