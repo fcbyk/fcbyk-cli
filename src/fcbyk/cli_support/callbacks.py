@@ -61,28 +61,69 @@ def version_callback(ctx, param, value):
 
 
 def print_aliases(show_empty=False, leading_newline=True):
-    """打印别名列表"""
+    """打印别名列表（支持递归分组）"""
     try:
-        from fcbyk.commands.alias.cli import load_aliases
+        from fcbyk.commands.alias.cli import load_aliases, collect_all_alias_paths
         aliases = load_aliases(merge_local=True)
+        
         if aliases:
             if leading_newline:
                 click.echo()
             click.echo("Aliases:")
-            items = list(aliases.items())
-            max_name_len = max(get_display_width(name) for name, _ in items)
-            for alias_name, alias_data in items:
-                if isinstance(alias_data, str):
-                    cmd_str = alias_data
-                elif isinstance(alias_data, dict):
-                    cmd_str = alias_data.get('cmd', '')
-                else:
-                    cmd_str = str(alias_data)
-                alias_with_padding = pad_display_text(alias_name, max_name_len, min_spaces=2)
-                click.echo("  {}->  {}".format(alias_with_padding, cmd_str))
+            
+            # 收集所有别名路径
+            all_paths = collect_all_alias_paths(aliases)
+            
+            if not all_paths:
+                if show_empty:
+                    click.echo("No aliases configured.")
+                return
+            
+            # 计算最大宽度（使用显示宽度而非字符长度）
+            max_name_len = max(get_display_width(path) for path in all_paths)
+            
+            # 按路径排序并打印
+            for path in sorted(all_paths):
+                # 解析命令字符串和 cwd
+                cmd_str, cwd = resolve_alias_by_path(aliases, path)
+                if cmd_str:
+                    # 如果有 cwd，在命令后添加括号显示
+                    display_cmd = cmd_str
+                    if cwd:
+                        display_cmd += f" (cwd: {cwd})"
+                    
+                    alias_with_padding = pad_display_text(path, max_name_len, min_spaces=2)
+                    click.echo("  {}->  {}".format(alias_with_padding, display_cmd))
+            
             click.echo()
         elif show_empty:
             click.echo("No aliases configured.")
-    except Exception:
+    except Exception as e:
         pass
+
+
+def resolve_alias_by_path(aliases, path):
+    """根据路径解析别名
+    
+    Args:
+        aliases: 别名字典
+        path: 点号分隔的路径
+    
+    Returns:
+        tuple: (cmd_str, cwd) 或 (None, None)
+    """
+    parts = path.split('.')
+    current = aliases
+    
+    for part in parts:
+        if not isinstance(current, dict) or part not in current:
+            return None, None
+        current = current[part]
+    
+    if isinstance(current, str):
+        return current, None
+    elif isinstance(current, dict):
+        return current.get('cmd', ''), current.get('cwd')
+    
+    return None, None
 

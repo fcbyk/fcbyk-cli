@@ -24,7 +24,6 @@
 - [`pick`](https://github.com/fcbyk/fcbyk-cli/blob/main/docs/Pick.md)：随机抽取一个元素（可用于抽奖、随机选择等）
 - [`slide`](https://github.com/fcbyk/fcbyk-cli/blob/main/docs/Slide.md)：同一局域网内，手机控制电脑PTT翻页
 - [`alias`](https://github.com/fcbyk/fcbyk-cli/blob/main/docs/Alias.md)：为常用命令添加别名，方便快速执行
-- [`run`](https://github.com/fcbyk/fcbyk-cli/blob/main/docs/Run.md)：从 scripts.byk.json 文件中运行可重复使用的命令脚本
 - [`get`](https://github.com/fcbyk/fcbyk-cli/blob/main/docs/Get.md)：资源获取，支持下载和打开官网
 - [`config`](https://github.com/fcbyk/fcbyk-cli/blob/main/docs/Config.md)：查看数据目录、日志目录和配置文件路径
 - [`svc`](https://github.com/fcbyk/fcbyk-cli/blob/main/docs/Svc.md)：统一管理由各子命令启动的后台 Web 服务进程
