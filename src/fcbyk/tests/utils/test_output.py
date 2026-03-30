@@ -1,6 +1,6 @@
 import click
 
-import fcbyk.cli_support.output as output
+import fcbyk.cli.output as output
 
 
 def test_colored_key_value_returns_string_with_colon(monkeypatch):

@@ -63,8 +63,8 @@ def test_pick_item_runs_animation_without_sleep(monkeypatch):
     # 减少随机次数 + 禁用 sleep
     monkeypatch.setattr(pick_service_mod.random, "randint", lambda a, b: a)
     # animation 逻辑已迁移到 output，这里 mock output 中的相关依赖
-    monkeypatch.setattr("fcbyk.cli_support.output.time.sleep", lambda *_: None)
-    monkeypatch.setattr("fcbyk.cli_support.output.random.choice", lambda items: items[0])
+    monkeypatch.setattr("fcbyk.cli.output.time.sleep", lambda *_: None)
+    monkeypatch.setattr("fcbyk.cli.output.random.choice", lambda items: items[0])
 
     lines = []
     monkeypatch.setattr("click.echo", lambda msg="", **k: lines.append(msg))

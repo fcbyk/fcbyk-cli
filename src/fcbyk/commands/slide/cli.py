@@ -6,11 +6,11 @@ import click
 from fcbyk.core import start_daemon
 
 from fcbyk.utils.network import get_private_networks
-from fcbyk.cli_support.guard import check_port
+from fcbyk.cli.guard import check_port
 
 from .service import SlideService
 from .controller import create_slide_app
-from fcbyk.cli_support.output import echo_network_urls, copy_to_clipboard
+from fcbyk.cli.output import echo_network_urls, copy_to_clipboard
 
 
 @click.command(name="slide", help="Start PPT remote control server, control slides via mobile web page")

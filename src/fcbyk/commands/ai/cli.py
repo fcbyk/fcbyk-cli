@@ -15,7 +15,7 @@ ai 命令行接口模块
 
 import click
 from fcbyk.utils import storage
-from fcbyk.cli_support.output import show_dict
+from fcbyk.cli.output import show_dict
 
 from .service import (
     AIService,

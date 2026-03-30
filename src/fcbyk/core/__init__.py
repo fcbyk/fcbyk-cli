@@ -12,6 +12,8 @@ from .daemon import (
     status_daemon,
     status_all_daemons,
     stop_by_pid,
+    kill_daemon_callback,
+    print_daemons
 )
 
 __all__ = [
@@ -26,4 +28,6 @@ __all__ = [
     'status_daemon',
     'status_all_daemons',
     'stop_by_pid',
+    'kill_daemon_callback',
+    'print_daemons'
 ]

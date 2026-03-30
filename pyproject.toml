@@ -45,8 +45,8 @@ dev = [
 ]
 
 [project.scripts]
-fcbyk = "fcbyk.cli:main"
-byk = "fcbyk.cli:main"
+fcbyk = "fcbyk.main:main"
+byk = "fcbyk.main:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

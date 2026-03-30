@@ -3,7 +3,7 @@ import importlib
 
 def test_slide_help():
     from click.testing import CliRunner
-    from fcbyk.cli import main
+    from fcbyk.main import main
 
     runner = CliRunner()
     r = runner.invoke(main, ["slide", "--help"])

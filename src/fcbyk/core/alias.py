@@ -13,6 +13,7 @@ except ImportError:
 
 from .json_storage import JsonFileStorage, JsonStorage
 from fcbyk import __version__
+from fcbyk.cli import output
 
 
 GLOBAL_ALIAS_FILE = "alias.byk.json"
@@ -263,3 +264,35 @@ class AliasedGroup(click.Group):
                 )
         
         raise click.UsageError(f"Unknown alias '{cmd_name}'")
+
+
+def print_aliases(show_empty: bool = False, leading_newline: bool = True) -> None:
+    aliases = load_aliases(merge_local=True)
+    
+    if aliases:
+        if leading_newline:
+            click.echo()
+        click.echo("Aliases:")
+        
+        all_paths = collect_all_alias_paths(aliases)
+        
+        if not all_paths:
+            if show_empty:
+                click.echo("No aliases configured.")
+            return
+        
+        max_name_len = max(output.get_display_width(path) for path in all_paths)
+        
+        for path in sorted(all_paths):
+            cmd_str, cwd = resolve_nested_alias(aliases, path)
+            if cmd_str:
+                display_cmd = cmd_str
+                if cwd:
+                    display_cmd += f" (cwd: {cwd})"
+                
+                alias_with_padding = output.pad_display_text(path, max_name_len, min_spaces=2)
+                click.echo(f"  {alias_with_padding} ->  {display_cmd}")
+        
+        click.echo()
+    elif show_empty:
+        click.echo("No aliases configured.")

@@ -1,8 +1,8 @@
 import pytest
 from click.testing import CliRunner
-from fcbyk.cli_support.output import get_display_width
+from fcbyk.cli.output import get_display_width
 
-from fcbyk.cli import main
+from fcbyk.main import main
 
 
 def test_version_command():

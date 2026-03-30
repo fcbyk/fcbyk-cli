@@ -4,8 +4,8 @@ lansend 命令行接口模块
 
 import os, webbrowser, click
 from fcbyk.core import start_daemon
-from fcbyk.cli_support.output import echo_network_urls, copy_to_clipboard
-from fcbyk.cli_support.guard import check_port
+from fcbyk.cli.output import echo_network_urls, copy_to_clipboard
+from fcbyk.cli.guard import check_port
 from fcbyk.utils.network import get_private_networks
 from .controller import start_web_server
 from .service import LansendConfig, LansendService

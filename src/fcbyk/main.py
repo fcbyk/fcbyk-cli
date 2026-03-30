@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 import click
 from fcbyk import commands
-from fcbyk.core import AliasedGroup
-from fcbyk.cli_support import (
-    version_callback, 
-    print_aliases,
-    kill_daemon_callback
+from fcbyk.core import (
+    AliasedGroup,
+    kill_daemon_callback,
+    print_daemons
 )
+from fcbyk.cli import (
+    version_callback, 
+)
+from fcbyk.core.alias import print_aliases
 
 
 @click.group(
@@ -38,7 +41,6 @@ def main(ctx):
         click.echo()
         click.echo(ctx.get_help())
         print_aliases()
-        from fcbyk.cli_support import print_daemons
         print_daemons()
 
 

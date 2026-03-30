@@ -1,19 +1,15 @@
-"""后台守护进程管理模块
-
-提供后台服务的启动、停止、状态查询等功能。
-"""
 import json
 import os
 import signal
 import subprocess
 import sys
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
+import click
 from fcbyk.utils import storage
 
 
-# 服务注册表
 SERVICE_REGISTRY = {
     "lansend": "lansend",
     "pick": "pick",
@@ -22,7 +18,6 @@ SERVICE_REGISTRY = {
 
 
 def _daemon_pid_dir() -> str:
-    """获取 PID 文件存储目录"""
     base = os.path.dirname(storage.get_path("daemon_dummy", subdir="temp"))
     path = os.path.join(base, "daemon")
     try:
@@ -33,13 +28,11 @@ def _daemon_pid_dir() -> str:
 
 
 def _pid_file_path(name: str, pid: int) -> str:
-    """生成 PID 文件路径"""
-    filename = "daemon-{0}-{1}.json".format(name, pid)
+    filename = f"daemon-{name}-{pid}.json"
     return os.path.join(_daemon_pid_dir(), filename)
 
 
-def _list_pid_files(name: Optional[str] = None) -> List[str]:
-    """列出所有 PID 文件"""
+def _list_pid_files(name: str | None = None) -> list[str]:
     directory = _daemon_pid_dir()
     try:
         filenames = os.listdir(directory)
@@ -48,7 +41,7 @@ def _list_pid_files(name: Optional[str] = None) -> List[str]:
     result = []
     prefix = None
     if name is not None:
-        prefix = "daemon-{0}-".format(name)
+        prefix = f"daemon-{name}-"
     for fname in filenames:
         if not fname.endswith(".json"):
             continue
@@ -58,8 +51,7 @@ def _list_pid_files(name: Optional[str] = None) -> List[str]:
     return result
 
 
-def _read_pid_file(path: str) -> Optional[Dict[str, Any]]:
-    """读取 PID 文件内容"""
+def _read_pid_file(path: str) -> dict[str, Any] | None:
     try:
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -75,7 +67,6 @@ def _read_pid_file(path: str) -> Optional[Dict[str, Any]]:
 
 
 def _remove_file(path: str) -> None:
-    """删除文件"""
     try:
         if os.path.exists(path):
             os.remove(path)
@@ -84,13 +75,12 @@ def _remove_file(path: str) -> None:
 
 
 def _process_exists(pid: int) -> bool:
-    """检查进程是否存在"""
     if pid <= 0:
         return False
     if sys.platform == "win32":
         try:
             out = subprocess.check_output(
-                ["tasklist", "/FI", "PID eq {0}".format(pid)],
+                ["tasklist", "/FI", f"PID eq {pid}"],
                 stderr=subprocess.DEVNULL,
                 stdin=subprocess.DEVNULL,
                 creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
@@ -106,7 +96,6 @@ def _process_exists(pid: int) -> bool:
 
 
 def _force_terminate(pid: int, timeout: float = 3.0) -> bool:
-    """强制终止进程"""
     if not pid or not _process_exists(pid):
         return True
     try:
@@ -126,8 +115,7 @@ def _force_terminate(pid: int, timeout: float = 3.0) -> bool:
     return not _process_exists(pid)
 
 
-def _build_command(name: str, args: List[str]) -> List[str]:
-    """构建服务启动命令"""
+def _build_command(name: str, args: list[str]) -> list[str]:
     python_exe = sys.executable
     if sys.platform == "win32":
         try:
@@ -143,8 +131,7 @@ def _build_command(name: str, args: List[str]) -> List[str]:
     return cmd
 
 
-def _extract_port_from_argv(argv: List[str], name: str) -> Optional[int]:
-    """从命令行参数中提取端口号"""
+def _extract_port_from_argv(argv: list[str], name: str) -> int | None:
     try:
         idx = argv.index(name)
     except ValueError:
@@ -175,24 +162,11 @@ def _extract_port_from_argv(argv: List[str], name: str) -> Optional[int]:
     return None
 
 
-def start_daemon(name: str, args: List[str]) -> Dict[str, Any]:
-    """启动后台守护进程
-    
-    Args:
-        name: 服务名称
-        args: 命令行参数列表
-        
-    Returns:
-        包含进程信息的字典
-        
-    Raises:
-        ValueError: 服务名称不存在
-        RuntimeError: 启动失败
-    """
+def start_daemon(name: str, args: list[str]) -> dict[str, Any]:
     if name not in SERVICE_REGISTRY:
-        raise ValueError("Unknown daemon name: {0}".format(name))
+        raise ValueError(f"Unknown daemon name: {name}")
     cmd = _build_command(name, list(args))
-    log_file = storage.get_path("fcbyk_daemon_{0}.log".format(name), subdir="log")
+    log_file = storage.get_path(f"fcbyk_daemon_{name}.log", subdir="log")
     try:
         os.makedirs(os.path.dirname(log_file), exist_ok=True)
         log_fp = open(log_file, "a", encoding="utf-8")
@@ -227,7 +201,7 @@ def start_daemon(name: str, args: List[str]) -> Dict[str, Any]:
                 log_fp.flush()
             except Exception:
                 pass
-        raise RuntimeError("failed to start daemon '{0}': {1}".format(name, e))
+        raise RuntimeError(f"failed to start daemon '{name}': {e}")
     pid = proc.pid
     pid_path = _pid_file_path(name, pid)
     port = _extract_port_from_argv(cmd, name)
@@ -247,17 +221,9 @@ def start_daemon(name: str, args: List[str]) -> Dict[str, Any]:
     return data
 
 
-def stop_daemon(name: str) -> List[Dict[str, Any]]:
-    """停止指定服务的所有进程
-    
-    Args:
-        name: 服务名称
-        
-    Returns:
-        处理结果列表
-    """
+def stop_daemon(name: str) -> list[dict[str, Any]]:
     files = _list_pid_files(name)
-    results: List[Dict[str, Any]] = []
+    results: list[dict[str, Any]] = []
     for path in files:
         info = _read_pid_file(path)
         if not info:
@@ -283,17 +249,9 @@ def stop_daemon(name: str) -> List[Dict[str, Any]]:
     return results
 
 
-def status_daemon(name: str) -> List[Dict[str, Any]]:
-    """查询指定服务的状态
-    
-    Args:
-        name: 服务名称
-        
-    Returns:
-        服务状态信息列表
-    """
+def status_daemon(name: str) -> list[dict[str, Any]]:
     files = _list_pid_files(name)
-    results: List[Dict[str, Any]] = []
+    results: list[dict[str, Any]] = []
     for path in files:
         info = _read_pid_file(path)
         if not info:
@@ -325,14 +283,9 @@ def status_daemon(name: str) -> List[Dict[str, Any]]:
     return results
 
 
-def status_all_daemons() -> List[Dict[str, Any]]:
-    """查询所有后台守护进程的状态
-    
-    Returns:
-        所有守护进程状态信息列表
-    """
+def status_all_daemons() -> list[dict[str, Any]]:
     files = _list_pid_files()
-    results: List[Dict[str, Any]] = []
+    results: list[dict[str, Any]] = []
     for path in files:
         info = _read_pid_file(path)
         if not info:
@@ -365,19 +318,11 @@ def status_all_daemons() -> List[Dict[str, Any]]:
     return results
 
 
-def stop_by_pid(pid: int) -> List[Dict[str, Any]]:
-    """根据 PID 停止进程
-    
-    Args:
-        pid: 进程 ID
-        
-    Returns:
-        处理结果列表
-    """
+def stop_by_pid(pid: int) -> list[dict[str, Any]]:
     if pid <= 0:
         return []
     files = _list_pid_files()
-    results: List[Dict[str, Any]] = []
+    results: list[dict[str, Any]] = []
     for path in files:
         info = _read_pid_file(path)
         if not info:
@@ -403,3 +348,89 @@ def stop_by_pid(pid: int) -> List[Dict[str, Any]]:
         }
         results.append(result)
     return results
+
+
+def kill_daemon_callback(ctx: click.Context, param: click.Parameter, value: str | None) -> None:
+    if not value or ctx.resilient_parsing:
+        return
+    
+    console = None
+    try:
+        from rich.console import Console
+        console = Console()
+    except ImportError:
+        pass
+    
+    if value.lower() == 'all':
+        daemons = status_all_daemons()
+        if not daemons:
+            click.echo("No background daemons running.")
+            ctx.exit()
+        
+        killed_count = 0
+        for daemon in daemons:
+            pid = daemon.get('pid')
+            if pid:
+                results = stop_by_pid(pid)
+                for result in results:
+                    if result.get('status') in ('terminated', 'not_running'):
+                        killed_count += 1
+        
+        click.echo(f"Terminated {killed_count} daemon process(es).")
+    else:
+        try:
+            pid = int(value)
+        except ValueError:
+            if console:
+                console.print(f"[red]Error: Invalid PID '{value}'[/red]")
+            else:
+                click.echo(f"Error: Invalid PID '{value}'")
+            ctx.exit(1)
+        
+        results = stop_by_pid(pid)
+        if not results:
+            click.echo(f"No tracked process with PID {pid}.")
+        else:
+            for item in results:
+                status = item.get('status')
+                name = item.get('name') or 'unknown'
+                ipid = item.get('pid')
+                if status == 'terminated':
+                    click.echo(f"PID {ipid} ({name}) terminated.")
+                elif status == 'not_running':
+                    click.echo(f"PID {ipid} ({name}) already not running.")
+                else:
+                    click.echo(f"PID {ipid} ({name}) could not be terminated.", err=True)
+                    ctx.exit(1)
+    
+    ctx.exit()
+
+
+def print_daemons() -> None:
+    try:
+        from rich.console import Console
+        
+        daemons = status_all_daemons()
+        
+        if daemons:
+            console = Console()
+            console.print("[bold]Background Daemons:[/bold]")
+            
+            for daemon in daemons:
+                alive = bool(daemon.get('alive'))
+                status = 'running' if alive else 'stopped'
+                status_color = 'green' if alive else 'red'
+                status_symbol = '●'
+                port = daemon.get('port')
+                port_str = '?' if not port else str(port)
+                
+                console.print(
+                    f'[{status_color}]{status_symbol}[/{status_color}] {daemon.get("name")}: PID {daemon.get("pid")} (port {port_str}) [[{status_color}]{status}[/{status_color}]]',
+                    highlight=False,
+                )
+            
+            console.print()
+            console.print("Use 'fcbyk --kill <PID|all>' to stop daemons.")
+            console.print()
+    except Exception:
+        pass
