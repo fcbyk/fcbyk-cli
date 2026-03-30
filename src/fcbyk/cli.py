@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import click
 from fcbyk import commands
-from fcbyk.commands.alias.cli import AliasedGroup
+from fcbyk.core import AliasedGroup
 from fcbyk.cli_support import (
     version_callback, 
     print_aliases

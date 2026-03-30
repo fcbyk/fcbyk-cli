@@ -4,7 +4,7 @@ from fcbyk.utils.storage import load_json, save_json, get_path
 T = TypeVar('T')
 APP_NAME = "fcbyk"
 CONFIG_FILE_NAME = "config.byk.json"
-ALIAS_FILE_NAME = "alias.byk.json"
+
 
 @runtime_checkable
 class JsonStorage(Protocol):    

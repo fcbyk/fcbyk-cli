@@ -1,5 +1,6 @@
 """CLI 命令回调函数"""
 import click
+from typing import Any
 from fcbyk.cli_support.output import get_display_width, pad_display_text
 
 
@@ -60,10 +61,10 @@ def version_callback(ctx, param, value):
     ctx.exit()
 
 
-def print_aliases(show_empty=False, leading_newline=True):
+def print_aliases(show_empty: bool = False, leading_newline: bool = True) -> None:
     """打印别名列表（支持递归分组）"""
     try:
-        from fcbyk.commands.alias.cli import load_aliases, collect_all_alias_paths
+        from fcbyk.core.alias import load_aliases, collect_all_alias_paths
         aliases = load_aliases(merge_local=True)
         
         if aliases:
@@ -93,7 +94,7 @@ def print_aliases(show_empty=False, leading_newline=True):
                         display_cmd += f" (cwd: {cwd})"
                     
                     alias_with_padding = pad_display_text(path, max_name_len, min_spaces=2)
-                    click.echo("  {}->  {}".format(alias_with_padding, display_cmd))
+                    click.echo(f"  {alias_with_padding} ->  {display_cmd}")
             
             click.echo()
         elif show_empty:
@@ -102,7 +103,7 @@ def print_aliases(show_empty=False, leading_newline=True):
         pass
 
 
-def resolve_alias_by_path(aliases, path):
+def resolve_alias_by_path(aliases: dict, path: str) -> tuple[str | None, str | None]:
     """根据路径解析别名
     
     Args:
@@ -113,7 +114,7 @@ def resolve_alias_by_path(aliases, path):
         tuple: (cmd_str, cwd) 或 (None, None)
     """
     parts = path.split('.')
-    current = aliases
+    current: Any = aliases
     
     for part in parts:
         if not isinstance(current, dict) or part not in current:

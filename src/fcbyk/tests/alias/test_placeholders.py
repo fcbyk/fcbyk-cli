@@ -1,6 +1,6 @@
 """参数占位符解析测试"""
 import pytest
-from fcbyk.commands.alias.cli import parse_arguments
+from fcbyk.core.alias import parse_arguments
 
 
 class TestParseArguments:

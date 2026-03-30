@@ -1,6 +1,6 @@
 """Alias 分组功能测试"""
 import pytest
-from fcbyk.commands.alias.cli import resolve_nested_alias, collect_all_alias_paths
+from fcbyk.core.alias import resolve_nested_alias, collect_all_alias_paths
 
 
 class TestResolveNestedAlias:
