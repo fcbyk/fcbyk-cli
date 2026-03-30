@@ -1,4 +1,3 @@
-"""Download utility functions"""
 import os
 import requests
 from rich.progress import (
@@ -10,21 +9,13 @@ from rich.progress import (
     TimeRemainingColumn,
 )
 
-def download_file(url, dest_path):
-    """
-    General download utility with rich progress bar.
-    Supports Python 3.6+.
 
-    Args:
-        url (str): Download URL
-        dest_path (str): Destination path
-    """
+def download_file(url: str, dest_path: str) -> None:
     response = requests.get(url, stream=True)
     response.raise_for_status()
     
     total_size = int(response.headers.get('content-length', 0))
     
-    # Ensure directory exists
     dest_dir = os.path.dirname(os.path.abspath(dest_path))
     if not os.path.exists(dest_dir):
         os.makedirs(dest_dir)

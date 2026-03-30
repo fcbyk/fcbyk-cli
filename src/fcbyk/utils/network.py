@@ -1,8 +1,6 @@
-"""网络相关工具函数"""
 import socket
 import psutil
 
-# 网卡识别规则：匹配关键字 -> 类型, 是否虚拟, 优先级
 IFACE_RULES = [
     (['vmware', 'vmnet'],         'vmware',     True,  30),
     (['vbox', 'virtualbox'],      'virtualbox', True,  30),
@@ -14,19 +12,7 @@ IFACE_RULES = [
 ]
 
 
-def detect_iface_type(iface: str):
-    """
-    根据网卡名称识别类型、虚拟状态和优先级。
-
-    Args:
-        iface (str): 网卡名称
-
-    Returns:
-        tuple:
-            type (str): 网卡类型，如 'wifi', 'ethernet', 'vmware' 等
-            virtual (bool): 是否虚拟网卡
-            priority (int): 优先级，数值越小越推荐
-    """
+def detect_iface_type(iface: str) -> tuple[str, bool, int]:
     lname = iface.lower()
     for keywords, t, virtual, prio in IFACE_RULES:
         if any(k in lname for k in keywords):
@@ -34,21 +20,7 @@ def detect_iface_type(iface: str):
     return 'unknown', False, 50
 
 
-def get_private_networks():
-    """
-    获取所有私有 IPv4 地址及网卡信息，并按优先级排序。
-
-    排序后第一个元素通常是最推荐的局域网 IP。
-    如果没有可用的私有网络，会自动包含回环地址 127.0.0.1 作为回退方案。
-
-    Returns:
-        list[dict]: 每个元素为字典，包含：
-            iface (str): 网卡名称
-            ips (list[str]): 私有 IPv4 地址列表
-            type (str): 网卡类型
-            virtual (bool): 是否虚拟网卡
-            priority (int): 网卡优先级
-    """
+def get_private_networks() -> list[dict]:
     results = []
     interfaces = psutil.net_if_addrs()
 
@@ -58,15 +30,14 @@ def get_private_networks():
 
         for addr in addrs:
             if addr.family != socket.AF_INET:
-                continue  # 只处理 IPv4
+                continue
 
             ip = addr.address
 
-            # 排除非私有地址
             if ip.startswith('127.'):
-                continue  # 回环地址
+                continue
             if ip.startswith('169.254.'):
-                continue  # APIPA 地址
+                continue
             if ip.startswith(('10.', '192.168.', '172.')):
                 ips.append(ip)
 
@@ -79,10 +50,8 @@ def get_private_networks():
                 "priority": priority
             })
 
-    # 按优先级排序
     results.sort(key=lambda x: x['priority'])
     
-    # 如果没有可用网络，添加回环地址作为回退
     if not results:
         results.append({
             "iface": "localhost",
@@ -96,12 +65,5 @@ def get_private_networks():
 
 
 def ensure_port_available(port: int, host: str = "0.0.0.0") -> None:
-    """确保端口可用，否则抛出 OSError。
-
-    说明：
-    - 不启用 SO_REUSEADDR，避免在部分平台/场景下出现“端口已被占用但 bind 仍成功”的误判。
-    - 调用方可以捕获 OSError 并输出友好提示。
-    """
-
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind((host, int(port)))

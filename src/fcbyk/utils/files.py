@@ -1,11 +1,9 @@
-"""文件处理相关工具函数"""
 import os
 import re
-from typing import List, Dict, Optional
+from typing import List, Dict
 
 
 def get_files_metadata(path: str) -> List[Dict]:
-    """获取指定路径（文件或目录）下的文件元数据列表 (name, path, size)。"""
     if not path or not os.path.exists(path):
         return []
 
@@ -31,8 +29,7 @@ def get_files_metadata(path: str) -> List[Dict]:
     return files
 
 
-def format_size(num_bytes: Optional[int]) -> str:
-    """将字节数格式化为人类可读的字符串 (B, KB, MB, GB, TB)。"""
+def format_size(num_bytes: int | None) -> str:
     if num_bytes is None:
         return "unknown size"
     units = ["B", "KB", "MB", "GB", "TB"]
@@ -45,12 +42,10 @@ def format_size(num_bytes: Optional[int]) -> str:
 
 
 def safe_filename(filename: str) -> str:
-    """清理文件名中的非法字符，保留字母、数字、中文、下划线、连字符和点。"""
     return re.sub(r"[^\w\s\u4e00-\u9fff\-\.]", "", filename)
 
 
 def is_image_file(filename: str) -> bool:
-    """根据扩展名判断是否为图片文件。"""
     image_extensions = {
         ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".svg", ".ico", ".tiff", ".tif"
     }
@@ -59,7 +54,6 @@ def is_image_file(filename: str) -> bool:
 
 
 def is_video_file(filename: str) -> bool:
-    """根据扩展名判断是否为视频文件。"""
     video_extensions = {
         ".mp4", ".webm", ".ogg", ".mov", ".mkv", ".avi", ".m4v"
     }
