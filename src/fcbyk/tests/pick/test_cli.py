@@ -129,11 +129,11 @@ def test_pick_files_daemon_passes_password_to_svc(monkeypatch, tmp_path):
     
     called = {}
     
-    def _start_service(name, args):
+    def _start_daemon(name, args):
         called["name"] = name
         called["args"] = list(args)
     
-    monkeypatch.setattr(pick_cli.svc_core, "start_service", _start_service)
+    monkeypatch.setattr(pick_cli, "start_daemon", _start_daemon)
     monkeypatch.setattr(pick_cli, "check_port", lambda *_a, **_k: True)
     
     from click.testing import CliRunner
@@ -155,11 +155,11 @@ def test_pick_daemon_mode(monkeypatch):
     
     called = {}
     
-    def _start_service(name, args):
+    def _start_daemon(name, args):
         called["name"] = name
         called["args"] = list(args)
     
-    monkeypatch.setattr(pick_cli.svc_core, "start_service", _start_service)
+    monkeypatch.setattr(pick_cli, "start_daemon", _start_daemon)
     monkeypatch.setattr(pick_cli, "check_port", lambda *_a, **_k: True)
     
     from click.testing import CliRunner

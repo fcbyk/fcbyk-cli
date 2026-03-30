@@ -1,5 +1,5 @@
 import click
-import fcbyk.svc as svc_core
+from fcbyk.core import start_daemon
 
 from fcbyk.cli_support.guard import check_port
 
@@ -58,14 +58,14 @@ def pick(ctx, port, no_browser, files, password, daemon_password, daemon):
         args.append('--no-browser')
         if effective_password:
             args.extend(['--daemon-password', effective_password])
-        svc_core.start_service('pick', args)
+        start_daemon('pick', args)
         return
 
     # 默认启动普通 Web 抽奖
     if daemon:
         args = ['--port', str(port)]
         args.append('--no-browser')
-        svc_core.start_service('pick', args)
+        start_daemon('pick', args)
         return
 
     # 非 daemon 模式下，根据 -pw 参数决定是否设置密码

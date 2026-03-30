@@ -1,9 +1,9 @@
 """
-lansend 命令行接口模块 (局域网内共享文件)
+lansend 命令行接口模块
 """
 
 import os, webbrowser, click
-import fcbyk.svc as svc_core
+from fcbyk.core import start_daemon
 from fcbyk.cli_support.output import echo_network_urls, copy_to_clipboard
 from fcbyk.cli_support.guard import check_port
 from fcbyk.utils.network import get_private_networks
@@ -97,4 +97,4 @@ def lansend(
     args.append("--no-browser")
     if config.upload_password:
         args.extend(["--daemon-password", config.upload_password])
-    svc_core.start_service("lansend", args)
+    start_daemon("lansend", args)

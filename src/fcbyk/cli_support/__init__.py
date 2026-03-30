@@ -2,7 +2,9 @@
 
 from .callbacks import (
     version_callback, 
-    print_aliases
+    print_aliases,
+    kill_daemon_callback,
+    print_daemons,
 )
 
-__all__ = ['version_callback', 'print_aliases']
+__all__ = ['version_callback', 'print_aliases', 'kill_daemon_callback', 'print_daemons']

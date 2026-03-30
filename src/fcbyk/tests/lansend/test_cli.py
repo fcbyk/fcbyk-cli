@@ -43,11 +43,11 @@ def test_lansend_daemon_passes_password_to_svc(monkeypatch, tmp_path):
 
     called = {}
 
-    def _fake_start_service(name, args):
+    def _fake_start_daemon(name, args):
         called["name"] = name
         called["args"] = list(args)
 
-    monkeypatch.setattr(lansend_cli.svc_core, "start_service", _fake_start_service)
+    monkeypatch.setattr(lansend_cli, "start_daemon", _fake_start_daemon)
 
     from click.testing import CliRunner
 

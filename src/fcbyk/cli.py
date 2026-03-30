@@ -4,7 +4,8 @@ from fcbyk import commands
 from fcbyk.core import AliasedGroup
 from fcbyk.cli_support import (
     version_callback, 
-    print_aliases
+    print_aliases,
+    kill_daemon_callback
 )
 
 
@@ -23,12 +24,22 @@ from fcbyk.cli_support import (
     is_eager=True, 
     help='Show version and exit.'
 )
+@click.option(
+    '--kill', '-k',
+    type=str,
+    callback=kill_daemon_callback,
+    expose_value=False,
+    is_eager=True,
+    help='Kill background daemon processes. Use "all" to kill all or specify PID.',
+)
 @click.pass_context
 def main(ctx):
     if ctx.invoked_subcommand is None:
         click.echo()
         click.echo(ctx.get_help())
         print_aliases()
+        from fcbyk.cli_support import print_daemons
+        print_daemons()
 
 
 for cmd_name in commands.__all__:

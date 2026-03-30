@@ -1,3 +1,7 @@
+"""后台守护进程管理模块
+
+提供后台服务的启动、停止、状态查询等功能。
+"""
 import json
 import os
 import signal
@@ -9,6 +13,7 @@ from typing import Any, Dict, List, Optional
 from fcbyk.utils import storage
 
 
+# 服务注册表
 SERVICE_REGISTRY = {
     "lansend": "lansend",
     "pick": "pick",
@@ -16,9 +21,10 @@ SERVICE_REGISTRY = {
 }
 
 
-def _svc_pid_dir() -> str:
-    base = os.path.dirname(storage.get_path("svc_dummy", subdir="temp"))
-    path = os.path.join(base, "svc")
+def _daemon_pid_dir() -> str:
+    """获取 PID 文件存储目录"""
+    base = os.path.dirname(storage.get_path("daemon_dummy", subdir="temp"))
+    path = os.path.join(base, "daemon")
     try:
         os.makedirs(path, exist_ok=True)
     except Exception:
@@ -27,12 +33,14 @@ def _svc_pid_dir() -> str:
 
 
 def _pid_file_path(name: str, pid: int) -> str:
-    filename = "svc-{0}-{1}.json".format(name, pid)
-    return os.path.join(_svc_pid_dir(), filename)
+    """生成 PID 文件路径"""
+    filename = "daemon-{0}-{1}.json".format(name, pid)
+    return os.path.join(_daemon_pid_dir(), filename)
 
 
 def _list_pid_files(name: Optional[str] = None) -> List[str]:
-    directory = _svc_pid_dir()
+    """列出所有 PID 文件"""
+    directory = _daemon_pid_dir()
     try:
         filenames = os.listdir(directory)
     except Exception:
@@ -40,7 +48,7 @@ def _list_pid_files(name: Optional[str] = None) -> List[str]:
     result = []
     prefix = None
     if name is not None:
-        prefix = "svc-{0}-".format(name)
+        prefix = "daemon-{0}-".format(name)
     for fname in filenames:
         if not fname.endswith(".json"):
             continue
@@ -51,6 +59,7 @@ def _list_pid_files(name: Optional[str] = None) -> List[str]:
 
 
 def _read_pid_file(path: str) -> Optional[Dict[str, Any]]:
+    """读取 PID 文件内容"""
     try:
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -66,6 +75,7 @@ def _read_pid_file(path: str) -> Optional[Dict[str, Any]]:
 
 
 def _remove_file(path: str) -> None:
+    """删除文件"""
     try:
         if os.path.exists(path):
             os.remove(path)
@@ -74,6 +84,7 @@ def _remove_file(path: str) -> None:
 
 
 def _process_exists(pid: int) -> bool:
+    """检查进程是否存在"""
     if pid <= 0:
         return False
     if sys.platform == "win32":
@@ -95,6 +106,7 @@ def _process_exists(pid: int) -> bool:
 
 
 def _force_terminate(pid: int, timeout: float = 3.0) -> bool:
+    """强制终止进程"""
     if not pid or not _process_exists(pid):
         return True
     try:
@@ -115,6 +127,7 @@ def _force_terminate(pid: int, timeout: float = 3.0) -> bool:
 
 
 def _build_command(name: str, args: List[str]) -> List[str]:
+    """构建服务启动命令"""
     python_exe = sys.executable
     if sys.platform == "win32":
         try:
@@ -131,6 +144,7 @@ def _build_command(name: str, args: List[str]) -> List[str]:
 
 
 def _extract_port_from_argv(argv: List[str], name: str) -> Optional[int]:
+    """从命令行参数中提取端口号"""
     try:
         idx = argv.index(name)
     except ValueError:
@@ -161,11 +175,24 @@ def _extract_port_from_argv(argv: List[str], name: str) -> Optional[int]:
     return None
 
 
-def start_service(name: str, args: List[str]) -> Dict[str, Any]:
+def start_daemon(name: str, args: List[str]) -> Dict[str, Any]:
+    """启动后台守护进程
+    
+    Args:
+        name: 服务名称
+        args: 命令行参数列表
+        
+    Returns:
+        包含进程信息的字典
+        
+    Raises:
+        ValueError: 服务名称不存在
+        RuntimeError: 启动失败
+    """
     if name not in SERVICE_REGISTRY:
-        raise ValueError("Unknown service name: {0}".format(name))
+        raise ValueError("Unknown daemon name: {0}".format(name))
     cmd = _build_command(name, list(args))
-    log_file = storage.get_path("fcbyk_svc_{0}.log".format(name), subdir="log")
+    log_file = storage.get_path("fcbyk_daemon_{0}.log".format(name), subdir="log")
     try:
         os.makedirs(os.path.dirname(log_file), exist_ok=True)
         log_fp = open(log_file, "a", encoding="utf-8")
@@ -200,7 +227,7 @@ def start_service(name: str, args: List[str]) -> Dict[str, Any]:
                 log_fp.flush()
             except Exception:
                 pass
-        raise RuntimeError("failed to start service '{0}': {1}".format(name, e))
+        raise RuntimeError("failed to start daemon '{0}': {1}".format(name, e))
     pid = proc.pid
     pid_path = _pid_file_path(name, pid)
     port = _extract_port_from_argv(cmd, name)
@@ -220,7 +247,15 @@ def start_service(name: str, args: List[str]) -> Dict[str, Any]:
     return data
 
 
-def stop_service(name: str) -> List[Dict[str, Any]]:
+def stop_daemon(name: str) -> List[Dict[str, Any]]:
+    """停止指定服务的所有进程
+    
+    Args:
+        name: 服务名称
+        
+    Returns:
+        处理结果列表
+    """
     files = _list_pid_files(name)
     results: List[Dict[str, Any]] = []
     for path in files:
@@ -248,7 +283,15 @@ def stop_service(name: str) -> List[Dict[str, Any]]:
     return results
 
 
-def status_service(name: str) -> List[Dict[str, Any]]:
+def status_daemon(name: str) -> List[Dict[str, Any]]:
+    """查询指定服务的状态
+    
+    Args:
+        name: 服务名称
+        
+    Returns:
+        服务状态信息列表
+    """
     files = _list_pid_files(name)
     results: List[Dict[str, Any]] = []
     for path in files:
@@ -282,7 +325,12 @@ def status_service(name: str) -> List[Dict[str, Any]]:
     return results
 
 
-def status_all() -> List[Dict[str, Any]]:
+def status_all_daemons() -> List[Dict[str, Any]]:
+    """查询所有后台守护进程的状态
+    
+    Returns:
+        所有守护进程状态信息列表
+    """
     files = _list_pid_files()
     results: List[Dict[str, Any]] = []
     for path in files:
@@ -318,6 +366,14 @@ def status_all() -> List[Dict[str, Any]]:
 
 
 def stop_by_pid(pid: int) -> List[Dict[str, Any]]:
+    """根据 PID 停止进程
+    
+    Args:
+        pid: 进程 ID
+        
+    Returns:
+        处理结果列表
+    """
     if pid <= 0:
         return []
     files = _list_pid_files()

@@ -3,7 +3,7 @@ slide 命令行接口模块
 提供 PPT 远程控制的 CLI 命令
 """
 import click
-import fcbyk.svc as svc_core
+from fcbyk.core import start_daemon
 
 from fcbyk.utils.network import get_private_networks
 from fcbyk.cli_support.guard import check_port
@@ -77,4 +77,4 @@ def slide(port, daemon, password):
         return
 
     args = ["--port", str(port), "--daemon-password", password]
-    svc_core.start_service("slide", args)
+    start_daemon("slide", args)

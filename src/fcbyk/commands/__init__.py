@@ -4,6 +4,5 @@ from .pick.cli import pick
 from .slide.cli import slide
 from .get.cli import get
 from .config.cli import config
-from .svc.cli import svc
 
-__all__ = ['lansend', 'ai', 'pick', 'slide', 'get', 'config', 'svc']
+__all__ = ['lansend', 'ai', 'pick', 'slide', 'get', 'config']

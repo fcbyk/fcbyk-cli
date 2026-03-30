@@ -103,6 +103,100 @@ def print_aliases(show_empty: bool = False, leading_newline: bool = True) -> Non
         pass
 
 
+def kill_daemon_callback(ctx, param, value):
+    """--kill 选项的回调函数"""
+    if not value or ctx.resilient_parsing:
+        return
+    
+    from fcbyk.core.daemon import stop_by_pid, status_all_daemons
+    from rich.console import Console
+    
+    console = Console()
+    
+    if value.lower() == 'all':
+        # Kill all daemons
+        daemons = status_all_daemons()
+        if not daemons:
+            click.echo("No background daemons running.")
+            ctx.exit()
+        
+        killed_count = 0
+        for daemon in daemons:
+            pid = daemon.get('pid')
+            if pid:
+                results = stop_by_pid(pid)
+                for result in results:
+                    if result.get('status') in ('terminated', 'not_running'):
+                        killed_count += 1
+        
+        click.echo(f"Terminated {killed_count} daemon process(es).")
+    else:
+        # Kill by PID
+        try:
+            pid = int(value)
+        except ValueError:
+            console.print(f"[red]Error: Invalid PID '{value}'[/red]")
+            ctx.exit(1)
+        
+        results = stop_by_pid(pid)
+        if not results:
+            click.echo(f"No tracked process with PID {pid}.")
+        else:
+            for item in results:
+                status = item.get('status')
+                name = item.get('name') or 'unknown'
+                ipid = item.get('pid')
+                if status == 'terminated':
+                    click.echo(f"PID {ipid} ({name}) terminated.")
+                elif status == 'not_running':
+                    click.echo(f"PID {ipid} ({name}) already not running.")
+                else:
+                    click.echo(f"PID {ipid} ({name}) could not be terminated.", err=True)
+                    ctx.exit(1)
+    
+    ctx.exit()
+
+
+def print_daemons() -> None:
+    """打印运行中的后台守护进程"""
+    try:
+        from fcbyk.core import status_all_daemons
+        from rich.console import Console
+        
+        daemons = status_all_daemons()
+        
+        if daemons:
+            console = Console()
+            console.print()
+            console.print("[bold]Background Daemons:[/bold]")
+            
+            for daemon in daemons:
+                alive = bool(daemon.get('alive'))
+                status = 'running' if alive else 'stopped'
+                status_color = 'green' if alive else 'red'
+                status_symbol = '●'
+                port = daemon.get('port')
+                port_str = '?' if not port else str(port)
+                
+                console.print(
+                    '[{0}]{1}[/{0}] {2}: PID {3} (port {4}) [[{0}]{5}[/{0}]]'.format(
+                        status_color,
+                        status_symbol,
+                        daemon.get('name'),
+                        daemon.get('pid'),
+                        port_str,
+                        status,
+                    ),
+                    highlight=False,
+                )
+            
+            console.print()
+            console.print("Use 'fcbyk --kill <PID|all>' to stop daemons.")
+            console.print()
+    except Exception as e:
+        pass
+
+
 def resolve_alias_by_path(aliases: dict, path: str) -> tuple[str | None, str | None]:
     """根据路径解析别名
     
@@ -127,4 +221,3 @@ def resolve_alias_by_path(aliases: dict, path: str) -> tuple[str | None, str | N
         return current.get('cmd', ''), current.get('cwd')
     
     return None, None
-

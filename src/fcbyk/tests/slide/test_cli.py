@@ -72,12 +72,12 @@ def test_slide_daemon_passes_password_to_svc(monkeypatch):
 
     called = {}
 
-    def _fake_start_service(name, args):
+    def _fake_start_daemon(name, args):
         called["name"] = name
         called["args"] = list(args)
         return {"name": name, "pid": 1}
 
-    monkeypatch.setattr(slide_cli.svc_core, "start_service", _fake_start_service)
+    monkeypatch.setattr(slide_cli, "start_daemon", _fake_start_daemon)
 
     from click.testing import CliRunner
 
