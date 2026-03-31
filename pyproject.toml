@@ -47,22 +47,23 @@ dev = [
 [project.scripts]
 fcbyk = "fcbyk.main:main"
 byk = "fcbyk.main:main"
+bykr = "fcbykcli.main:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
-packages = { find = { where = ["src"], include = ["fcbyk*"] } }
+packages = { find = { where = ["src"], include = ["fcbyk*", "fcbykcli*"] } }
 
 [tool.setuptools.package-data]
 fcbyk = ["web/dist/**/*"]
 
 [tool.setuptools.dynamic]
-version = {attr = "fcbyk.__version__"}
+version = {attr = "fcbykcli.__version__"}
 readme = {file = ["README.md"], content-type = "text/markdown"}
 
 [tool.pytest.ini_options]
-testpaths = ["src/fcbyk/tests"]
+testpaths = ["src/fcbyk/tests", "src/fcbykcli/tests"]
 python_files = ["test_*.py"]
-addopts = "-v --cov=fcbyk --cov-report=term-missing"
+addopts = "-v --cov=fcbyk --cov=fcbykcli --cov-report=term-missing"
 
 [tool.commitizen]
 name = "cz_customize"
@@ -72,6 +73,7 @@ changelog_file = "CHANGELOG.md"
 bump_message = "release: v$new_version"
 version_files = [
     "src/fcbyk/__init__.py:__version__",
+    "src/fcbykcli/__init__.py:__version__",
     "pyproject.toml:version ="
 ]
 
