@@ -7,9 +7,9 @@ import click
 from fcbykcli.api import CommandContext, PathItem, pass_command_context, register_path_provider
 
 
-@click.command(help="示例子命令，用于验证动态注册链路。")
-@click.option("--name", default="world", show_default=True, help="问候对象。")
-@click.option("--reset-state", is_flag=True, help="清空 hello 的本地状态。")
+@click.command(help="Example subcommand to verify dynamic registration.")
+@click.option("--name", default="world", show_default=True, help="The object to greet.")
+@click.option("--reset-state", is_flag=True, help="Clear hello's local state.")
 @pass_command_context
 def hello(ctx: CommandContext, name: str, reset_state: bool) -> None:
     store = ctx.state
@@ -27,8 +27,8 @@ def hello(ctx: CommandContext, name: str, reset_state: bool) -> None:
 
 
 def hello_path_items(context) -> list[PathItem]:
-    """返回 hello 相关路径。"""
-    return [("数据文件", str(context.command_store("hello").path))]
+    """Return hello-related paths."""
+    return [("Data File", str(context.command_store("hello").path))]
 
 
 def register(cli: click.Group) -> None:

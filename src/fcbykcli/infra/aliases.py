@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import unicodedata
 from typing import Any
 
 import click
@@ -118,13 +119,97 @@ def render_alias_lines(context: AppContext) -> list[str]:
     """返回别名展示文本。"""
     aliases = load_aliases(context, merge_local=True)
     lines: list[str] = []
+    
+    alias_entries = []
     for path in sorted(collect_alias_paths(aliases)):
         alias = resolve_nested_alias(aliases, path)
         if alias is None:
             continue
         suffix = f" (cwd: {alias.cwd})" if alias.cwd else ""
-        lines.append(f"{path} -> {alias.command}{suffix}")
+        alias_entries.append((path, f"{alias.command}{suffix}"))
+    
+    if not alias_entries:
+        return []
+    
+    max_name_width = max(get_display_width(path) for path, _ in alias_entries)
+    
+    terminal_width = get_terminal_width()
+    separator = "  "
+    indent_width = 2
+    name_and_separator_width = max_name_width + len(separator)
+    max_command_width = terminal_width - indent_width - name_and_separator_width
+    
+    for path, command in alias_entries:
+        padded_name = pad_display_text(path, max_name_width, min_spaces=0)
+        full_command = f"{padded_name}{separator}{command}"
+        
+        if get_display_width(full_command) <= terminal_width - indent_width:
+            lines.append(full_command)
+        else:
+            wrapped_commands = wrap_text(command, max_command_width)
+            if wrapped_commands:
+                lines.append(f"{padded_name}{separator}{wrapped_commands[0]}")
+                for cmd_line in wrapped_commands[1:]:
+                    lines.append(f"{' ' * (max_name_width + len(separator))}{cmd_line}")
+    
     return lines
+
+
+def get_display_width(text: str) -> int:
+    """计算字符串在终端中的显示宽度，兼容中英文混排。"""
+    width = 0
+    for char in str(text):
+        if unicodedata.combining(char):
+            continue
+        if unicodedata.east_asian_width(char) in ('F', 'W'):
+            width += 2
+        else:
+            width += 1
+    return width
+
+
+def pad_display_text(text: str, target_width: int, min_spaces: int = 0) -> str:
+    """按终端显示宽度补齐字符串后的空格。"""
+    display_width = get_display_width(text)
+    padding_width = max(0, target_width - display_width) + min_spaces
+    return f"{text}{' ' * padding_width}"
+
+
+def get_terminal_width() -> int:
+    """获取终端宽度，如果无法获取则返回默认值 80。"""
+    import shutil
+    try:
+        size = shutil.get_terminal_size()
+        return size.columns or 80
+    except Exception:
+        return 80
+
+
+def wrap_text(text: str, max_width: int) -> list[str]:
+    """将文本按指定宽度换行，保持单词完整性。"""
+    if max_width <= 0:
+        return [text]
+    
+    words = text.split()
+    if not words:
+        return []
+    
+    lines = []
+    current_line = ""
+    
+    for word in words:
+        if not current_line:
+            current_line = word
+        elif get_display_width(current_line) + 1 + get_display_width(word) <= max_width:
+            current_line += " " + word
+        else:
+            lines.append(current_line)
+            current_line = word
+    
+    if current_line:
+        lines.append(current_line)
+    
+    return lines if lines else [""]
 
 
 class AliasAwareGroup(click.Group):
@@ -162,8 +247,8 @@ class AliasAwareGroup(click.Group):
         final_command = parse_alias_arguments(alias.command, args[1:])
         working_dir = Path(alias.cwd or os.getcwd()).expanduser().resolve()
         if is_dangerous_command(final_command):
-            click.secho("检测到高风险命令，请确认后再执行。", fg="yellow", err=True)
-            if not click.confirm("是否继续执行？", default=False):
+            click.secho("Dangerous command detected. Please confirm before execution.", fg="yellow", err=True)
+            if not click.confirm("Do you want to continue?", default=False):
                 raise SystemExit(1)
 
         click.echo(f"{context.app_name} v{context.version} alias: {args[0]}")
@@ -178,7 +263,7 @@ class AliasAwareGroup(click.Group):
             return ctx.obj.context
         if callable(self.runtime_provider):
             return self.runtime_provider()
-        raise click.ClickException("运行时上下文尚未初始化")
+        raise click.ClickException("Runtime context not yet initialized")
 
     def invoke(self, ctx: click.Context) -> Any:
         """统一兜底未处理异常。"""
@@ -193,5 +278,5 @@ class AliasAwareGroup(click.Group):
             raise
         except Exception as exc:  # noqa: BLE001
             logger.exception("unexpected cli error")
-            log_file = getattr(ctx.obj.context.paths, "app_log_file", "日志文件") if ctx.obj else "日志文件"
-            raise click.ClickException(f"发生未处理异常，详细日志见: {log_file}") from exc
+            log_file = getattr(ctx.obj.context.paths, "app_log_file", "log file") if ctx.obj else "log file"
+            raise click.ClickException(f"Unexpected error occurred, see logs at: {log_file}") from exc

@@ -25,7 +25,7 @@ def get_path_provider(command_name: str) -> PathProvider | None:
 def global_path_items(context: AppContext) -> list[PathItem]:
     """返回默认展示的全局路径。"""
     return [
-        ("CLI 家目录", str(context.paths.root_dir)),
-        ("别名文件", str(context.paths.alias_file)),
-        ("日志目录", str(context.paths.logs_dir)),
+        ("CLI Home", str(context.paths.root_dir)),
+        ("Alias File", str(context.paths.alias_file)),
+        ("Logs Directory", str(context.paths.logs_dir)),
     ]

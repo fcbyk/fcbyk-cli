@@ -217,7 +217,7 @@ def kill_daemon_callback(
     _param: click.Parameter,
     value: str | None,
 ) -> None:
-    """处理全局 kill 选项。"""
+    """Handle global kill option."""
     if not value or ctx.resilient_parsing:
         return
 
@@ -233,17 +233,17 @@ def kill_daemon_callback(
                 for item in stop_by_pid(context, int(daemon["pid"]))
                 if item["status"] in {"terminated", "not_running"}
             )
-        click.echo(f"已处理 {count} 个守护进程。")
+        click.echo(f"Processed {count} daemon(s).")
         ctx.exit()
 
     try:
         pid = int(value)
     except ValueError as exc:
-        raise click.BadParameter(f"无效 PID: {value}") from exc
+        raise click.BadParameter(f"Invalid PID: {value}") from exc
 
     results = stop_by_pid(context, pid)
     if not results:
-        click.echo(f"未找到 PID={pid} 的受管进程。")
+        click.echo(f"No managed process found with PID={pid}.")
         ctx.exit()
 
     for item in results:

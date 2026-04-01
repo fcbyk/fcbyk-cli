@@ -7,11 +7,11 @@ import click
 from fcbykcli.api import CommandContext, get_path_provider, global_path_items, pass_command_context
 
 
-@click.command(help="显示 CLI 常用路径，可选查看某个子命令自己的数据路径。")
+@click.command(help="Show common CLI paths, optionally view data paths for a specific subcommand.")
 @click.argument("command_name", required=False)
 @pass_command_context
 def paths(ctx: CommandContext, command_name: str | None) -> None:
-    """显示全局路径或某个子命令的附加路径。"""
+    """Show global paths or additional paths for a subcommand."""
     if command_name is None:
         for label, value in global_path_items(ctx.app):
             click.echo(f"{label}: {value}")
@@ -19,7 +19,7 @@ def paths(ctx: CommandContext, command_name: str | None) -> None:
 
     provider = get_path_provider(command_name)
     if provider is None:
-        raise click.ClickException(f"未找到命令 {command_name} 的路径信息")
+        raise click.ClickException(f"No path information found for command {command_name}")
 
     items = provider(ctx.app)
     if not items:

@@ -28,7 +28,7 @@ def version_callback(
     _param: click.Parameter,
     value: bool,
 ) -> None:
-    """输出版本并退出。"""
+    """Show version and exit."""
     if not value or ctx.resilient_parsing:
         return
 
@@ -63,7 +63,7 @@ def create_cli() -> click.Group:
         callback=version_callback,
         expose_value=False,
         is_eager=True,
-        help="显示版本并退出。",
+        help="Show version and exit.",
     )
     @click.option(
         "--kill",
@@ -72,7 +72,7 @@ def create_cli() -> click.Group:
         callback=kill_daemon_callback,
         expose_value=False,
         is_eager=True,
-        help='终止后台守护进程，可传入 "all" 或具体 PID。',
+        help='Kill background daemon processes. Use "all" to kill all or specify PID.',
     )
     @click.pass_context
     def cli(ctx: click.Context) -> None:

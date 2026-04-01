@@ -50,9 +50,9 @@ def read_json(path: Path, default: T) -> T:
         with path.open("r", encoding="utf-8") as file:
             data = json.load(file)
     except json.JSONDecodeError as exc:
-        raise CliError(f"JSON 文件解析失败: {path}") from exc
+        raise CliError(f"Failed to parse JSON file: {path}") from exc
     except OSError as exc:
-        raise CliError(f"无法读取文件: {path}") from exc
+        raise CliError(f"Unable to read file: {path}") from exc
 
     return data if data is not None else default
 
@@ -71,7 +71,7 @@ def write_json(path: Path, data: Any) -> None:
             temp_path = Path(temp_file.name)
         temp_path.replace(path)
     except OSError as exc:
-        raise CliError(f"无法写入文件: {path}") from exc
+        raise CliError(f"Unable to write file: {path}") from exc
 
 
 def read_text(path: Path, default: str | None = None) -> str | None:
@@ -81,7 +81,7 @@ def read_text(path: Path, default: str | None = None) -> str | None:
     try:
         return path.read_text(encoding="utf-8")
     except OSError as exc:
-        raise CliError(f"无法读取文件: {path}") from exc
+        raise CliError(f"Unable to read file: {path}") from exc
 
 
 def write_text(path: Path, content: str) -> None:
@@ -98,4 +98,4 @@ def write_text(path: Path, content: str) -> None:
             temp_path = Path(temp_file.name)
         temp_path.replace(path)
     except OSError as exc:
-        raise CliError(f"无法写入文件: {path}") from exc
+        raise CliError(f"Unable to write file: {path}") from exc
