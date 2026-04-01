@@ -126,7 +126,7 @@ def _build_command(name: str, args: list[str]) -> list[str]:
                     python_exe = pythonw
         except Exception:
             pass
-    cmd = [python_exe, "-m", "fcbyk.cli", name]
+    cmd = [python_exe, "-m", "fcbyk.main", name]
     cmd.extend(args)
     return cmd
 
