@@ -1,4 +1,4 @@
-"""paths 命令。"""
+"""paths 子命令插件。"""
 
 from __future__ import annotations
 

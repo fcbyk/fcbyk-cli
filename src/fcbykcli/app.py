@@ -10,10 +10,10 @@ from fcbykcli.core.context import AppContext
 from fcbykcli.infra.aliases import AliasAwareGroup
 from fcbykcli.infra.daemon import kill_daemon_callback
 from fcbykcli.infra.logging import setup_logging
-from fcbykcli.infra.registry import register_builtin_commands, register_plugins
+from fcbykcli.infra.registry import register_builtin_plugins, register_plugins
 from fcbykcli.infra.view import render_dashboard
 from fcbykcli.runtime import build_runtime
-import fcbykcli.commands as builtin_commands
+import fcbykcli.plugins as builtin_plugins
 
 
 @dataclass(slots=True)
@@ -81,6 +81,6 @@ def create_cli() -> click.Group:
             render_dashboard(ctx.obj.context, cli)
 
     cli.runtime_provider = get_runtime
-    register_builtin_commands(cli, builtin_commands)
+    register_builtin_plugins(cli, builtin_plugins)
     register_plugins(cli)
     return cli

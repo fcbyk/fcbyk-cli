@@ -1,4 +1,4 @@
-"""命令发现与插件注册。"""
+"""插件发现与注册。"""
 
 from __future__ import annotations
 
@@ -12,10 +12,10 @@ import click
 logger = logging.getLogger("fcbykcli")
 
 
-def register_builtin_commands(cli: click.Group, builtin_commands) -> None:
-    """扫描并注册内置子命令。"""
-    for module in pkgutil.iter_modules(builtin_commands.__path__):
-        target = f"{builtin_commands.__name__}.{module.name}.command"
+def register_builtin_plugins(cli: click.Group, builtin_plugins) -> None:
+    """扫描并注册内置插件。"""
+    for module in pkgutil.iter_modules(builtin_plugins.__path__):
+        target = f"{builtin_plugins.__name__}.{module.name}.command"
         try:
             imported = import_module(target)
         except ModuleNotFoundError:

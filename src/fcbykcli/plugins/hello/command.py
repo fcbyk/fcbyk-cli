@@ -1,4 +1,4 @@
-"""示例命令。"""
+"""示例子命令插件。"""
 
 from __future__ import annotations
 
