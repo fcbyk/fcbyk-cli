@@ -39,13 +39,13 @@ def register(cli: click.Group) -> None:
 子命令执行时拿到的上下文对象。
 
 - `ctx.name` - 当前命令名
-- `ctx.app` - 应用级上下文
-- `ctx.state` - 当前命令专属状态存储
-- `ctx.shared_state` - 应用级共享状态存储
+- `ctx.app` - 应用级上下文（Core 层）
+- `ctx.state` - 当前命令专属状态存储（Protocol）
+- `ctx.shared_state` - 应用级共享状态存储（Protocol）
 
 ## 状态存储
 
-`ctx.state` 和 `ctx.shared_state` 都使用相同的存储接口。
+`ctx.state` 和 `ctx.shared_state` 都使用相同的存储接口（Protocol）。
 
 - `load() -> dict` - 读取完整状态
 - `save(data: dict) -> dict` - 覆盖保存整个状态对象

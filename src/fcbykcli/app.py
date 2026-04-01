@@ -6,13 +6,13 @@ from dataclasses import dataclass
 
 import click
 
-from fcbykcli.core.aliases import AliasAwareGroup
 from fcbykcli.core.context import AppContext
-from fcbykcli.core.daemon import kill_daemon_callback
-from fcbykcli.core.logging import setup_logging
-from fcbykcli.core.registry import register_builtin_commands, register_plugins
-from fcbykcli.core.runtime import build_runtime
-from fcbykcli.core.view import render_dashboard
+from fcbykcli.infra.aliases import AliasAwareGroup
+from fcbykcli.infra.daemon import kill_daemon_callback
+from fcbykcli.infra.logging import setup_logging
+from fcbykcli.infra.registry import register_builtin_commands, register_plugins
+from fcbykcli.infra.view import render_dashboard
+from fcbykcli.runtime import build_runtime
 import fcbykcli.commands as builtin_commands
 
 
@@ -32,8 +32,10 @@ def version_callback(
     if not value or ctx.resilient_parsing:
         return
 
+    from fcbykcli.infra.view import format_version_line
+
     app_context: AppContext = ctx.obj.context if ctx.obj else build_runtime()
-    click.echo(app_context.environment.format_version_line())
+    click.echo(format_version_line(app_context.environment))
     ctx.exit()
 
 

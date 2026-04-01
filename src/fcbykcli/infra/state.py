@@ -1,4 +1,4 @@
-"""状态存储 API。"""
+"""状态存储的 JSON 文件实现。"""
 
 from __future__ import annotations
 
@@ -6,12 +6,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from fcbykcli.core.persistence import read_json, write_json
+from fcbykcli.core.state import StateStore
+from fcbykcli.infra.persistence import read_json, write_json
 
 
 @dataclass(slots=True)
-class StateStore:
-    """基于 JSON 文件的轻量键值存储。"""
+class JsonFileStateStore:
+    """基于 JSON 文件的状态存储实现。"""
 
     path: Path
 
@@ -53,7 +54,7 @@ class StateStore:
 
 
 @dataclass(slots=True)
-class CommandStateStore(StateStore):
-    """带命令元信息的状态存储。"""
+class CommandJsonStateStore(JsonFileStateStore):
+    """带命令元信息的状态存储实现。"""
 
     command_name: str

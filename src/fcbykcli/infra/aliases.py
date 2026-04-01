@@ -14,7 +14,7 @@ import click
 
 from fcbykcli.core.context import AppContext
 from fcbykcli.core.errors import CliError
-from fcbykcli.core.persistence import read_json
+from fcbykcli.infra.persistence import read_json
 
 LOCAL_ALIAS_FILES = ("alias.byk.json", "script.byk.json")
 DANGEROUS_PATTERNS = (

@@ -9,7 +9,8 @@ from fcbykcli.core.environment import EnvironmentInfo
 from fcbykcli.core.persistence import PathLayout
 
 if TYPE_CHECKING:
-    from fcbykcli.core.state import CommandStateStore, StateStore
+    from fcbykcli.core.config import ConfigStore
+    from fcbykcli.core.state import StateStore
 
 
 @dataclass(slots=True)
@@ -25,17 +26,14 @@ class AppContext:
         self,
         command_name: str,
         filename: str = "state.json",
-    ) -> CommandStateStore:
+    ) -> StateStore:
         """返回某个子命令的状态存储。"""
-        from fcbykcli.core.state import CommandStateStore
-
-        return CommandStateStore(
-            command_name=command_name,
-            path=self.paths.command_file(command_name, filename),
-        )
+        raise NotImplementedError
 
     def shared_store(self, filename: str = "shared-state.json") -> StateStore:
         """返回应用级共享状态存储。"""
-        from fcbykcli.core.state import StateStore
+        raise NotImplementedError
 
-        return StateStore(path=self.paths.config_dir / filename)
+    def config_store(self) -> ConfigStore:
+        """返回应用配置存储。"""
+        raise NotImplementedError

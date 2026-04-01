@@ -17,13 +17,6 @@ class EnvironmentInfo:
     executable: str
     platform_name: str
 
-    def format_version_line(self) -> str:
-        """生成适合终端输出的版本描述。"""
-        return (
-            f"{self.app_name} v{self.version} | "
-            f"Python {self.python_version} | {self.platform_name}"
-        )
-
 
 def collect_environment(app_name: str, version: str) -> EnvironmentInfo:
     """收集当前运行环境。"""

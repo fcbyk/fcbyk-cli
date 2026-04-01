@@ -10,25 +10,47 @@
 - 子命令通过自动扫描注册
 - 未来插件可以通过统一入口接入
 - 持久化按"全局 / 子命令"分层
+- **Core 与 Infra 分层设计（依赖倒置）**
 
 ## 目录结构
 
 ```
 src/fcbykcli/
-├── app.py
-├── main.py
-├── commands/
-├── core/
-├── api/
-└── web/
+├── core/              # 核心层：纯逻辑 + 抽象
+│   ├── context.py     # AppContext 数据类
+│   ├── environment.py # EnvironmentInfo 数据类
+│   ├── persistence.py # PathLayout 数据类
+│   ├── state.py       # StateStore Protocol
+│   ├── config.py      # ConfigStore Protocol
+│   └── errors.py      # CliError 异常
+│
+├── infra/             # 基础设施层：具体实现
+│   ├── persistence.py # build_path_layout, read_json, write_json
+│   ├── state.py       # JsonFileStateStore, CommandJsonStateStore
+│   ├── config.py      # JsonFileConfigStore
+│   ├── aliases.py     # 别名系统实现
+│   ├── daemon.py      # 守护进程管理
+│   ├── logging.py     # 日志初始化
+│   ├── registry.py    # 命令注册
+│   └── view.py        # CLI 视图渲染（含 format_version_line）
+│
+├── api/               # 公开 API（业务层入口）
+│   ├── context.py     # CommandContext, pass_command_context
+│   └── paths.py       # register_path_provider, get_path_provider
+│
+├── runtime.py         # 运行时装配（根目录）
+├── app.py             # 应用装配
+└── commands/          # 子命令（只依赖 api）
 ```
 
-- `app.py` - 负责装配整个 CLI
-- `main.py` - 提供命令入口
-- `commands/` - 放子命令实现
-- `core/` - 放内部基础实现
+各目录职责：
+
+- `core/` - 定义数据结构和抽象接口（Protocol），无 IO 操作
+- `infra/` - 提供具体实现（IO、视图、工厂函数）
 - `api/` - 对子命令和未来插件公开的开发入口
-- `web/` - 预留给需要局域网 Web 服务的命令复用
+- `runtime.py` - 运行时装配，注入具体实现
+- `app.py` - 装配整个 CLI
+- `commands/` - 放子命令实现，每个子命令一个独立目录
 
 ## 启动流程
 
@@ -56,7 +78,7 @@ def register(cli):
     cli.add_command(...)
 ```
 
-当前内置命令：`hello`、`info`、`paths`
+当前内置命令：`hello`、`paths`
 
 ## 路径与持久化设计
 
@@ -80,6 +102,91 @@ CLI 的数据根目录：`~/.fcbyk-cli`
 - 子命令开发者不需要自己拼路径、读写 JSON、处理原子写入
 
 例如 `hello` 的状态文件：`~/.fcbyk-cli/commands/hello/state.json`
+
+## Core 与 Infra 分层架构
+
+### 设计原则
+
+**Core 层（纯逻辑 + 抽象）：**
+- 只包含数据类（`@dataclass`）
+- 定义 Protocol（抽象接口）
+- 纯计算逻辑（无 IO、无副作用）
+
+**Infra 层（具体实现）：**
+- 提供所有具体实现（带 IO 操作）
+- 工厂函数
+- 视图渲染
+- 运行时装配
+
+**依赖方向：**
+```
+Infra → Core （✓ 正确）
+Core → Infra （✗ 错误）
+```
+
+### 示例
+
+**Core 层定义接口：**
+```python
+# core/state.py
+class StateStore(Protocol):
+    """状态存储协议。"""
+    
+    path: Path
+    def load(self) -> dict[str, Any]: ...
+    def save(self, data: dict[str, Any]) -> dict[str, Any]: ...
+    def get(self, key: str, default: Any = None) -> Any: ...
+```
+
+**Infra 层提供实现：**
+```python
+# infra/state.py
+class JsonFileStateStore:
+    """基于 JSON 文件的状态存储实现。"""
+    
+    def __init__(self, path: Path) -> None:
+        self.path = path
+    
+    def load(self) -> dict[str, Any]:
+        data = read_json(self.path, default={})
+        return data if isinstance(data, dict) else {}
+    
+    def save(self, data: dict[str, Any]) -> dict[str, Any]:
+        write_json(self.path, data)
+        return data
+```
+
+**运行时注入：**
+```python
+# runtime.py
+class RuntimeAppContext(AppContext):
+    def command_store(self, command_name: str, filename: str = "state.json"):
+        return CommandJsonStateStore(
+            command_name=command_name,
+            path=self.paths.command_file(command_name, filename),
+        )
+```
+
+### 优势
+
+1. **清晰的职责分离**
+   - Core：定义"是什么"（数据结构 + 接口）
+   - Infra：定义"怎么做"（具体实现）
+
+2. **依赖倒置原则**
+   - 业务层依赖抽象（Protocol）
+   - 实现层依赖抽象
+   - 核心层独立于实现
+
+3. **易于扩展**
+   - 可轻松替换存储后端（JSON → SQLite）
+   - 可添加新的 Infra 实现
+   - 不影响业务代码
+
+4. **更好的可测试性**
+   - Core 层可独立单元测试
+   - Infra 层可通过 Mock 测试
+   - 业务层可注入测试实现
 
 ## 公开开发入口
 

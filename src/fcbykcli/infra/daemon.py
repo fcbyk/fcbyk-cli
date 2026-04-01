@@ -15,7 +15,7 @@ from typing import Any
 import click
 
 from fcbykcli.core.context import AppContext
-from fcbykcli.core.runtime import build_runtime
+from fcbykcli.runtime import build_runtime
 
 
 @dataclass(slots=True)

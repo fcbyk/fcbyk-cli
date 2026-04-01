@@ -66,9 +66,9 @@ def demo(ctx: CommandContext) -> None:
 这样可以直接拿到：
 
 - `ctx.name` - 当前命令名
-- `ctx.app` - 应用级上下文
-- `ctx.state` - 当前命令专属状态存储
-- `ctx.shared_state` - 应用级共享状态存储
+- `ctx.app` - 应用级上下文（Core 层）
+- `ctx.state` - 当前命令专属状态存储（Protocol）
+- `ctx.shared_state` - 应用级共享状态存储（Protocol）
 
 ## 使用状态存储
 

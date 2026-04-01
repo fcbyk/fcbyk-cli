@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fcbykcli.core.runtime import build_runtime
+from fcbykcli.runtime import build_runtime
 
 
 def test_command_store_is_isolated_per_command(tmp_path, monkeypatch):

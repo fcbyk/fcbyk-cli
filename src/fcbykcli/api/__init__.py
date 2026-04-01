@@ -8,7 +8,7 @@ from fcbykcli.api.paths import (
     get_path_provider,
     global_path_items,
 )
-from fcbykcli.api.state import CommandStateStore, StateStore
+from fcbykcli.core.state import StateStore
 
 __all__ = [
     # 上下文
@@ -22,5 +22,4 @@ __all__ = [
     "global_path_items",
     # 状态存储
     "StateStore",
-    "CommandStateStore",
 ]

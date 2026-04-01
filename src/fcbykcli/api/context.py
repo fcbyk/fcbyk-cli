@@ -10,7 +10,7 @@ import click
 
 from fcbykcli.app import CliState
 from fcbykcli.core.context import AppContext
-from fcbykcli.core.state import CommandStateStore, StateStore
+from fcbykcli.core.state import StateStore
 
 F = TypeVar("F", bound=Callable[..., Any])
 
@@ -21,7 +21,7 @@ class CommandContext:
 
     name: str
     app: AppContext
-    state: CommandStateStore
+    state: StateStore
     shared_state: StateStore
 
 
