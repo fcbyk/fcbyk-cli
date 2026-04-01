@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import click
 
-from fcbykcli.core.paths import get_path_provider, global_path_items
-from fcbykcli.runtime import CommandContext, pass_command_context
+from fcbykcli.api import CommandContext, get_path_provider, global_path_items, pass_command_context
 
 
 @click.command(help="显示 CLI 常用路径，可选查看某个子命令自己的数据路径。")

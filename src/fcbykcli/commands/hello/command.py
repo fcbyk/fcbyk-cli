@@ -4,9 +4,7 @@ from __future__ import annotations
 
 import click
 
-from fcbykcli.core.context import AppContext
-from fcbykcli.core.paths import register_path_provider
-from fcbykcli.runtime import CommandContext, pass_command_context
+from fcbykcli.api import CommandContext, PathItem, pass_command_context, register_path_provider
 
 
 @click.command(help="示例子命令，用于验证动态注册链路。")
@@ -28,7 +26,7 @@ def hello(ctx: CommandContext, name: str, reset_state: bool) -> None:
     click.echo(f"state file: {store.path}")
 
 
-def hello_path_items(context: AppContext) -> list[tuple[str, str]]:
+def hello_path_items(context) -> list[PathItem]:
     """返回 hello 相关路径。"""
     return [("数据文件", str(context.command_store("hello").path))]
 

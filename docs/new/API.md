@@ -1,0 +1,131 @@
+# fcbykcli 子命令 API 文档
+
+## 概述
+
+`fcbykcli.api` 为子命令和未来插件提供了一组统一的运行时 API。
+
+```python
+from fcbykcli.api import CommandContext, pass_command_context
+```
+
+## 快速开始
+
+```python
+import click
+
+from fcbykcli.api import CommandContext, pass_command_context
+
+
+@click.command()
+@pass_command_context
+def hello(ctx: CommandContext) -> None:
+    count = int(ctx.state.get("run_count", 0)) + 1
+    ctx.state.set("run_count", count)
+    click.echo(f"run count: {count}")
+
+
+def register(cli: click.Group) -> None:
+    cli.add_command(hello)
+```
+
+## 公开入口
+
+### `pass_command_context`
+
+装饰器，用于把运行时上下文注入到命令函数中。
+
+### `CommandContext`
+
+子命令执行时拿到的上下文对象。
+
+- `ctx.name` - 当前命令名
+- `ctx.app` - 应用级上下文
+- `ctx.state` - 当前命令专属状态存储
+- `ctx.shared_state` - 应用级共享状态存储
+
+## 状态存储
+
+`ctx.state` 和 `ctx.shared_state` 都使用相同的存储接口。
+
+- `load() -> dict` - 读取完整状态
+- `save(data: dict) -> dict` - 覆盖保存整个状态对象
+- `get(key, default=None)` - 读取单个键
+- `set(key, value) -> dict` - 设置单个键
+- `update(values: dict) -> dict` - 批量更新多个键
+- `delete(key) -> dict` - 删除某个键
+- `clear() -> dict` - 清空整个状态文件
+- `path` - 状态文件的实际路径
+
+## `ctx.app` 可用能力
+
+### 1. 应用信息
+
+- `ctx.app.app_name`
+- `ctx.app.version`
+- `ctx.app.environment`
+
+其中 `environment` 中包含：
+
+- Python 版本
+- 可执行文件路径
+- 平台信息
+
+### 2. 路径布局
+
+`ctx.app.paths` 包含：
+
+- `root_dir`
+- `config_dir`
+- `commands_dir`
+- `logs_dir`
+- `runtime_dir`
+- `app_config_file`
+- `alias_file`
+- `app_log_file`
+- `daemon_dir`
+
+### 3. 额外获取存储对象
+
+```python
+store = ctx.app.command_store("hello")
+shared = ctx.app.shared_store()
+```
+
+## paths 扩展能力
+
+如果一个子命令希望被 `bykr paths <command>` 展示自己的数据路径，可以注册路径提供器。
+
+```python
+from fcbykcli.api import (
+    CommandContext, 
+    PathItem, 
+    pass_command_context,
+    register_path_provider
+)
+
+
+def my_command_paths(context) -> list[PathItem]:
+    return [
+        ("数据目录", str(context.command_store("my_command").path.parent)),
+        ("配置文件", str(context.command_store("my_command", "config.json").path)),
+    ]
+
+
+def register(cli):
+    cli.add_command(my_command)
+    register_path_provider("my_command", my_command_paths)
+```
+
+## 别名与守护进程
+
+当前子命令一般不需要直接操作别名系统或守护进程内部实现。这些能力目前仍属于框架内部能力。
+
+如果后续需要对外开放更稳定的 API，建议通过 `fcbykcli.api` 再提供一层公开接口。
+
+## 适合子命令解决的问题
+
+- 保存上次输入
+- 保存最近一次运行结果
+- 记录端口、主机、开关状态
+- 保存临时历史记录
+- 提供 `paths` 子命令需要展示的数据文件位置

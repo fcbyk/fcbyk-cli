@@ -9,12 +9,10 @@ import pkgutil
 
 import click
 
-import fcbykcli.commands as builtin_commands
-
 logger = logging.getLogger("fcbykcli")
 
 
-def register_builtin_commands(cli: click.Group) -> None:
+def register_builtin_commands(cli: click.Group, builtin_commands) -> None:
     """扫描并注册内置子命令。"""
     for module in pkgutil.iter_modules(builtin_commands.__path__):
         target = f"{builtin_commands.__name__}.{module.name}.command"

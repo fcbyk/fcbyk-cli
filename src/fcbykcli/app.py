@@ -13,6 +13,7 @@ from fcbykcli.core.logging import setup_logging
 from fcbykcli.core.registry import register_builtin_commands, register_plugins
 from fcbykcli.core.runtime import build_runtime
 from fcbykcli.core.view import render_dashboard
+import fcbykcli.commands as builtin_commands
 
 
 @dataclass(slots=True)
@@ -78,6 +79,6 @@ def create_cli() -> click.Group:
             render_dashboard(ctx.obj.context, cli)
 
     cli.runtime_provider = get_runtime
-    register_builtin_commands(cli)
+    register_builtin_commands(cli, builtin_commands)
     register_plugins(cli)
     return cli
