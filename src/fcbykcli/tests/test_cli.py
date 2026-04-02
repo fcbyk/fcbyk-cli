@@ -18,7 +18,7 @@ def test_dashboard_shows_registered_commands(tmp_path, monkeypatch):
     result = runner.invoke(build_cli(), [])
 
     assert result.exit_code == 0
-    assert "已注册命令:" in result.output
+    assert "Plugins:" in result.output
     assert "hello" in result.output
     assert "paths" in result.output
 
@@ -40,9 +40,9 @@ def test_paths_command(tmp_path, monkeypatch):
     result = runner.invoke(build_cli(), ["paths"])
 
     assert result.exit_code == 0
-    assert "CLI 家目录:" in result.output
-    assert "别名文件:" in result.output
-    assert "日志目录:" in result.output
+    assert "CLI Home:" in result.output
+    assert "Alias File:" in result.output
+    assert "Logs Directory:" in result.output
 
 
 def test_paths_command_for_subcommand(tmp_path, monkeypatch):
@@ -52,10 +52,10 @@ def test_paths_command_for_subcommand(tmp_path, monkeypatch):
     result = runner.invoke(build_cli(), ["paths", "hello"])
 
     assert result.exit_code == 0
-    assert "数据文件:" in result.output
-    assert "CLI 家目录:" not in result.output
-    assert "别名文件:" not in result.output
-    assert "日志目录:" not in result.output
+    assert "Data File:" in result.output
+    assert "CLI Home:" not in result.output
+    assert "Alias File:" not in result.output
+    assert "Logs Directory:" not in result.output
 
 
 def test_hello_command(tmp_path, monkeypatch):

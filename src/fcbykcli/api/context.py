@@ -45,3 +45,9 @@ def pass_command_context(func: F) -> F:
         return ctx.invoke(func, build_command_context(ctx), *args, **kwargs)
 
     return cast(F, update_wrapper(new_func, func))
+
+
+def get_command_context() -> AppContext:
+    """获取当前应用上下文（用于后台进程启动等场景）。"""
+    from fcbykcli.runtime import build_runtime
+    return build_runtime()

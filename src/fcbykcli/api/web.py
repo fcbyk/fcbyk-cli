@@ -2,7 +2,9 @@
 
 import logging
 from pathlib import Path
-from typing import Union, List, Optional
+from typing import Union, List, Optional, Any, Tuple
+
+from flask import jsonify
 
 
 # 禁用 Flask 的日志
@@ -10,9 +12,31 @@ log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
 
+class R:
+    """Web API 响应格式化工具类。"""
+    
+    @staticmethod
+    def success(data: Any = None, message: str = "success") -> Tuple[Any, int]:
+        """构建成功的 API 响应。"""
+        return jsonify({
+            "code": 200,
+            "message": message,
+            "data": data
+        }), 200
+    
+    @staticmethod
+    def error(message: str = "error", code: int = 400, data: Any = None) -> Tuple[Any, int]:
+        """构建错误的 API 响应。"""
+        return jsonify({
+            "code": code,
+            "message": message,
+            "data": data
+        }), code
+
+
 def create_spa(
-    entry_html: str,
     static_dir: Union[str, Path],
+    entry_html: str = "index.html",
     page: Optional[List[str]] = None,
 ):
     """创建单页应用 Flask 实例。
