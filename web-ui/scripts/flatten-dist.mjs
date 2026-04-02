@@ -137,12 +137,12 @@ async function flatten() {
   console.log('[flatten-dist] 扁平化处理完成')
 
   // 拷贝 dist 目录到后端 web/dist 目录
-  const backendWebDir = resolve(projectRoot, '..', 'src', 'fcbyk', 'web')
+  const backendWebDir = resolve(projectRoot, '..', 'src', 'fcbykcli', 'web')
   const backendDistDir = resolve(backendWebDir, 'dist')
 
   try {
-    // 确保后端 web 目录存在
-    await fs.access(backendWebDir)
+    // 确保后端 web 目录存在（不存在则创建）
+    await ensureDir(backendWebDir)
     
     // 清空或创建 dist 目录
     await removeDir(backendDistDir)
