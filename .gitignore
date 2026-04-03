@@ -10,3 +10,6 @@ __pycache__
 
 src/fcbyk/web/static
 .obsidian
+*/.vitepress/cache
+node_modules
+.DS_Store
