@@ -1,4 +1,4 @@
-# Alias 命令别名
+# 命令别名
 
 ## 概述
 
@@ -7,18 +7,6 @@
 ```bash
 byk <name> [...args]
 ```
-
-## 核心设计
-
-- **统一模型**：不再区分 alias / script，统一为 alias
-- **配置驱动**：通过 JSON 文件管理，无需 CLI 命令维护
-- **Shell 执行**：直接使用 shell 执行命令
-- **参数处理**：支持自动透传和占位符机制
-- **层级分组**：支持递归嵌套的别名分组
-- **工作目录**：支持配置 cwd 和 CLI 覆盖
-- **安全检测**：内置危险命令识别
-
----
 
 ## 配置加载
 
@@ -33,13 +21,31 @@ byk <name> [...args]
 本地配置 > 全局配置（覆盖合并）
 ```
 
----
-
 ## 配置格式
 
-### 简单模式
+- TypeScript 类型定义
 
-```json
+```typescript
+// 命令对象，`cmd` 必填，`cwd` 可选
+export interface AliasCommand {
+  cmd: string;
+  cwd?: string;
+}
+
+// 联合类型，支持字符串或命令对象
+export type AliasValue = string | AliasCommand;
+
+// 递归接口，支持无限层级分组
+export interface AliasConfig {
+  [key: string]: AliasValue | AliasConfig;
+}
+```
+
+- 配置示例
+
+::: code-group
+
+```json [简单模式]
 {
   "dev": "vite",
   "build": "vite build",
@@ -47,11 +53,7 @@ byk <name> [...args]
 }
 ```
 
----
-
-### 对象模式
-
-```json
+```json [对象模式]
 {
   "dev": {
     "cmd": "vite"
@@ -66,13 +68,7 @@ byk <name> [...args]
 }
 ```
 
----
-
-### 分组模式（递归嵌套）
-
-支持通过对象嵌套实现别名分组，使用 **英文点号** `.` 作为路径分隔符：
-
-```json
+```json [分组模式]
 {
   "开发": {
     "测试": "pytest -q",
@@ -88,41 +84,20 @@ byk <name> [...args]
 }
 ```
 
-调用示例：
+:::
+
+- 调用示例
 
 ```bash
-byk 开发.测试          # pytest -q
+byk dev             # vite
+byk 开发.测试         # pytest -q
 byk 开发.构建.前端     # pnpm run build (cwd: web-ui)
-byk 清理                # find . -type d ...
+byk 清理             # find . -type d ...
 ```
 
----
-
-### TypeScript 类型定义
-
-```typescript
-export interface AliasCommand {
-  cmd: string;
-  cwd?: string;
-}
-
-export type AliasValue = string | AliasCommand;
-
-export interface AliasConfig {
-  [key: string]: AliasValue | AliasConfig;
-}
-```
-
-**类型说明：**
-- `AliasCommand`：命令对象，`cmd` 必填，`cwd` 可选
-- `AliasValue`：联合类型，支持字符串或命令对象
-- `AliasConfig`：递归接口，支持无限层级分组
-
----
 
 ## 执行流程
 
-```
 1. 检查内置插件命令 → 命中则执行
 2. 加载并合并 alias 配置（本地 > 全局）
 3. 查找匹配的 alias（支持分组路径）
@@ -130,9 +105,6 @@ export interface AliasConfig {
 5. 确定 cwd（CLI 参数 > 配置）
 6. 安全检查（危险命令检测）
 7. Shell 执行
-```
-
----
 
 ## 参数处理
 
@@ -202,15 +174,6 @@ byk repeat Hello
 # 输出：Hello Hello Hello
 ```
 
-### 参数异常
-
-| 情况 | 行为 |
-|------|------|
-| 参数不足 | 报错 |
-| 参数过多 | 报错 |
-
----
-
 ## 工作目录（cwd）
 
 ### 配置方式
@@ -231,58 +194,3 @@ byk install --cwd ./other-dir
 ```
 
 **优先级**：`CLI 参数 > 配置文件`
-
----
-
-## 安全机制
-
-### 危险命令检测
-
-自动识别并阻止以下类型的命令：
-- `rm -rf /` 等系统级删除操作
-- `dd` 等底层磁盘操作
-- 其他覆盖系统路径的操作
-
-**行为**：默认提示并阻止执行
-
----
-
-## 错误处理
-
-- **字段缺失**：提示具体缺失的 key
-- **参数不匹配**：报错并显示期望的参数数量
-- **命令未找到**：提示无匹配的 alias
-
----
-
-## 与旧版本差异
-
-### 移除的功能
-
-| 旧能力 | 状态 |
-|--------|------|
-| `fcbyk run` | ❌ 移除 |
-| `fcbyk alias add` | ❌ 移除 |
-| 命令序列数组 | ❌ 移除 |
-| CLI 管理 alias | ❌ 移除 |
-| `script.byk.json` | ❌ 移除（统一为 `alias.byk.json`） |
-
-### 新模型
-
-| 能力 | 新方式 |
-|------|--------|
-| 执行 | `byk <name>` |
-| 管理 | 修改 JSON 文件 |
-| 脚本 | alias |
-| 参数 | 占位符 |
-| 分组 | 递归嵌套对象 |
-
----
-
-## 最佳实践
-
-- ✅ 将 `alias.byk.json` 纳入版本控制
-- ✅ 避免使用系统常见命令名（如 `ls`, `cd`）
-- ✅ 对需要参数的命令使用 `{args}` 明确行为
-- ✅ 复杂命令显式定义 `cwd`
-- ✅ 使用分组组织相关命令
