@@ -19,8 +19,8 @@ def test_dashboard_shows_registered_commands(tmp_path, monkeypatch):
 
     assert result.exit_code == 0
     assert "Plugins:" in result.output
-    assert "hello" in result.output
     assert "paths" in result.output
+    assert "lansend" in result.output
 
 
 def test_version_option(tmp_path, monkeypatch):
@@ -43,42 +43,6 @@ def test_paths_command(tmp_path, monkeypatch):
     assert "CLI Home:" in result.output
     assert "Alias File:" in result.output
     assert "Logs Directory:" in result.output
-
-
-def test_paths_command_for_subcommand(tmp_path, monkeypatch):
-    monkeypatch.setenv("HOME", str(tmp_path))
-
-    runner = CliRunner()
-    result = runner.invoke(build_cli(), ["paths", "hello"])
-
-    assert result.exit_code == 0
-    assert "Data File:" in result.output
-    assert "CLI Home:" not in result.output
-    assert "Alias File:" not in result.output
-    assert "Logs Directory:" not in result.output
-
-
-def test_hello_command(tmp_path, monkeypatch):
-    monkeypatch.setenv("HOME", str(tmp_path))
-
-    runner = CliRunner()
-    result = runner.invoke(build_cli(), ["hello", "--name", "codex"])
-
-    assert result.exit_code == 0
-    assert "hello codex" in result.output
-    assert "run count: 1" in result.output
-
-
-def test_hello_command_persists_state(tmp_path, monkeypatch):
-    monkeypatch.setenv("HOME", str(tmp_path))
-
-    runner = CliRunner()
-    first = runner.invoke(build_cli(), ["hello", "--name", "codex"])
-    second = runner.invoke(build_cli(), ["hello", "--name", "codex"])
-
-    assert first.exit_code == 0
-    assert second.exit_code == 0
-    assert "run count: 2" in second.output
 
 
 def test_alias_command_resolution(tmp_path, monkeypatch):
