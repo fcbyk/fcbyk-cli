@@ -1,11 +1,11 @@
 {
     "发布": {
         "1": "pytest -q",
-        "3": "cz changelog --incremental",
-        "4": "cz bump $1",
-        "5": "python3 -m build",
-        "6": "git push origin --tags",
-        "7": "twine upload dist/*"
+        "2": "cz changelog --incremental",
+        "3": "cz bump $1",
+        "4": "python3 -m build",
+        "5": "git push origin --tags",
+        "6": "twine upload dist/*"
     },
 
     "清理文件": "find . -type d \\( -name '__pycache__' -o -name '.pytest_cache' \\) -exec rm -rf {} +",

@@ -1,0 +1,127 @@
+from __future__ import annotations
+
+from unittest.mock import MagicMock, patch
+
+from fcbykcli.core.environment import EnvironmentInfo
+from fcbykcli.infra.view import (
+    _get_status_symbol,
+    format_version_line,
+    render_dashboard,
+)
+
+
+class TestFormatVersionLine:
+    def test_format_version_line(self):
+        env = EnvironmentInfo(
+            app_name="testapp",
+            version="1.0.0",
+            python_version="3.11.0",
+            platform_name="Linux",
+            executable="/usr/bin/python",
+        )
+        result = format_version_line(env)
+        assert "testapp v1.0.0" in result
+        assert "Python 3.11.0" in result
+        assert "Linux" in result
+
+
+class TestGetStatusSymbol:
+    def test_alive_symbol(self):
+        assert _get_status_symbol(True) == "●"
+
+    def test_dead_symbol(self):
+        assert _get_status_symbol(False) == "○"
+
+
+class TestRenderDashboard:
+    @patch("fcbykcli.infra.view.plugin_display_info")
+    @patch("fcbykcli.infra.view.render_alias_lines")
+    @patch("fcbykcli.infra.view.list_daemons")
+    def test_render_dashboard_with_plugins(self, mock_list_daemons, mock_render_alias, mock_plugin_info):
+        mock_plugin_info.__iter__ = MagicMock(return_value=iter(["plugin1", "plugin2"]))
+        mock_render_alias.return_value = ["alias1: cmd1", "alias2: cmd2"]
+        mock_list_daemons.return_value = []
+
+        context = MagicMock()
+        cli = MagicMock()
+
+        from click.testing import CliRunner
+        runner = CliRunner()
+        from fcbykcli.app import create_cli
+
+        with runner.isolation():
+            render_dashboard(context, cli)
+
+    @patch("fcbykcli.infra.view.plugin_display_info")
+    @patch("fcbykcli.infra.view.render_alias_lines")
+    @patch("fcbykcli.infra.view.list_daemons")
+    def test_render_dashboard_no_aliases(self, mock_list_daemons, mock_render_alias, mock_plugin_info):
+        mock_plugin_info.__iter__ = MagicMock(return_value=iter([]))
+        mock_render_alias.return_value = []
+        mock_list_daemons.return_value = []
+
+        context = MagicMock()
+        cli = MagicMock()
+
+        from click.testing import CliRunner
+        runner = CliRunner()
+
+        with runner.isolation():
+            render_dashboard(context, cli)
+
+    @patch("fcbykcli.infra.view.plugin_display_info")
+    @patch("fcbykcli.infra.view.render_alias_lines")
+    @patch("fcbykcli.infra.view.list_daemons")
+    def test_render_dashboard_with_running_daemons(self, mock_list_daemons, mock_render_alias, mock_plugin_info):
+        mock_plugin_info.__iter__ = MagicMock(return_value=iter([]))
+        mock_render_alias.return_value = []
+        mock_list_daemons.return_value = [
+            {"name": "test", "pid": 1234, "alive": True, "port": 8080},
+        ]
+
+        context = MagicMock()
+        cli = MagicMock()
+
+        from click.testing import CliRunner
+        runner = CliRunner()
+
+        with runner.isolation():
+            render_dashboard(context, cli)
+
+    @patch("fcbykcli.infra.view.plugin_display_info")
+    @patch("fcbykcli.infra.view.render_alias_lines")
+    @patch("fcbykcli.infra.view.list_daemons")
+    def test_render_dashboard_with_stopped_daemons(self, mock_list_daemons, mock_render_alias, mock_plugin_info):
+        mock_plugin_info.__iter__ = MagicMock(return_value=iter([]))
+        mock_render_alias.return_value = []
+        mock_list_daemons.return_value = [
+            {"name": "test", "pid": 1234, "alive": False, "port": None},
+        ]
+
+        context = MagicMock()
+        cli = MagicMock()
+
+        from click.testing import CliRunner
+        runner = CliRunner()
+
+        with runner.isolation():
+            render_dashboard(context, cli)
+
+    @patch("fcbykcli.infra.view.plugin_display_info")
+    @patch("fcbykcli.infra.view.render_alias_lines")
+    @patch("fcbykcli.infra.view.list_daemons")
+    @patch("fcbykcli.infra.view.get_terminal_width")
+    def test_render_dashboard_wrap_text(self, mock_get_width, mock_list_daemons, mock_render_alias, mock_plugin_info):
+        mock_plugin_info.__iter__ = MagicMock(return_value=iter([]))
+        mock_render_alias.return_value = []
+        mock_list_daemons.return_value = []
+        mock_get_width.return_value = 40
+
+        context = MagicMock()
+        cli = MagicMock()
+
+        from click.testing import CliRunner
+        runner = CliRunner()
+
+        with runner.isolation():
+            render_dashboard(context, cli)
