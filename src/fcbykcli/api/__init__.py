@@ -14,7 +14,7 @@ from fcbykcli.api.network import (
     ensure_port_available,
     detect_iface_type,
 )
-from fcbykcli.api.web import create_spa, R
+
 from fcbykcli.core.state import StateStore
 from fcbykcli.infra.daemon import start_daemon
 

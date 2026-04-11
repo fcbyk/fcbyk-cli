@@ -1,10 +1,6 @@
 {
     "发布": {
         "1": "pytest -q",
-        "2": {
-            "cmd": "pnpm run build:flatten",
-            "cwd": "./web-ui"
-        },
         "3": "cz changelog --incremental",
         "4": "cz bump $1",
         "5": "python3 -m build",

@@ -1,5 +1,3 @@
-"""新的 CLI 主入口。"""
-
 from fcbykcli.app import create_cli
 
 

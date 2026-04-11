@@ -20,7 +20,6 @@ def test_dashboard_shows_registered_commands(tmp_path, monkeypatch):
     assert result.exit_code == 0
     assert "Plugins:" in result.output
     assert "paths" in result.output
-    assert "lansend" in result.output
 
 
 def test_version_option(tmp_path, monkeypatch):
