@@ -57,7 +57,7 @@ addopts = "-v --cov=fcbykcli --cov-report=term-missing"
 
 [tool.commitizen]
 name = "cz_customize"
-version = "0.3.0"
+version = "1.0.0a1"
 tag_format = "v$version"
 changelog_file = "CHANGELOG.md"
 bump_message = "release: v$new_version"

@@ -10,5 +10,6 @@
 
     "清理文件": "find . -type d \\( -name '__pycache__' -o -name '.pytest_cache' \\) -exec rm -rf {} +",
     "本地标签": "git tag",
-    "查看远程库标签": "git ls-remote --tags origin"
+    "查看远程库标签": "git ls-remote --tags origin",
+    "回滚": "git reset --soft HEAD~1"
 }

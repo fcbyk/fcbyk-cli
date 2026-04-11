@@ -1,3 +1,13 @@
+## v1.0.0a1 (2026-04-11)
+
+### BREAKING CHANGE
+
+- fcbyk包更名fcbykcli包
+- commands 改为 plugins 语义
+- 实现Core与Infra分层架构并重构状态管理
+- 去除之前端代码和所有子命令，所有子命令通过插件形式扩展
+- 保留别名和后台进程功能
+
 ## v0.3.0 (2026-03-28)
 
 ### Features
