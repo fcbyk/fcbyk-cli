@@ -42,7 +42,7 @@ byk = "fcbykcli.main:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
-packages = { find = { where = ["src"], include = ["fcbykcli*"] } }
+packages = { find = { where = ["src"], include = ["fcbykcli*"], exclude = ["example*"] } }
 
 [tool.setuptools.package-data]
 fcbykcli = ["web/dist/**/*"]
@@ -55,6 +55,7 @@ readme = {file = ["README.md"], content-type = "text/markdown"}
 testpaths = ["src/fcbykcli/tests"]
 python_files = ["test_*.py"]
 addopts = "-v --cov=fcbykcli --cov-report=term-missing"
+norecursedirs = ["example", "example-*", ".git", "dist", "build"]
 
 [tool.commitizen]
 name = "cz_customize"

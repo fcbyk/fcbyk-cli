@@ -37,7 +37,7 @@ def render_dashboard(context: AppContext, cli: click.Group) -> None:
     console = Console()
 
     welcome_text = Text()
-    welcome_text.append(f"✦  Welcome to FCBYK CLI!", style="bold cyan")
+    welcome_text.append(f"✦ Welcome to FCBYK CLI!", style="bold cyan")
     welcome_text.append(f" {context.version}", style="dim")
     welcome_text.append("\n")
     welcome_text.append("\n")
