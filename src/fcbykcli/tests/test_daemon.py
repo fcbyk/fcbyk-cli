@@ -199,13 +199,15 @@ class TestWriteRecord:
 
 
 class TestProcessExists:
-    @patch("os.kill")
-    def test_process_exists(self, mock_kill):
-        mock_kill.return_value = None
+    @patch("subprocess.check_output")
+    def test_process_exists(self, mock_check_output, monkeypatch):
+        monkeypatch.setattr(sys, "platform", "win32")
+        mock_check_output.return_value = b"python.exe 1234 Console"
         assert _process_exists(1234) is True
 
     @patch("os.kill")
-    def test_process_not_exists(self, mock_kill):
+    def test_process_not_exists_unix(self, mock_kill, monkeypatch):
+        monkeypatch.setattr(sys, "platform", "linux")
         mock_kill.side_effect = OSError()
         assert _process_exists(1234) is False
 
@@ -236,9 +238,22 @@ class TestProcessExists:
 
 class TestTerminate:
     @patch("fcbykcli.infra.daemon._process_exists")
+    @patch("subprocess.Popen")
+    @patch("time.sleep")
+    def test_terminate_success_windows(self, mock_sleep, mock_popen, mock_exists, monkeypatch):
+        monkeypatch.setattr(sys, "platform", "win32")
+        mock_exists.side_effect = [True, False]
+        mock_process = MagicMock()
+        mock_popen.return_value = mock_process
+        result = _terminate(1234)
+        assert result is True
+        mock_popen.assert_called_once()
+
+    @patch("fcbykcli.infra.daemon._process_exists")
     @patch("os.kill")
     @patch("time.sleep")
-    def test_terminate_success(self, mock_sleep, mock_kill, mock_exists):
+    def test_terminate_success_unix(self, mock_sleep, mock_kill, mock_exists, monkeypatch):
+        monkeypatch.setattr(sys, "platform", "linux")
         mock_exists.side_effect = [True, False]
         result = _terminate(1234)
         assert result is True

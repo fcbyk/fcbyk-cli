@@ -45,7 +45,10 @@ def test_paths_command(tmp_path, monkeypatch):
 
 
 def test_alias_command_resolution(tmp_path, monkeypatch):
-    monkeypatch.setenv("HOME", str(tmp_path))
+
+    from pathlib import Path
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    
     alias_dir = tmp_path / ".fcbyk-cli" / "config"
     alias_dir.mkdir(parents=True, exist_ok=True)
     (alias_dir / "alias.byk.json").write_text(
