@@ -33,9 +33,11 @@ def version_callback(
         return
 
     from fcbykcli.infra.view import format_version_line
+    from rich.console import Console
 
     app_context: AppContext = ctx.obj.context if ctx.obj else build_runtime()
-    click.echo(format_version_line(app_context.environment))
+    console = Console()
+    console.print(format_version_line(app_context.environment))
     ctx.exit()
 
 

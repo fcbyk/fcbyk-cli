@@ -29,7 +29,7 @@ def test_version_option(tmp_path, monkeypatch):
     result = runner.invoke(build_cli(), ["--version"])
 
     assert result.exit_code == 0
-    assert "fcbyk-cli" in result.output
+    assert "Version:" in result.output
 
 
 def test_paths_command(tmp_path, monkeypatch):

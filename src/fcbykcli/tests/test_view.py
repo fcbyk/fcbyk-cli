@@ -20,9 +20,12 @@ class TestFormatVersionLine:
             executable="/usr/bin/python",
         )
         result = format_version_line(env)
-        assert "testapp v1.0.0" in result
-        assert "Python 3.11.0" in result
-        assert "Linux" in result
+        from rich.text import Text
+        assert isinstance(result, Text)
+        plain_text = result.plain
+        assert "v1.0.0" in plain_text
+        assert "Python: 3.11.0" in plain_text
+        assert "Platform: Linux" in plain_text
 
 
 class TestGetStatusSymbol:

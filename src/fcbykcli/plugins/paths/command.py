@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import click
+from rich.console import Console
+from rich.text import Text
 
 from fcbykcli.api import CommandContext, get_path_provider, global_path_items, pass_command_context
 
@@ -12,21 +14,28 @@ from fcbykcli.api import CommandContext, get_path_provider, global_path_items, p
 @pass_command_context
 def paths(ctx: CommandContext, command_name: str | None) -> None:
     """Show global paths or additional paths for a subcommand."""
+    console = Console()
+    
     if command_name is None:
-        for label, value in global_path_items(ctx.app):
-            click.echo(f"{label}: {value}")
-        return
+        items = list(global_path_items(ctx.app))
+    else:
+        provider = get_path_provider(command_name)
+        if provider is None:
+            raise click.ClickException(f"No path information found for command {command_name}")
 
-    provider = get_path_provider(command_name)
-    if provider is None:
-        raise click.ClickException(f"No path information found for command {command_name}")
-
-    items = provider(ctx.app)
-    if not items:
-        return
-
+        items = provider(ctx.app)
+        if not items:
+            return
+    
+    max_label_len = max(len(label) for label, _ in items) if items else 0
+    
     for label, value in items:
-        click.echo(f"{label}: {value}")
+        padded_label = f"{label:>{max_label_len}}"
+        text = Text()
+        text.append(padded_label, style="orange1")
+        text.append(": ", style="orange1")
+        text.append(f"{value}")
+        console.print(text)
 
 
 def register(cli: click.Group) -> None:
