@@ -45,7 +45,7 @@ def register_plugins(cli: click.Group) -> None:
     for entry in plugin_entries:
         try:
             register = entry.load()
-            logger.info("plugin loaded: %s", entry.name)
+            logger.debug("plugin loaded: %s", entry.name)
             # 外部插件注册需返回INFO信息
             plugin_display_info.append(register(cli))
         except Exception as exc:  # noqa: BLE001

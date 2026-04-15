@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import update_wrapper
+import logging
 from typing import Any, Callable, TypeVar, cast
 
 import click
@@ -23,6 +24,7 @@ class CommandContext:
     app: AppContext
     state: StateStore
     shared_state: StateStore
+    logger: logging.Logger
 
 
 def build_command_context(ctx: click.Context) -> CommandContext:
@@ -34,6 +36,7 @@ def build_command_context(ctx: click.Context) -> CommandContext:
         app=state.context,
         state=state.context.command_store(command_name),
         shared_state=state.context.shared_store(),
+        logger=state.context.get_command_logger(command_name)
     )
 
 

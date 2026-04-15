@@ -10,10 +10,15 @@ from fcbykcli.api import CommandContext, PathItem, pass_command_context, registe
 @click.option("--reset-state", is_flag=True, help="Clear hello's local state.")
 @pass_command_context
 def hello(ctx: CommandContext, name: str, reset_state: bool) -> None:
+    # 使用命令专属 logger（默认写入 hello.log）
+    ctx.logger.info("hello command executed with name: %s", name)
+
     store = ctx.state
     if reset_state:
+        ctx.logger.debug("Resetting hello state")
         store.clear()
         click.echo("hello state cleared")
+        ctx.logger.info("hello state has been cleared")
         return
 
     count = int(store.get("run_count", 0)) + 1
@@ -22,6 +27,14 @@ def hello(ctx: CommandContext, name: str, reset_state: bool) -> None:
     click.echo(f"hello {name}")
     click.echo(f"run count: {count}")
     click.echo(f"state file: {store.path}")
+    
+    # 记录不同级别的日志信息
+    ctx.logger.debug("Current run count: %d", count)
+    ctx.logger.info("Greeted %s for the %d time(s)", name, count)
+    if count > 5:
+        ctx.logger.warning("Hello command has been run %d times - consider resetting state", count)
+    if count > 10:
+        ctx.logger.error("Hello command run count (%d) exceeds recommended limit", count)
 
 
 def hello_path_items(context) -> list[PathItem]:

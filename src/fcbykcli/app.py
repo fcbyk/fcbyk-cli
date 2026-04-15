@@ -50,8 +50,10 @@ def create_cli() -> click.Group:
         nonlocal runtime
         if runtime is None:
             runtime = build_runtime()
-            setup_logging(runtime)
         return runtime
+
+    temp_runtime = build_runtime()
+    setup_logging(temp_runtime)
 
     @click.group(
         cls=AliasAwareGroup,
@@ -79,6 +81,7 @@ def create_cli() -> click.Group:
     @click.pass_context
     def cli(ctx: click.Context) -> None:
         ctx.obj = CliState(context=get_runtime())
+        ctx.obj.context.logger.info("FCBYK CLI v%s started", ctx.obj.context.version)
         if ctx.invoked_subcommand is None:
             render_dashboard(ctx.obj.context, cli)
 

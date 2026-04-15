@@ -132,7 +132,7 @@ def _extract_port(argv: list[str]) -> int | None:
 def start_daemon(context: AppContext, name: str, args: list[str]) -> DaemonRecord:
     """启动新的守护进程。"""
     command = [sys.executable, "-m", "fcbykcli.main", name, *args]
-    log_file = context.paths.logs_dir / f"{name}.log"
+    log_file = context.paths.logs_dir / f"{name}-D.log"
     log_file.parent.mkdir(parents=True, exist_ok=True)
     with log_file.open("a", encoding="utf-8") as log_handle:
         if sys.platform == "win32":

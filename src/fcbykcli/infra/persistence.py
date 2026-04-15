@@ -36,7 +36,7 @@ def build_path_layout(app_name: str) -> PathLayout:
         runtime_dir=runtime_dir,
         app_config_file=config_dir / CORE_CONFIG_FILE,
         alias_file=config_dir / ALIAS_FILE,
-        app_log_file=logs_dir / "fcbykcli.log",
+        app_log_file=logs_dir / "app.log",
         daemon_dir=daemon_dir,
     )
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import logging
 from typing import TYPE_CHECKING
 
 from fcbykcli.core.environment import EnvironmentInfo
@@ -21,6 +22,7 @@ class AppContext:
     version: str
     paths: PathLayout
     environment: EnvironmentInfo
+    logger: logging.Logger
 
     def command_store(
         self,
@@ -36,4 +38,8 @@ class AppContext:
 
     def config_store(self) -> ConfigStore:
         """返回应用配置存储。"""
+        raise NotImplementedError
+
+    def get_command_logger(self, command_name: str) -> logging.Logger:
+        """获取命令专属 logger。"""
         raise NotImplementedError
