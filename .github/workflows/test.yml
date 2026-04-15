@@ -28,7 +28,7 @@ jobs:
 
       - name: Run tests with coverage
         run: |
-          pytest --cov=fcbyk --cov-report=xml
+          pytest --cov=fcbykcli --cov-report=xml
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
