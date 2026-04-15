@@ -403,7 +403,7 @@ class TestAliasAwareGroup:
             mock_super.side_effect = click.UsageError("not found")
             with pytest.raises(click.UsageError) as exc_info:
                 group.resolve_command(ctx, ["unknown"])
-            assert "未知命令或别名" in str(exc_info.value)
+            assert "Unknown command or alias" in str(exc_info.value)
 
     def test_resolve_with_suggestions(self, tmp_path, monkeypatch):
         group = AliasAwareGroup()
@@ -421,7 +421,7 @@ class TestAliasAwareGroup:
             mock_super.side_effect = click.UsageError("not found")
             with pytest.raises(click.UsageError) as exc_info:
                 group.resolve_command(ctx, ["group"])
-            assert "可尝试" in str(exc_info.value)
+            assert "Did you mean" in str(exc_info.value)
 
     def test_get_context_from_ctx_obj(self):
         group = AliasAwareGroup()

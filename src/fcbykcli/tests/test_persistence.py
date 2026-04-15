@@ -40,7 +40,7 @@ class TestBuildPathLayout:
         assert layout.runtime_dir == tmp_path / ".testapp" / "runtime"
         assert layout.app_config_file == tmp_path / ".testapp" / "config" / CORE_CONFIG_FILE
         assert layout.alias_file == tmp_path / ".testapp" / "config" / ALIAS_FILE
-        assert layout.app_log_file == tmp_path / ".testapp" / "logs" / "fcbykcli.log"
+        assert layout.app_log_file == tmp_path / ".testapp" / "logs" / "app.log"
         assert layout.daemon_dir == tmp_path / ".testapp" / "runtime" / "daemon"
 
 

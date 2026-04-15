@@ -240,9 +240,9 @@ class AliasAwareGroup(click.Group):
             ]
             if suggestions:
                 raise click.UsageError(
-                    f"未知命令或别名: {args[0]}\n可尝试:\n  " + "\n  ".join(suggestions[:5])
+                    f"Unknown command or alias: {args[0]}\nDid you mean:\n  " + "\n  ".join(suggestions[:5])
                 )
-            raise click.UsageError(f"未知命令或别名: {args[0]}")
+            raise click.UsageError(f"Unknown command or alias: {args[0]}")
 
         final_command = parse_alias_arguments(alias.command, args[1:])
         working_dir = Path(alias.cwd or os.getcwd()).expanduser().resolve()
@@ -266,7 +266,7 @@ class AliasAwareGroup(click.Group):
         raise click.ClickException("Runtime context not yet initialized")
 
     def invoke(self, ctx: click.Context) -> Any:
-        """统一兜底未处理异常。"""
+        """统一兜底未处理异常"""
         try:
             return super().invoke(ctx)
         except click.ClickException:
@@ -278,5 +278,13 @@ class AliasAwareGroup(click.Group):
             raise
         except Exception as exc:  # noqa: BLE001
             logger.exception("unexpected cli error")
-            log_file = getattr(ctx.obj.context.paths, "app_log_file", "log file") if ctx.obj else "log file"
-            raise click.ClickException(f"Unexpected error occurred, see logs at: {log_file}") from exc
+            log_file = "log file"
+            try:
+                if ctx.obj and hasattr(ctx.obj, 'context'):
+                    log_file = getattr(ctx.obj.context.paths, 'app_log_file', 'log file')
+            except Exception:
+                pass
+            
+            raise click.ClickException(
+                f"Unexpected error occurred, see logs at: {log_file}"
+            ) from exc
