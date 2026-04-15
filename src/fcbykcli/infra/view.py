@@ -12,7 +12,7 @@ from fcbykcli.core.context import AppContext
 from fcbykcli.core.environment import EnvironmentInfo
 from fcbykcli.infra.aliases import render_alias_lines, wrap_text, get_terminal_width
 from fcbykcli.infra.daemon import list_daemons
-from fcbykcli.infra.registry import plugin_display_info
+from fcbykcli.infra.registry import plugin_display_info, plugin_load_errors
 
 
 def format_version_line(environment: EnvironmentInfo) -> Text:
@@ -56,6 +56,12 @@ def render_dashboard(context: AppContext, cli: click.Group) -> None:
     console.print(Text("Plugins:", style="bold"))
     for plugin in plugin_display_info:
         click.echo(f"  {plugin}")
+    
+    if plugin_load_errors:
+        click.echo()
+        for plugin_name, error_msg in plugin_load_errors:
+            colored_text = click.style(f"  {plugin_name}: {error_msg}", fg="red", bold=True)
+            click.echo(colored_text)
 
     console.print()
     console.print(Text("Aliases:", style="bold"))

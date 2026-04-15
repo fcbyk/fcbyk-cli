@@ -128,3 +128,25 @@ class TestRenderDashboard:
 
         with runner.isolation():
             render_dashboard(context, cli)
+
+    @patch("fcbykcli.infra.view.plugin_load_errors")
+    @patch("fcbykcli.infra.view.plugin_display_info")
+    @patch("fcbykcli.infra.view.render_alias_lines")
+    @patch("fcbykcli.infra.view.list_daemons")
+    def test_render_dashboard_with_plugin_errors(self, mock_list_daemons, mock_render_alias, mock_plugin_info, mock_plugin_errors):
+        mock_plugin_info.__iter__ = MagicMock(return_value=iter(["plugin1"]))
+        mock_plugin_errors.__iter__ = MagicMock(return_value=iter([
+            ("failed-plugin", "ModuleNotFoundError: No module named 'xxx'"),
+            ("another-failed", "ImportError: cannot import name 'yyy'")
+        ]))
+        mock_render_alias.return_value = []
+        mock_list_daemons.return_value = []
+
+        context = MagicMock()
+        cli = MagicMock()
+
+        from click.testing import CliRunner
+        runner = CliRunner()
+
+        with runner.isolation():
+            render_dashboard(context, cli)
