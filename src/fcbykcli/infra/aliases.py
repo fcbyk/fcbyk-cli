@@ -271,6 +271,8 @@ class AliasAwareGroup(click.Group):
             return super().invoke(ctx)
         except click.ClickException:
             raise
+        except click.exceptions.Exit:
+            raise
         except CliError as exc:
             logger.warning("cli error: %s", exc)
             raise click.ClickException(str(exc)) from exc

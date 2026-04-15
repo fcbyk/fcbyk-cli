@@ -483,6 +483,15 @@ class TestAliasAwareGroup:
             with pytest.raises(SystemExit):
                 group.invoke(ctx)
 
+    def test_invoke_click_exit(self):
+        group = AliasAwareGroup()
+        ctx = MagicMock()
+
+        with patch.object(click.Group, "invoke") as mock_invoke:
+            mock_invoke.side_effect = click.exceptions.Exit(0)
+            with pytest.raises(click.exceptions.Exit):
+                group.invoke(ctx)
+
     def test_invoke_unexpected_exception(self):
         group = AliasAwareGroup()
         ctx = MagicMock()
