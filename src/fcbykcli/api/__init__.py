@@ -29,19 +29,10 @@ __all__ = [
     "register_path_provider",
     "get_path_provider",
     "global_path_items",
-    # 文件处理
-    "get_files_metadata",
-    "format_size",
-    "safe_filename",
-    "is_image_file",
-    "is_video_file",
     # 网络工具
     "get_private_networks",
     "ensure_port_available",
     "detect_iface_type",
-    # Web 功能
-    "create_spa",
-    "R",
     # 状态存储
     "StateStore",
     # 守护进程
