@@ -18,7 +18,7 @@ def test_dashboard_shows_registered_commands(tmp_path, monkeypatch):
     result = runner.invoke(build_cli(), [])
 
     assert result.exit_code == 0
-    assert "Plugins:" in result.output
+    assert "Commands:" in result.output
     assert "paths" in result.output
 
 

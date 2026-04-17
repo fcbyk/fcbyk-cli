@@ -12,7 +12,7 @@ from fcbykcli.core.context import AppContext
 from fcbykcli.core.environment import EnvironmentInfo
 from fcbykcli.infra.aliases import render_alias_lines, wrap_text, get_terminal_width
 from fcbykcli.infra.daemon import list_daemons
-from fcbykcli.infra.registry import plugin_display_info, plugin_load_errors
+from fcbykcli.infra.registry import plugin_load_errors
 
 
 def format_version_line(environment: EnvironmentInfo) -> Text:
@@ -42,7 +42,7 @@ def render_dashboard(context: AppContext, cli: click.Group) -> None:
     welcome_text.append("\n")
     welcome_text.append("\n")
     welcome_text.append("Docs: https://cli.fcbyk.com", style="dim")
-    
+
     welcome_panel = Panel(
         welcome_text,
         box=box.ASCII,
@@ -53,18 +53,22 @@ def render_dashboard(context: AppContext, cli: click.Group) -> None:
     console.print()
     console.print(welcome_panel)
     console.print()
-    console.print(Text("Plugins:", style="bold"))
-    for plugin in plugin_display_info:
-        click.echo(f"  {plugin}")
-    
+
     if plugin_load_errors:
         click.echo()
         for plugin_name, error_msg in plugin_load_errors:
             colored_text = click.style(f"  {plugin_name}: {error_msg}", fg="red", bold=True)
             click.echo(colored_text)
+        click.echo()
+    
+    # Get full help text from Click
+    ctx = click.Context(cli)
+    ctx.info_name = 'byk'  # Set the command name
+    help_text = cli.get_help(ctx)
+    click.echo(help_text)
 
     console.print()
-    console.print(Text("Aliases:", style="bold"))
+    console.print(Text("Aliases:"))
     alias_lines = render_alias_lines(context)
     if alias_lines:
         for line in alias_lines:
@@ -74,7 +78,7 @@ def render_dashboard(context: AppContext, cli: click.Group) -> None:
         console.print(Text("  Manage your aliases in alias.byk.json", style="dim"))
 
     console.print()
-    console.print(Text("Background Daemons:", style="bold"))
+    console.print(Text("Daemons:"))
     daemons = list_daemons(context)
     if daemons:
         for daemon in daemons:

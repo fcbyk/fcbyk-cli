@@ -37,34 +37,34 @@ class TestGetStatusSymbol:
 
 
 class TestRenderDashboard:
-    @patch("fcbykcli.infra.view.plugin_display_info")
     @patch("fcbykcli.infra.view.render_alias_lines")
     @patch("fcbykcli.infra.view.list_daemons")
-    def test_render_dashboard_with_plugins(self, mock_list_daemons, mock_render_alias, mock_plugin_info):
-        mock_plugin_info.__iter__ = MagicMock(return_value=iter(["plugin1", "plugin2"]))
+    def test_render_dashboard_basic(self, mock_list_daemons, mock_render_alias):
+        """Test basic dashboard rendering without plugins section."""
         mock_render_alias.return_value = ["alias1: cmd1", "alias2: cmd2"]
         mock_list_daemons.return_value = []
 
         context = MagicMock()
         cli = MagicMock()
+        cli.commands = {
+            "test-cmd": MagicMock(get_short_help_str=MagicMock(return_value="Test command"))
+        }
 
         from click.testing import CliRunner
         runner = CliRunner()
-        from fcbykcli.app import create_cli
 
         with runner.isolation():
             render_dashboard(context, cli)
 
-    @patch("fcbykcli.infra.view.plugin_display_info")
     @patch("fcbykcli.infra.view.render_alias_lines")
     @patch("fcbykcli.infra.view.list_daemons")
-    def test_render_dashboard_no_aliases(self, mock_list_daemons, mock_render_alias, mock_plugin_info):
-        mock_plugin_info.__iter__ = MagicMock(return_value=iter([]))
+    def test_render_dashboard_no_aliases(self, mock_list_daemons, mock_render_alias):
         mock_render_alias.return_value = []
         mock_list_daemons.return_value = []
 
         context = MagicMock()
         cli = MagicMock()
+        cli.commands = {}
 
         from click.testing import CliRunner
         runner = CliRunner()
@@ -72,11 +72,9 @@ class TestRenderDashboard:
         with runner.isolation():
             render_dashboard(context, cli)
 
-    @patch("fcbykcli.infra.view.plugin_display_info")
     @patch("fcbykcli.infra.view.render_alias_lines")
     @patch("fcbykcli.infra.view.list_daemons")
-    def test_render_dashboard_with_running_daemons(self, mock_list_daemons, mock_render_alias, mock_plugin_info):
-        mock_plugin_info.__iter__ = MagicMock(return_value=iter([]))
+    def test_render_dashboard_with_running_daemons(self, mock_list_daemons, mock_render_alias):
         mock_render_alias.return_value = []
         mock_list_daemons.return_value = [
             {"name": "test", "pid": 1234, "alive": True, "port": 8080},
@@ -84,6 +82,7 @@ class TestRenderDashboard:
 
         context = MagicMock()
         cli = MagicMock()
+        cli.commands = {}
 
         from click.testing import CliRunner
         runner = CliRunner()
@@ -91,11 +90,9 @@ class TestRenderDashboard:
         with runner.isolation():
             render_dashboard(context, cli)
 
-    @patch("fcbykcli.infra.view.plugin_display_info")
     @patch("fcbykcli.infra.view.render_alias_lines")
     @patch("fcbykcli.infra.view.list_daemons")
-    def test_render_dashboard_with_stopped_daemons(self, mock_list_daemons, mock_render_alias, mock_plugin_info):
-        mock_plugin_info.__iter__ = MagicMock(return_value=iter([]))
+    def test_render_dashboard_with_stopped_daemons(self, mock_list_daemons, mock_render_alias):
         mock_render_alias.return_value = []
         mock_list_daemons.return_value = [
             {"name": "test", "pid": 1234, "alive": False, "port": None},
@@ -103,6 +100,7 @@ class TestRenderDashboard:
 
         context = MagicMock()
         cli = MagicMock()
+        cli.commands = {}
 
         from click.testing import CliRunner
         runner = CliRunner()
@@ -110,18 +108,17 @@ class TestRenderDashboard:
         with runner.isolation():
             render_dashboard(context, cli)
 
-    @patch("fcbykcli.infra.view.plugin_display_info")
     @patch("fcbykcli.infra.view.render_alias_lines")
     @patch("fcbykcli.infra.view.list_daemons")
     @patch("fcbykcli.infra.view.get_terminal_width")
-    def test_render_dashboard_wrap_text(self, mock_get_width, mock_list_daemons, mock_render_alias, mock_plugin_info):
-        mock_plugin_info.__iter__ = MagicMock(return_value=iter([]))
+    def test_render_dashboard_wrap_text(self, mock_get_width, mock_list_daemons, mock_render_alias):
         mock_render_alias.return_value = []
         mock_list_daemons.return_value = []
         mock_get_width.return_value = 40
 
         context = MagicMock()
         cli = MagicMock()
+        cli.commands = {}
 
         from click.testing import CliRunner
         runner = CliRunner()
@@ -130,11 +127,9 @@ class TestRenderDashboard:
             render_dashboard(context, cli)
 
     @patch("fcbykcli.infra.view.plugin_load_errors")
-    @patch("fcbykcli.infra.view.plugin_display_info")
     @patch("fcbykcli.infra.view.render_alias_lines")
     @patch("fcbykcli.infra.view.list_daemons")
-    def test_render_dashboard_with_plugin_errors(self, mock_list_daemons, mock_render_alias, mock_plugin_info, mock_plugin_errors):
-        mock_plugin_info.__iter__ = MagicMock(return_value=iter(["plugin1"]))
+    def test_render_dashboard_with_plugin_errors(self, mock_list_daemons, mock_render_alias, mock_plugin_errors):
         mock_plugin_errors.__iter__ = MagicMock(return_value=iter([
             ("failed-plugin", "ModuleNotFoundError: No module named 'xxx'"),
             ("another-failed", "ImportError: cannot import name 'yyy'")
@@ -144,6 +139,7 @@ class TestRenderDashboard:
 
         context = MagicMock()
         cli = MagicMock()
+        cli.commands = {}
 
         from click.testing import CliRunner
         runner = CliRunner()
