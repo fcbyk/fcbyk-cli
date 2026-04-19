@@ -3,6 +3,7 @@ slide 命令行接口模块
 提供 PPT 远程控制的 CLI 命令
 """
 import click
+import webbrowser
 import fcbyk.svc as svc_core
 
 from fcbyk.utils.network import get_private_networks
@@ -32,7 +33,8 @@ from fcbyk.cli_support.output import echo_network_urls, copy_to_clipboard
     help="Access password for daemon/background mode (normally omit to be prompted)",
     hidden=True
 )
-def slide(port, daemon, password):
+@click.option("-nb", "--no-browser", is_flag=True, help="Disable automatic browser opening")
+def slide(port, daemon, password, no_browser):
     """启动 PPT 远程控制服务器"""
 
     if not password:
@@ -70,6 +72,8 @@ def slide(port, daemon, password):
     # 复制 URL 到剪贴板
     copy_to_clipboard(f"http://{local_ip}:{port}")
     
+    if not no_browser:
+        webbrowser.open(f"http://{local_ip}:{port}")
     click.echo()
 
     if not daemon:
@@ -77,4 +81,6 @@ def slide(port, daemon, password):
         return
 
     args = ["--port", str(port), "--daemon-password", password]
+    if no_browser:
+        args.append("--no-browser")
     svc_core.start_service("slide", args)
