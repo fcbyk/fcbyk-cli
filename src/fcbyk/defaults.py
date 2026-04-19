@@ -14,6 +14,7 @@ DEFAULT_CONFIG = {
         "rich": False,
     },
     "aliases": {
-        "ls": ["lansend"]
+        "ls": ["lansend"],
+        "ppt": ["slide"]
    } 
 }
