@@ -7,22 +7,11 @@ from fcbyk.cli_support import (
     version_callback, 
     print_aliases, 
     print_commands,
+    paths_callback,
+    init_callback,
+    uninstall_callback,
     banner
 )
-
-
-def paths_callback(ctx, param, value):
-    """Callback for --paths option to show file paths."""
-    if not value or ctx.resilient_parsing:
-        return
-    config_path = storage.get_path(defaults.CONFIG_FILE)
-    data_dir = os.path.dirname(config_path)
-    log_dir = os.path.join(data_dir, "log")
-    
-    click.echo("数据目录: {}".format(data_dir))
-    click.echo("日志目录: {}".format(log_dir))
-    click.echo("配置文件: {}".format(config_path))
-    ctx.exit()
 
 
 @click.group(
@@ -47,6 +36,24 @@ def paths_callback(ctx, param, value):
     expose_value=False,
     is_eager=True,
     help='Show data directory paths.'
+)
+@click.option(
+    '--init',
+    'do_init',
+    is_flag=True,
+    callback=init_callback,
+    expose_value=False,
+    is_eager=True,
+    help='Reset configuration to defaults.'
+)
+@click.option(
+    '--uninstall', '-uni',
+    'do_uninstall',
+    is_flag=True,
+    callback=uninstall_callback,
+    expose_value=False,
+    is_eager=True,
+    help='Uninstall fcbyk and remove configuration.'
 )
 @click.pass_context
 def main(ctx):
