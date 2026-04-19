@@ -367,7 +367,7 @@ const selectionMode = ref(false)
 const selectedPaths = ref<string[]>([])
 
 function toggleSelectMode() {
-  if (unDownload.value) return
+  // 选择模式始终可用，不受 unDownload 影响
   selectionMode.value = !selectionMode.value
   if (!selectionMode.value) {
     selectedPaths.value = []

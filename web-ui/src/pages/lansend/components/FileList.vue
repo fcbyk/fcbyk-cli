@@ -125,10 +125,19 @@
                 <span v-else class="text-[#3498db]">📄</span>
               </span>
               <span class="flex items-center grow min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
-                <span class="text-[#3498db] no-underline overflow-hidden text-ellipsis whitespace-nowrap">{{ item.name }}</span>
+                <span class="text-[#3498db] no-underline overflow-hidden text-ellipsis whitespace-nowrap hover:underline">{{ item.name }}</span>
               </span>
             </div>
 
+            <!-- 正常文件的下载按钮（非选中模式下显示） -->
+            <a
+              v-if="!unDownload && !item.is_dir && !selectionMode"
+              :href="`/api/download/${item.path}`"
+              class="bg-[#2ecc71] text-white border-none px-[10px] py-[5px] rounded cursor-pointer no-underline text-[12px] flex-none ml-2.5 hover:bg-[#27ae60]"
+              download
+              @click.stop
+              >下载</a
+            >
           </div>
         </li>
       </template>
@@ -205,7 +214,8 @@ const needsPassword = computed(() => props.requirePassword && !props.canUpload)
 
 // 是否显示上传按钮
 const shouldShowUploadButton = computed(() => !props.unUpload)
-const shouldShowSelectButton = computed(() => !props.unDownload)
+// 选择按钮始终可用，不受 unDownload 影响
+const shouldShowSelectButton = computed(() => true)
 const selectedCount = computed(() => props.selectedPaths?.length || 0)
 const selectedFileCount = computed(() => {
   const selected = props.selectedPaths || []
