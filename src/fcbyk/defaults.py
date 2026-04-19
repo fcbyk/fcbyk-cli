@@ -15,6 +15,7 @@ DEFAULT_CONFIG = {
     },
     "aliases": {
         "ls": ["lansend"],
-        "ppt": ["slide"]
+        "ppt": ["slide"],
+        "ps": ["servers"],
    } 
 }

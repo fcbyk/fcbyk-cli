@@ -18,7 +18,7 @@ SERVICE_REGISTRY = {
 
 def _svc_pid_dir() -> str:
     base = os.path.dirname(storage.get_path("svc_dummy", subdir="temp"))
-    path = os.path.join(base, "svc")
+    path = os.path.join(base, "servers")
     try:
         os.makedirs(path, exist_ok=True)
     except Exception:
@@ -27,7 +27,7 @@ def _svc_pid_dir() -> str:
 
 
 def _pid_file_path(name: str, pid: int) -> str:
-    filename = "svc-{0}-{1}.json".format(name, pid)
+    filename = "servers-{0}-{1}.json".format(name, pid)
     return os.path.join(_svc_pid_dir(), filename)
 
 
@@ -40,7 +40,7 @@ def _list_pid_files(name: Optional[str] = None) -> List[str]:
     result = []
     prefix = None
     if name is not None:
-        prefix = "svc-{0}-".format(name)
+        prefix = "servers-{0}-".format(name)
     for fname in filenames:
         if not fname.endswith(".json"):
             continue
@@ -165,7 +165,7 @@ def start_service(name: str, args: List[str]) -> Dict[str, Any]:
     if name not in SERVICE_REGISTRY:
         raise ValueError("Unknown service name: {0}".format(name))
     cmd = _build_command(name, list(args))
-    log_file = storage.get_path("fcbyk_svc_{0}.log".format(name), subdir="log")
+    log_file = storage.get_path("fcbyk_servers_{0}.log".format(name), subdir="log")
     try:
         os.makedirs(os.path.dirname(log_file), exist_ok=True)
         log_fp = open(log_file, "a", encoding="utf-8")

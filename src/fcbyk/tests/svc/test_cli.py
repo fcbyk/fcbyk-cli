@@ -5,14 +5,14 @@ from fcbyk.cli import main
 
 def test_svc_help():
     runner = CliRunner()
-    result = runner.invoke(main, ["svc", "--help"])
+    result = runner.invoke(main, ["servers", "--help"])
     assert result.exit_code == 0
     assert "Manage background services" in result.output
 
 
 def test_svc_status_empty():
     runner = CliRunner()
-    result = runner.invoke(main, ["svc", "status"])
+    result = runner.invoke(main, ["servers", "status"])
     assert result.exit_code == 0
 
 
@@ -28,7 +28,7 @@ def test_svc_kill_uses_pid(monkeypatch):
     monkeypatch.setattr(svc_core, "stop_by_pid", _fake_stop)
 
     runner = CliRunner()
-    result = runner.invoke(main, ["svc", "kill", "1234"])
+    result = runner.invoke(main, ["servers", "kill", "1234"])
 
     assert result.exit_code == 0
     assert called["pid"] == 1234
@@ -46,7 +46,7 @@ def test_svc_stop_all_calls_all_services(monkeypatch):
     monkeypatch.setattr(svc_core, "stop_service", _fake_stop_service)
 
     runner = CliRunner()
-    result = runner.invoke(main, ["svc", "stop", "all"])
+    result = runner.invoke(main, ["servers", "stop", "all"])
 
     assert result.exit_code == 0
     assert set(called) == set(svc_core.SERVICE_REGISTRY.keys())
@@ -61,7 +61,7 @@ def test_svc_stop_all_no_processes(monkeypatch):
     monkeypatch.setattr(svc_core, "stop_service", _fake_stop_service)
 
     runner = CliRunner()
-    result = runner.invoke(main, ["svc", "stop", "all"])
+    result = runner.invoke(main, ["servers", "stop", "all"])
 
     assert result.exit_code == 0
     assert "No tracked processes for any service." in result.output

@@ -8,12 +8,12 @@ console = Console()
 
 
 @click.group(
-    name="svc",
+    name="servers",
     help="Manage background services for fcbyk web servers.",
     invoke_without_command=True,
 )
 @click.pass_context
-def svc(ctx) -> None:
+def servers(ctx) -> None:
     if ctx.invoked_subcommand is not None:
         return
     items = svc_core.status_all()
@@ -39,11 +39,11 @@ def svc(ctx) -> None:
             ),
             highlight=False,
         )
-    click.echo("\nUse 'fcbyk svc stop <service>' to stop all processes of a service.")
-    click.echo("Use 'fcbyk svc stop all' to stop all services.")
+    click.echo("\nUse 'fcbyk servers stop <service>' to stop all processes of a service.")
+    click.echo("Use 'fcbyk servers stop all' to stop all services.")
 
 
-@svc.command(name="stop")
+@servers.command(name="stop")
 @click.argument("name")
 def svc_stop(name: str) -> None:
     if name == "all":
@@ -84,7 +84,7 @@ def svc_stop(name: str) -> None:
         raise click.Abort()
 
 
-@svc.command(name="status")
+@servers.command(name="status")
 @click.argument("name", required=False)
 def svc_status(name: str = None) -> None:
     if name is None:
@@ -122,7 +122,7 @@ def svc_status(name: str = None) -> None:
         )
 
 
-@svc.command(name="kill")
+@servers.command(name="kill")
 @click.argument("pid", type=int)
 def svc_kill(pid: int) -> None:
     results = svc_core.stop_by_pid(pid)

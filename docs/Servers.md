@@ -1,13 +1,13 @@
-## Svc 子命令
+## Servers 子命令
 
-Svc 子命令用于统一管理由 fcbyk 各子命令以后台方式启动的 Web 服务进程。
+Servers 子命令用于统一管理由 fcbyk 各子命令以后台方式启动的 Web 服务进程。
 
 当前支持管理的服务包括：
 - `lansend`
 - `pick`
 - `slide`
 
-Svc 只做“进程管理”（查看/停止），不会解析业务参数。
+Servers 只做"进程管理"（查看/停止），不会解析业务参数。
 
 ### 基本功能
 - 查看当前所有后台服务实例（按服务名、PID、端口展示）
@@ -24,15 +24,15 @@ Svc 管理的后台进程通常来自以下命令：
 - `fcbyk slide -D ...`
 
 这些命令内部会使用 `fcbyk.svc.start_service(...)` 以子进程方式启动 Web 服务，
-并在 `~/.fcbyk/temp/svc/` 目录下记录 PID 文件。
+并在 `~/.fcbyk/temp/servers/` 目录下记录 PID 文件。
 
 ### 基本用法
 
 ```bash
-fcbyk svc [子命令] [参数...]
+fcbyk servers [子命令] [参数...]
 ```
 
-直接运行 `fcbyk svc`（不带子命令）时，会显示当前所有已知后台服务实例。
+直接运行 `fcbyk servers`（不带子命令）时，会显示当前所有已知后台服务实例。
 
 示例：
 
@@ -40,7 +40,7 @@ fcbyk svc [子命令] [参数...]
 Current background services:
 lansend: PID 4252 (port 8080) [running]
 slide:   PID 6896 (port 80)   [running]
-Use 'fcbyk svc stop <service>' to stop all processes of a service.
+Use 'fcbyk servers stop <service>' to stop all processes of a service.
 ```
 
 ### 子命令说明
@@ -48,14 +48,14 @@ Use 'fcbyk svc stop <service>' to stop all processes of a service.
 #### 1. status
 
 ```bash
-fcbyk svc status
-fcbyk svc status <service>
+fcbyk servers status
+fcbyk servers status <service>
 ```
 
-- `fcbyk svc status`  
+- `fcbyk servers status`  
   查看所有已知后台服务实例。
 
-- `fcbyk svc status lansend`  
+- `fcbyk servers status lansend`  
   仅查看 `lansend` 服务的所有实例。
 
 每一行输出形如：
@@ -69,13 +69,13 @@ fcbyk svc status <service>
 #### 2. stop
 
 ```bash
-fcbyk svc stop <service>
+fcbyk servers stop <service>
 ```
 
 按服务名停止该服务名下的所有后台实例。例如：
 
 ```bash
-fcbyk svc stop lansend
+fcbyk servers stop lansend
 ```
 
 可能的输出示例：
@@ -92,13 +92,13 @@ PID 7852 terminated.
 #### 3. kill
 
 ```bash
-fcbyk svc kill <pid>
+fcbyk servers kill <pid>
 ```
 
 按 PID 精确终止一个后台服务实例。示例：
 
 ```bash
-fcbyk svc kill 4252
+fcbyk servers kill 4252
 ```
 
 可能的输出：
@@ -139,8 +139,8 @@ fcbyk slide -p 8080 -D
 此时可以用：
 
 ```bash
-fcbyk svc
-fcbyk svc status slide
+fcbyk servers
+fcbyk servers status slide
 ```
 
 查看对应的后台实例。
@@ -156,25 +156,25 @@ fcbyk slide -p 9000 -D
 查看所有后台服务：
 
 ```bash
-fcbyk svc
+fcbyk servers
 ```
 
 按服务名停止：
 
 ```bash
-fcbyk svc stop lansend
+fcbyk servers stop lansend
 ```
 
 按 PID 精确停止：
 
 ```bash
-fcbyk svc kill 6896
+fcbyk servers kill 6896
 ```
 
 ### 注意事项
 
-- Svc 只管理通过 `fcbyk.svc` 启动并记录了 PID 文件的进程；  
+- Servers 只管理通过 `fcbyk.svc` 启动并记录了 PID 文件的进程；  
   手工启动的 Python 进程不会被自动纳入管理。
-- 在 Windows 平台下，后台进程会使用“无控制台窗口”的方式启动，避免闪烁黑框；
+- 在 Windows 平台下，后台进程会使用"无控制台窗口"的方式启动，避免闪烁黑框；
   Linux/macOS 下会使用 `start_new_session=True` 的方式在新的会话中运行。
-- 若发现某些 PID 在 `status` 中长期显示为 `stopped`，可以手动执行 `fcbyk svc status` 来触发清理。 
+- 若发现某些 PID 在 `status` 中长期显示为 `stopped`，可以手动执行 `fcbyk servers status` 来触发清理。

@@ -26,6 +26,9 @@ def test_slide_cli_uses_localhost_when_no_network(monkeypatch):
     # 避免真实剪贴板
     monkeypatch.setattr(slide_cli, "copy_to_clipboard", lambda *_: None)
     
+    # 避免打开浏览器
+    monkeypatch.setattr(slide_cli.webbrowser, "open", lambda *a, **k: None)
+    
     # 端口占用检测在测试环境可能误判，直接 mock 掉
     monkeypatch.setattr(slide_cli, "check_port", lambda *a, **k: True)
 
@@ -61,6 +64,7 @@ def test_slide_daemon_passes_password_to_svc(monkeypatch):
         {"iface": "localhost", "ips": ["127.0.0.1"], "type": "loopback", "virtual": True, "priority": 100}
     ])
     monkeypatch.setattr(slide_cli, "copy_to_clipboard", lambda *_: None)
+    monkeypatch.setattr(slide_cli.webbrowser, "open", lambda *a, **k: None)
     monkeypatch.setattr(slide_cli, "check_port", lambda *a, **k: True)
     monkeypatch.setattr(slide_cli, "echo_network_urls", lambda *a, **k: None)
 
