@@ -3,9 +3,9 @@ requires = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "fcbyk-cli"
+name = "bykcli"
 dynamic = ["version", "readme"]
-description = "A CLI tool for fcbyk"
+description = "A CLI tool"
 requires-python = ">=3.10"
 authors = [
     {name = "fcbyk", email = "731240932@qq.com"}
@@ -37,24 +37,24 @@ dev = [
 ]
 
 [project.scripts]
-fcbyk = "fcbykcli.main:main"
-byk = "fcbykcli.main:main"
+fcbyk = "bykcli.main:main"
+byk = "bykcli.main:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
-packages = { find = { where = ["src"], include = ["fcbykcli*"], exclude = ["example*"] } }
+packages = { find = { where = ["src"], include = ["bykcli*"], exclude = ["example*"] } }
 
 [tool.setuptools.package-data]
-fcbykcli = ["web/dist/**/*"]
+bykcli = ["web/dist/**/*"]
 
 [tool.setuptools.dynamic]
-version = {attr = "fcbykcli.__version__"}
+version = {attr = "bykcli.__version__"}
 readme = {file = ["README.md"], content-type = "text/markdown"}
 
 [tool.pytest.ini_options]
-testpaths = ["src/fcbykcli/tests"]
+testpaths = ["src/bykcli/tests"]
 python_files = ["test_*.py"]
-addopts = "-v --cov=fcbykcli --cov-report=term-missing"
+addopts = "-v --cov=bykcli --cov-report=term-missing"
 norecursedirs = ["example", "example-*", ".git", "dist", "build"]
 
 [tool.commitizen]
@@ -64,7 +64,7 @@ tag_format = "v$version"
 changelog_file = "CHANGELOG.md"
 bump_message = "release: v$new_version"
 version_files = [
-    "src/fcbykcli/__init__.py:__version__",
+    "src/bykcli/__init__.py:__version__",
     "pyproject.toml:version ="
 ]
 

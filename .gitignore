@@ -8,7 +8,7 @@ __pycache__
 .pytest_cache
 .vscode
 
-src/fcbyk/web/static
+src/bykcli/web/static
 .obsidian
 */.vitepress/cache
 node_modules

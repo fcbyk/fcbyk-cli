@@ -2,13 +2,13 @@
 
 <p>
   <img src="https://img.shields.io/badge/python-%E2%89%A53.10-blue?logo=python&logoColor=white" />
-  <img src="https://img.shields.io/pypi/v/fcbyk-cli.svg" />
-  <img src="https://img.shields.io/github/license/fcbyk/fcbyk-cli.svg" />
-  <img src="https://github.com/fcbyk/fcbyk-cli/actions/workflows/test.yml/badge.svg" />
-  <img src="https://codecov.io/gh/fcbyk/fcbyk-cli/branch/main/graph/badge.svg" />
+  <img src="https://img.shields.io/pypi/v/bykcli.svg" />
+  <img src="https://img.shields.io/github/license/fcbyk/bykcli.svg" />
+  <img src="https://github.com/fcbyk/bykcli/actions/workflows/test.yml/badge.svg" />
+  <img src="https://codecov.io/gh/fcbyk/bykcli/branch/main/graph/badge.svg" />
 </p>
 
-**`fcbyk-cli`** 是一个轻量的命令行工具集合 🧰
+**`bykcli`** 是一个轻量的命令行工具集合 🧰
 
 用于通过简单命令解决一些日常的小需求。
 
@@ -24,11 +24,11 @@
 - 使用 pip 安装
 
 ```bash
-pip install fcbyk-cli
+pip install bykcli
 ```
 
 - 显示仪表盘
 
 ```bash
-fcbyk
+byk
 ```

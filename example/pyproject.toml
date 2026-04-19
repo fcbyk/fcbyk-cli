@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bykcli-hello"
+version = "0.1.0"
+description = "bykcli plugin"
+requires-python = ">=3.10"
+
+[project.entry-points."bykcli.plugins"]
+bykcli-hello = "hello.main:register"

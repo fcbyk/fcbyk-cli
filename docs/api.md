@@ -1,11 +1,11 @@
-# fcbykcli 插件 API 文档
+# bykcli 插件 API 文档
 
 ## 概述
 
-`fcbykcli.api` 为子命令和插件提供了一组统一的运行时 API。
+`bykcli.api` 为子命令和插件提供了一组统一的运行时 API。
 
 ```python
-from fcbykcli.api import CommandContext, pass_command_context
+from bykcli.api import CommandContext, pass_command_context
 ```
 
 ## 快速开始
@@ -13,7 +13,7 @@ from fcbykcli.api import CommandContext, pass_command_context
 ```python
 import click
 
-from fcbykcli.api import CommandContext, pass_command_context
+from bykcli.api import CommandContext, pass_command_context
 
 
 @click.command()
@@ -24,15 +24,16 @@ def hello(ctx: CommandContext) -> None:
     click.echo(f"run count: {count}")
 
 
-def register(cli: click.Group) -> None:
+def register(cli: click.Group) -> str:
     cli.add_command(hello)
+    return "my-plugin (hello)"
 ```
 
 ## 插件开发指南
 
 ### 1. 项目结构
 
-一个标准的 fcbyk-cli 插件应包含以下文件：
+一个标准的 bykcli 插件应包含以下文件：
 
 ```
 my-plugin/
@@ -55,15 +56,15 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "my-plugin"
 version = "0.1.0"
-description = "fcbyk-cli plugin"
+description = "bykcli plugin"
 requires-python = ">=3.10"
 
-[project.entry-points."fcbyk.plugins"]
+[project.entry-points."bykcli.plugins"]
 my-plugin = "my_plugin.main:register"
 ```
 
 **关键点：**
-- 入口点组必须是 `fcbyk.plugins`
+- 入口点组必须是 `bykcli.plugins`
 - 键名是插件名称（用于标识）
 - 值是模块路径：`包名.模块名:函数名`
 - `register` 函数接收 `click.Group` 对象，返回描述字符串
@@ -97,7 +98,7 @@ def register(cli: click.Group) -> str:
 
 ```python
 import click
-from fcbykcli.api import CommandContext, pass_command_context
+from bykcli.api import CommandContext, pass_command_context
 
 @click.command(help="我的自定义命令")
 @click.option("--name", default="world", help="名称参数")
@@ -209,7 +210,7 @@ shared = ctx.app.shared_store()
 ### 4. 网络工具
 
 ```python
-from fcbykcli.api import get_private_networks, ensure_port_available, detect_iface_type
+from bykcli.api import get_private_networks, ensure_port_available, detect_iface_type
 
 networks = get_private_networks()  # 获取局域网 IP 列表
 ensure_port_available(8080)  # 检查端口是否可用
@@ -219,7 +220,7 @@ detect_iface_type("en0")  # 检测网卡类型
 ### 5. 守护进程管理
 
 ```python
-from fcbykcli.api import start_daemon
+from bykcli.api import start_daemon
 
 # 启动后台守护进程
 record = start_daemon(ctx.app, "my-service", ["--port", "8080"])
@@ -249,7 +250,7 @@ print(f"Started daemon: PID={record.pid}, Log={record.log_file}")
 ### 使用示例
 
 ```python
-from fcbykcli.api import (
+from bykcli.api import (
     CommandContext, 
     PathItem, 
     pass_command_context,
@@ -276,6 +277,7 @@ def register(cli):
     cli.add_command(my_plugin)
     # 注册路径提供器（在 register 函数中调用）
     register_path_provider("my_plugin", my_plugin_paths)
+    return "my-plugin (my_plugin)"
 ```
 
 **使用效果：**
@@ -297,7 +299,7 @@ byk paths my_plugin
 from __future__ import annotations
 
 import click
-from fcbykcli.api import CommandContext, PathItem, pass_command_context, register_path_provider
+from bykcli.api import CommandContext, PathItem, pass_command_context, register_path_provider
 
 
 @click.command(help="Example subcommand to verify dynamic registration.")
