@@ -1,70 +1,20 @@
 [build-system]
-requires = ["setuptools>=61", "wheel"]
+requires = ["setuptools>=40", "wheel"]
 build-backend = "setuptools.build_meta"
 
-[project]
-name = "bykcli"
-dynamic = ["version", "readme"]
-description = "A CLI tool"
-requires-python = ">=3.10"
-authors = [
-    {name = "fcbyk", email = "731240932@qq.com"}
-]
-license = {text = "MIT"}
-classifiers = [
-    "Development Status :: 3 - Alpha",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
-]
-dependencies = [
-    "click>=8.0.0",
-    "psutil>=5.9.0",
-    "rich>=10.0.0",
-]
-
-[project.optional-dependencies]
-dev = [
-    "pytest>=7.0.0,<8.0.0",
-    "pytest-cov>=4.0.0,<5.0.0",
-    "commitizen",
-    "build",
-    "twine",
-]
-
-[project.scripts]
-fcbyk = "bykcli.main:main"
-byk = "bykcli.main:main"
-
-[tool.setuptools]
-package-dir = {"" = "src"}
-packages = { find = { where = ["src"], include = ["bykcli*"], exclude = ["example*"] } }
-
-[tool.setuptools.package-data]
-bykcli = ["web/dist/**/*"]
-
-[tool.setuptools.dynamic]
-version = {attr = "bykcli.__version__"}
-readme = {file = ["README.md"], content-type = "text/markdown"}
-
 [tool.pytest.ini_options]
-testpaths = ["src/bykcli/tests"]
+testpaths = ["src/fcbyk/tests"]
 python_files = ["test_*.py"]
-addopts = "-v --cov=bykcli --cov-report=term-missing"
-norecursedirs = ["example", "example-*", ".git", "dist", "build"]
+addopts = "-v --cov=fcbyk --cov-report=term-missing"
 
 [tool.commitizen]
 name = "cz_customize"
-version = "1.0.0a1"
+version = "0.3.0"
 tag_format = "v$version"
 changelog_file = "CHANGELOG.md"
 bump_message = "release: v$new_version"
 version_files = [
-    "src/bykcli/__init__.py:__version__",
+    "setup.cfg:version =",
     "pyproject.toml:version ="
 ]
 

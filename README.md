@@ -1,34 +1,44 @@
 ## 简介
 
-<p>
-  <img src="https://img.shields.io/badge/python-%E2%89%A53.10-blue?logo=python&logoColor=white" />
-  <img src="https://img.shields.io/pypi/v/bykcli.svg" />
-  <img src="https://img.shields.io/github/license/fcbyk/bykcli.svg" />
-  <img src="https://github.com/fcbyk/bykcli/actions/workflows/test.yml/badge.svg" />
-  <img src="https://codecov.io/gh/fcbyk/bykcli/branch/main/graph/badge.svg" />
-</p>
+[![PyPI](https://img.shields.io/pypi/v/fcbyk-cli.svg)](https://pypi.org/project/fcbyk-cli/)
+[![Tests](https://github.com/fcbyk/fcbyk-cli/actions/workflows/test.yml/badge.svg)](https://github.com/fcbyk/fcbyk-cli/actions/workflows/test.yml)
+[![codecov](https://codecov.io/gh/fcbyk/fcbyk-cli/branch/main/graph/badge.svg)](https://codecov.io/gh/fcbyk/fcbyk-cli)
+[![License](https://img.shields.io/github/license/fcbyk/fcbyk-cli.svg)](https://github.com/fcbyk/fcbyk-cli/blob/main/LICENSE)
 
-**`bykcli`** 是一个轻量的命令行工具集合 🧰
+**`fcbyk-cli`** 是一个轻量、实用的命令行工具集合，
 
-用于通过简单命令解决一些日常的小需求。
+它用于通过终端快速完成一些 **零散但真实存在的需求**：
+- 没有现成软件可用
+- 或者已有软件过于臃肿、广告过多、不够轻量
+- 又或者只是想用一条命令把事情做完
 
-比如：
-* 没有现成工具可用
-* 或者工具太重、不够直接
-* 想一条命令快速搞定
+**`fcbyk-cli`** 的目标不是 “做一个大全”，  
+而是用 **小而直接的工具**，解决当下遇到的问题。
 
-项目采用插件化结构，子命令以插件形式组织，支持按需插拔
+如果你有实际需求或好的想法，也欢迎提交 [**issue**](https://github.com/fcbyk/fcbyk-cli/issues) 一起讨论。
+
+## 已有功能 (子命令)
+
+- [`lansend`](https://github.com/fcbyk/fcbyk-cli/blob/main/docs/LANSend.md)：在指定端口开启 `http服务器`，用于局域网内共享文件
+- [`ai`](https://github.com/fcbyk/fcbyk-cli/blob/main/docs/AI.md)：在控制台与 `ai` 聊天 （需自行配置`api-key`）
+- [`pick`](https://github.com/fcbyk/fcbyk-cli/blob/main/docs/Pick.md)：随机抽取一个元素（可用于抽奖、随机选择等）
+- [`slide`](https://github.com/fcbyk/fcbyk-cli/blob/main/docs/Slide.md)：同一局域网内，手机控制电脑PTT翻页
+- [`alias`](https://github.com/fcbyk/fcbyk-cli/blob/main/docs/Alias.md)：为常用命令添加别名，方便快速执行
+- [`run`](https://github.com/fcbyk/fcbyk-cli/blob/main/docs/Run.md)：从 scripts.byk.json 文件中运行可重复使用的命令脚本
+- [`get`](https://github.com/fcbyk/fcbyk-cli/blob/main/docs/Get.md)：资源获取，支持下载和打开官网
+- [`config`](https://github.com/fcbyk/fcbyk-cli/blob/main/docs/Config.md)：查看数据目录、日志目录和配置文件路径
+- [`svc`](https://github.com/fcbyk/fcbyk-cli/blob/main/docs/Svc.md)：统一管理由各子命令启动的后台 Web 服务进程
 
 ## 快速开始
 
 - 使用 pip 安装
 
 ```bash
-pip install bykcli
+pip install fcbyk-cli
 ```
 
-- 显示仪表盘
+- 显示帮助信息
 
 ```bash
-byk
+fcbyk
 ```

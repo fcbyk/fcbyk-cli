@@ -1,0 +1,13 @@
+{
+    "test": "pytest -q",
+    "build": {
+        "cmd": "pnpm run build:flatten",
+        "cwd": "/Users/coke/repo/fcbyk-cli/web-ui"
+    },
+    "clean": "find . -type d \\( -name '__pycache__' -o -name '.pytest_cache' \\) -exec rm -rf {} +",
+    "changelog": "cz changelog --incremental",
+    "bump": "cz bump $1",
+    "push": "git push --follow-tags",
+    "pypi-build": "python -m build",
+    "pypi-upload": "twine upload dist/*"
+}
