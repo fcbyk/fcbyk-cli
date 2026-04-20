@@ -1,8 +1,13 @@
+> [!WARNING]
+> This repository has been **deprecated** and is no longer maintained.  
+> The project has been refactored and renamed to **bykcli**.  
+>  
+> 👉 Please migrate to the new project.
+
 ## 简介
 
 [![PyPI](https://img.shields.io/pypi/v/fcbyk-cli.svg)](https://pypi.org/project/fcbyk-cli/)
 [![Tests](https://github.com/fcbyk/fcbyk-cli/actions/workflows/test.yml/badge.svg)](https://github.com/fcbyk/fcbyk-cli/actions/workflows/test.yml)
-[![codecov](https://codecov.io/gh/fcbyk/fcbyk-cli/branch/main/graph/badge.svg)](https://codecov.io/gh/fcbyk/fcbyk-cli)
 [![License](https://img.shields.io/github/license/fcbyk/fcbyk-cli.svg)](https://github.com/fcbyk/fcbyk-cli/blob/main/LICENSE)
 
 **`fcbyk-cli`** 是一个轻量、实用的命令行工具集合，
