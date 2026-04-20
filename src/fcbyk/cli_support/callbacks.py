@@ -1,9 +1,7 @@
 """CLI 命令回调函数"""
 import click
 import os
-import sys
 import shutil
-import subprocess
 
 
 def get_version():
@@ -158,41 +156,6 @@ def init_callback(ctx, param, value):
             click.secho("初始化完成!", fg="green")
         except Exception as e:
             click.secho("初始化失败: {}".format(str(e)), fg="red", err=True)
-            ctx.exit(1)
-    else:
-        click.echo("操作已取消")
-    
-    ctx.exit()
-
-
-def uninstall_callback(ctx, param, value):
-    """Callback for --uninstall option to uninstall fcbyk."""
-    if not value or ctx.resilient_parsing:
-        return
-    from fcbyk import defaults
-    from fcbyk.utils import storage
-    
-    config_path = storage.get_path(defaults.CONFIG_FILE)
-    data_dir = os.path.dirname(config_path)
-    
-    # 确认操作
-    if click.confirm('此操作将删除 ~/.fcbyk 目录并卸载 fcbyk-cli,是否继续?'):
-        try:
-            # 删除 .fcbyk 目录
-            if os.path.exists(data_dir):
-                shutil.rmtree(data_dir)
-                click.echo("已删除目录: {}".format(data_dir))
-            
-            click.echo("正在卸载 fcbyk...")
-            # 执行 pip uninstall
-            result = subprocess.call([sys.executable, "-m", "pip", "uninstall", "fcbyk-cli", "-y"])
-            
-            if result == 0:
-                click.secho("卸载完成!", fg="green")
-            else:
-                click.secho("卸载过程中出现错误", fg="yellow")
-        except Exception as e:
-            click.secho("卸载失败: {}".format(str(e)), fg="red", err=True)
             ctx.exit(1)
     else:
         click.echo("操作已取消")

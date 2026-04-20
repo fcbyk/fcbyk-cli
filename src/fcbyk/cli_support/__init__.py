@@ -6,7 +6,6 @@ from .callbacks import (
     print_commands,
     paths_callback,
     init_callback,
-    uninstall_callback
 )
 
 from .helpers import banner
@@ -17,6 +16,5 @@ __all__ = [
     'banner', 
     'print_commands',
     'paths_callback',
-    'init_callback',
-    'uninstall_callback'
+    'init_callback'
 ]

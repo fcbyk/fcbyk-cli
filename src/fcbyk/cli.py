@@ -9,7 +9,6 @@ from fcbyk.cli_support import (
     print_commands,
     paths_callback,
     init_callback,
-    uninstall_callback,
     banner
 )
 
@@ -45,15 +44,6 @@ from fcbyk.cli_support import (
     expose_value=False,
     is_eager=True,
     help='Reset configuration to defaults.'
-)
-@click.option(
-    '--uninstall', '-uni',
-    'do_uninstall',
-    is_flag=True,
-    callback=uninstall_callback,
-    expose_value=False,
-    is_eager=True,
-    help='Uninstall fcbyk and remove configuration.'
 )
 @click.pass_context
 def main(ctx):
