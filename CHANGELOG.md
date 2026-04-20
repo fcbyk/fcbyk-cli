@@ -1,4 +1,4 @@
-## v0.4.0 (Final Release) (2026-04-20)
+## v0.4.1 (Final Release) (2026-04-20)
 
 > [!WARNING]
 > This is the **final release** of fcbyk-cli.  
@@ -8,6 +8,21 @@
 >
 > This release marks the end of development.  
 > The project has been refactored and continued as bykcli.
+
+### 变更
+- 移除 CLI 中的 `--uninstall` / `-uni` 选项
+
+### 原因
+在 Windows 平台下，正在运行的可执行文件会被系统锁定，
+导致程序无法卸载自身，可能出现卸载失败或残留文件（如 `~package`）。
+
+为保证行为一致性和稳定性，移除了该功能。
+
+## v0.4.0 (Yanked) (2026-04-20)
+
+> [!WARNING]
+> ⚠️ This release has been yanked due to issues with the uninstall feature on Windows.
+> Please use v0.4.1 instead.
 
 ### Bug Fixes
 
