@@ -1,21 +1,3 @@
-"""
-ai 业务逻辑层
-
-类:
-- AIServiceError: 异常类，三种错误类型（network_error/api_key_error/backend_error）
-- AIService: OpenAI 兼容的 Chat Completions 客户端
-  - chat(req) -> JsonDict | Iterable[JsonDict]: 发起对话请求
-  - _parse_response(resp) -> JsonDict: 解析非流式响应
-  - _stream_chunks(resp) -> Generator: 解析流式响应
-
-数据类:
-- ChatRequest: 请求参数封装（messages, model, api_key, api_url, stream, timeout）
-
-函数:
-- extract_assistant_reply(response: JsonDict) -> str: 从非流式响应提取回复
-- extract_assistant_reply_from_stream(chunks: Iterable[JsonDict]) -> str: 从流式响应拼接回复
-"""
-
 import json
 from dataclasses import dataclass
 from typing import Any, Dict, Generator, Iterable, List, Optional, Union

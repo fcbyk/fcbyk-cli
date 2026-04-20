@@ -1,18 +1,3 @@
-"""
-ai 命令行接口模块
-
-常量:
-- CONFIG_FILE: 统一配置文件名
-- SECTION: 本命令在统一配置文件中的 section 名
-- DEFAULT_CONFIG: 默认配置（model, api_url, api_key, stream）
-- SYSTEM_PROMPT: AI 系统提示词（控制输出格式）
-
-函数:
-- _print_streaming_chunks(chunks) -> str: 边打印边拼接流式响应
-- _chat_loop(config: dict): 聊天主循环
-- ai(): Click 命令入口，处理参数和配置
-"""
-
 import click
 from fcbyk.utils import storage
 from fcbyk.cli_support.output import show_dict
@@ -32,7 +17,7 @@ DEFAULT_CONFIG = {
     'model': 'deepseek-chat',
     'api_url': 'https://api.deepseek.com/v1/chat/completions',
     'api_key': None,
-    'stream': False,
+    'stream': True,
     'rich': False,
 }
 

@@ -1,27 +1,3 @@
-"""
-lansend controller 层
-
-负责 Flask 路由注册、请求解析、调用 service 并返回响应。
-
-函数:
-- start_web_server(port, service, run_server=True) -> Optional[Flask]: 启动 Web 服务器或仅返回 Flask 应用
-- _try_int(v) -> Optional[int]: 安全地将值转换为整数
-- register_routes(app, service): 注册所有 API 路由
-- register_upload_routes(app, service): 注册文件上传相关路由
-- register_chat_routes(app, service): 注册聊天相关路由
-
-路由:
-- /api/config: 获取配置信息（un_download, un_upload, chat_enabled）
-- /upload: 文件上传接口（支持密码验证，仅在未禁用上传时注册）
-- /api/file/<path:filename>: 获取文件内容（文本/图片/二进制）
-- /api/tree: 获取递归文件树
-- /api/directory: 获取目录列表信息
-- /api/preview/<path:filename>: 预览文件（支持 Range 请求，用于视频/音频流式播放）
-- /api/download/<path:filename>: 下载文件（流式传输）
-- /api/chat/messages: 获取聊天消息列表（仅在启用聊天时注册）
-- /api/chat/send: 发送聊天消息（仅在启用聊天时注册）
-"""
-
 import os
 import re
 import mimetypes

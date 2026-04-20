@@ -10,7 +10,7 @@ DEFAULT_CONFIG = {
         "model": "deepseek-chat",
         "api_url": "https://api.deepseek.com/v1/chat/completions",
         "api_key": None,
-        "stream": False,
+        "stream": True,
         "rich": False,
     },
     "aliases": {

@@ -20,8 +20,6 @@
 **`fcbyk-cli`** 的目标不是 “做一个大全”，  
 而是用 **小而直接的工具**，解决当下遇到的问题。
 
-如果你有实际需求或好的想法，也欢迎提交 [**issue**](https://github.com/fcbyk/fcbyk-cli/issues) 一起讨论。
-
 ## 已有功能 (子命令)
 
 - [`lansend`](https://github.com/fcbyk/fcbyk-cli/blob/main/docs/LANSend.md)：在指定端口开启 `http服务器`，用于局域网内共享文件

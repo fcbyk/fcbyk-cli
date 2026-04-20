@@ -1,27 +1,3 @@
-"""
-lansend 业务逻辑层
-
-负责纯业务逻辑：路径/文件处理、目录树、内容读取等。
-
-数据类:
-- LansendConfig: 配置封装（shared_directory, upload_password, un_download, un_upload, chat_enabled）
-
-类:
-- LansendService: 文件共享服务核心类
-  - safe_filename(filename) -> str: 清理文件名中的非法字符
-  - is_image_file(filename) -> bool: 判断是否为图片文件
-  - format_size(num_bytes) -> str: 格式化文件大小
-  - get_path_parts(current_path) -> List[Dict]: 将路径拆分为面包屑导航
-  - log_upload(ip, file_count, status, rel_path, file_size): 记录上传日志
-  - ensure_shared_directory() -> str: 确保共享目录已设置
-  - abs_target_dir(rel_path) -> str: 获取目标目录的绝对路径（带安全检查）
-  - get_file_tree(base_path, relative_path) -> List[Dict]: 获取递归文件树
-  - get_directory_listing(relative_path) -> Dict: 获取目录列表信息
-  - resolve_file_path(filename) -> str: 解析并验证文件路径（带安全检查）
-  - read_file_content(relative_path) -> Dict: 读取文件内容（文本/图片/二进制）
-  - pick_upload_password(flag_password, un_upload, click_module) -> Optional[str]: 根据参数决定是否提示输入上传密码
-"""
-
 import os
 import sys
 from dataclasses import dataclass
