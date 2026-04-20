@@ -1,5 +1,7 @@
 import click
 import fcbyk.svc as svc_core
+from fcbyk.cli_support.output import echo_network_urls, copy_to_clipboard
+from fcbyk.utils.network import get_private_networks
 
 from fcbyk.cli_support.guard import check_port
 
@@ -58,6 +60,16 @@ def pick(ctx, port, no_browser, files, password, daemon_password, daemon):
         args.append('--no-browser')
         if effective_password:
             args.extend(['--daemon-password', effective_password])
+        
+        # 输出地址信息（与 lansend/slide 保持一致）
+        click.echo()
+        private_networks = get_private_networks()
+        local_ip = private_networks[0]["ips"][0] if private_networks else "127.0.0.1"
+        click.echo(f" Directory: {files}")
+        echo_network_urls(private_networks, port, include_virtual=True)
+        copy_to_clipboard(f"http://{local_ip}:{port}")
+        click.echo()
+        
         svc_core.start_service('pick', args)
         return
 
@@ -65,6 +77,15 @@ def pick(ctx, port, no_browser, files, password, daemon_password, daemon):
     if daemon:
         args = ['--port', str(port)]
         args.append('--no-browser')
+        
+        # 输出地址信息（与 lansend/slide 保持一致）
+        click.echo()
+        private_networks = get_private_networks()
+        local_ip = private_networks[0]["ips"][0] if private_networks else "127.0.0.1"
+        echo_network_urls(private_networks, port, include_virtual=True)
+        copy_to_clipboard(f"http://{local_ip}:{port}")
+        click.echo()
+        
         svc_core.start_service('pick', args)
         return
 
