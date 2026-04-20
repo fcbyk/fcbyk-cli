@@ -1,3 +1,29 @@
+## v0.4.0 (Final Release) (2026-04-20)
+
+> [!WARNING]
+> This is the **final release** of fcbyk-cli.  
+> This project is no longer maintained.  
+>  
+> 👉 Please migrate to **bykcli**.
+>
+> This release marks the end of development.  
+> The project has been refactored and continued as bykcli.
+
+### Bug Fixes
+
+- **pick**: 修复在 daemon 模式下没有输出服务器访问地址信息的问题
+
+### Features
+
+- **lansend**: 恢复单独的下载按钮，更改-nd选项的限制逻辑
+- **cli**: 添加初始化和卸载命令选项
+- **slide**: 添加自动打开浏览器和禁用选项功能
+
+### Refactor
+
+- 将svc子命令重命名为servers
+- 移除不完善的run和get命令
+
 ## v0.3.0 (2026-03-28)
 
 ### Features
